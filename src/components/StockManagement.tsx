@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Filter, ExternalLink, Edit, Trash2 } from "lucide-react";
+import { Search, Plus, Filter, ExternalLink, Edit, Trash2, Settings } from "lucide-react";
 import AddProductModal from "./AddProductModal";
 
 const StockManagement = () => {
@@ -27,11 +27,11 @@ const StockManagement = () => {
       exchangeRate: 4.6,
       priceThb: 8200,
       costThb: 8747,
-      margin: "164.9%",
-      quantity: 2,
+      sellingPrice: 8200,
       status: "พรีออเดอร์",
       shipmentDate: "15/7/2567",
-      link: "https://example.com"
+      link: "https://example.com",
+      description: "รายละเอียดสินค้า"
     },
     {
       id: 2,
@@ -39,15 +39,15 @@ const StockManagement = () => {
       name: "HSK - Pillow",
       category: "Honkai Star Rail",
       image: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=100&h=100&fit=crop",
-      priceYuan: 8276.38,
+      priceYuan: 82.76,
       exchangeRate: 4.62,
       priceThb: 380,
-      costThb: 8103.62,
-      margin: "37.5%",
-      quantity: 10,
-      status: "พรีออเดอร์",
+      costThb: 362.24,
+      sellingPrice: 380,
+      status: "พร้อมส่ง",
       shipmentDate: "18/9/2568",
-      link: "https://example.com"
+      link: "https://example.com",
+      description: "รายละเอียดสินค้า"
     },
     {
       id: 3,
@@ -55,15 +55,15 @@ const StockManagement = () => {
       name: "Figure Garen",
       category: "League of Legends",
       image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=100&h=100&fit=crop",
-      priceYuan: 81075.1,
+      priceYuan: 810.75,
       exchangeRate: 4.62,
-      priceThb: 81800,
-      costThb: 8724.9,
-      margin: "0%",
-      quantity: 0,
+      priceThb: 1800,
+      costThb: 1449.8,
+      sellingPrice: 1800,
       status: "พรีออเดอร์",
       shipmentDate: "30/6/2568",
-      link: "https://example.com"
+      link: "https://example.com",
+      description: "รายละเอียดสินค้า"
     }
   ];
 
@@ -87,8 +87,63 @@ const StockManagement = () => {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
+  // Calculate stats
+  const totalProducts = products.length;
+  const inStockProducts = products.filter(p => p.status === "พร้อมส่ง").length;
+  const preOrderProducts = products.filter(p => p.status === "พรีออเดอร์").length;
+
+  const deleteProduct = (productId: number) => {
+    console.log("Delete product:", productId);
+    // Implementation for deleting product
+  };
+
   return (
     <div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-100">สินค้าทั้งหมด</p>
+                <p className="text-2xl font-bold">{totalProducts}</p>
+              </div>
+              <div className="p-3 bg-blue-400 rounded-lg">
+                <Package className="w-6 h-6" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-green-100">พร้อมส่ง</p>
+                <p className="text-2xl font-bold">{inStockProducts}</p>
+              </div>
+              <div className="p-3 bg-green-400 rounded-lg">
+                <Package className="w-6 h-6" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-100">พรีออเดอร์</p>
+                <p className="text-2xl font-bold">{preOrderProducts}</p>
+              </div>
+              <div className="p-3 bg-purple-400 rounded-lg">
+                <Package className="w-6 h-6" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Search and Filters */}
       <Card className="mb-6">
         <CardContent className="p-6">
@@ -106,17 +161,22 @@ const StockManagement = () => {
             </div>
             
             <div className="flex gap-3 items-center">
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="หมวดหมู่สินค้า" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">หมวดหมู่ทั้งหมด</SelectItem>
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category}>{category}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="หมวดหมู่ทั้งหมด" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">หมวดหมู่ทั้งหมด</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm">
+                  <Settings className="w-4 h-4" />
+                </Button>
+              </div>
 
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-32">
@@ -125,8 +185,7 @@ const StockManagement = () => {
                 <SelectContent>
                   <SelectItem value="all">ทั้งหมด</SelectItem>
                   <SelectItem value="พรีออเดอร์">พรีออเดอร์</SelectItem>
-                  <SelectItem value="มีสต็อก">มีสต็อก</SelectItem>
-                  <SelectItem value="หมด">หมด</SelectItem>
+                  <SelectItem value="พร้อมส่ง">พร้อมส่ง</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -138,10 +197,6 @@ const StockManagement = () => {
               <Button variant="outline">
                 <Filter className="w-4 h-4 mr-2" />
                 ตัวกรอง
-              </Button>
-
-              <Button variant="outline" className="text-red-600 border-red-300 hover:bg-red-50">
-                ลำงข้อมูล
               </Button>
             </div>
           </div>
@@ -159,15 +214,10 @@ const StockManagement = () => {
               <TableHeader>
                 <TableRow className="bg-purple-50">
                   <TableHead className="text-purple-700">รูปภาพ</TableHead>
-                  <TableHead className="text-purple-700">SKU</TableHead>
                   <TableHead className="text-purple-700">ชื่อสินค้า</TableHead>
-                  <TableHead className="text-purple-700">หมวดหมู่</TableHead>
-                  <TableHead className="text-purple-700">ต้นทุน</TableHead>
-                  <TableHead className="text-purple-700">ราคาที่ขาย</TableHead>
-                  <TableHead className="text-purple-700">กำไร</TableHead>
-                  <TableHead className="text-purple-700">จำนวน</TableHead>
-                  <TableHead className="text-purple-700">สถานะ</TableHead>
-                  <TableHead className="text-purple-700">วันที่ส่ง</TableHead>
+                  <TableHead className="text-purple-700">ราคา</TableHead>
+                  <TableHead className="text-purple-700">วันที่จัดส่ง</TableHead>
+                  <TableHead className="text-purple-700">รายละเอียด</TableHead>
                   <TableHead className="text-purple-700">ลิงก์</TableHead>
                   <TableHead className="text-purple-700">จัดการ</TableHead>
                 </TableRow>
@@ -182,41 +232,12 @@ const StockManagement = () => {
                         className="w-12 h-12 rounded-lg object-cover"
                       />
                     </TableCell>
-                    <TableCell className="font-mono text-sm">{product.sku}</TableCell>
                     <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {product.category}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div>¥{product.priceYuan.toLocaleString()}</div>
-                        <div className="text-gray-500">฿{product.costThb.toLocaleString()}</div>
-                      </div>
-                    </TableCell>
                     <TableCell className="font-semibold text-green-600">
-                      ฿{product.priceThb.toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={product.margin === "0%" ? "destructive" : "default"}>
-                        {product.margin}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={product.quantity === 0 ? "destructive" : "default"}>
-                        {product.quantity}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant="outline" 
-                        className={product.status === "พรีออเดอร์" ? "border-purple-300 text-purple-700" : ""}
-                      >
-                        {product.status}
-                      </Badge>
+                      ฿{product.sellingPrice.toLocaleString()}
                     </TableCell>
                     <TableCell className="text-sm">{product.shipmentDate}</TableCell>
+                    <TableCell className="text-sm">{product.description}</TableCell>
                     <TableCell>
                       <Button variant="ghost" size="sm" asChild>
                         <a href={product.link} target="_blank" rel="noopener noreferrer">
@@ -229,7 +250,12 @@ const StockManagement = () => {
                         <Button variant="ghost" size="sm" className="text-blue-600">
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-600"
+                          onClick={() => deleteProduct(product.id)}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>

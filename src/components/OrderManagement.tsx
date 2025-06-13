@@ -3,8 +3,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { MoreHorizontal, Clock, Truck, CheckCircle, Edit, Trash2 } from "lucide-react";
+import { MoreHorizontal, Clock, Truck, CheckCircle, Edit, Trash2, Plus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const OrderManagement = () => {
@@ -12,8 +11,8 @@ const OrderManagement = () => {
     {
       id: 1,
       customerName: "น้องแมว",
-      avatar: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=100&h=100&fit=crop",
       product: "ฟิกฟิกฟิก",
+      productImage: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=100&h=100&fit=crop",
       sku: "GEN-399994",
       quantity: 1,
       sellingPrice: 8200,
@@ -25,8 +24,8 @@ const OrderManagement = () => {
     {
       id: 2,
       customerName: "คุณสมใจ",
-      avatar: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=100&h=100&fit=crop",
       product: "HSK - Pillow",
+      productImage: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=100&h=100&fit=crop",
       sku: "HSR-368857",
       quantity: 2,
       sellingPrice: 760,
@@ -38,8 +37,8 @@ const OrderManagement = () => {
     {
       id: 3,
       customerName: "พี่ใหญ่",
-      avatar: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=100&h=100&fit=crop",
       product: "Figure Garen",
+      productImage: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=100&h=100&fit=crop",
       sku: "LEA-F-123456",
       quantity: 1,
       sellingPrice: 1800,
@@ -49,6 +48,9 @@ const OrderManagement = () => {
       orderDate: "30/6/2568"
     }
   ]);
+
+  const [editableOrder, setEditableOrder] = useState<number | null>(null);
+  const [editCost, setEditCost] = useState<string>("");
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -86,6 +88,23 @@ const OrderManagement = () => {
     setOrders(orders.filter(order => order.id !== orderId));
   };
 
+  const startEditCost = (orderId: number, currentCost: number) => {
+    setEditableOrder(orderId);
+    setEditCost(currentCost.toString());
+  };
+
+  const saveCost = (orderId: number) => {
+    const newCost = parseFloat(editCost);
+    setOrders(orders.map(order => 
+      order.id === orderId ? { 
+        ...order, 
+        cost: newCost,
+        profit: order.sellingPrice - newCost
+      } : order
+    ));
+    setEditableOrder(null);
+  };
+
   const groupedOrders = {
     "รอชำระเงิน": orders.filter(order => order.status === "รอชำระเงิน"),
     "รอจัดส่ง": orders.filter(order => order.status === "รอจัดส่ง"),
@@ -99,6 +118,14 @@ const OrderManagement = () => {
 
   return (
     <div>
+      {/* Add Order Button */}
+      <div className="mb-6">
+        <Button className="bg-purple-600 hover:bg-purple-700">
+          <Plus className="w-4 h-4 mr-2" />
+          เพิ่มออเดอร์
+        </Button>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
@@ -163,10 +190,11 @@ const OrderManagement = () => {
                   <div className="space-y-3">
                     {/* Customer Info */}
                     <div className="flex items-center gap-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={order.avatar} />
-                        <AvatarFallback>{order.customerName.charAt(0)}</AvatarFallback>
-                      </Avatar>
+                      <img 
+                        src={order.productImage} 
+                        alt={order.product}
+                        className="w-10 h-10 rounded-lg object-cover"
+                      />
                       <div className="flex-1">
                         <p className="font-medium">{order.customerName}</p>
                         <p className="text-sm text-gray-500">{order.orderDate}</p>
@@ -236,9 +264,28 @@ const OrderManagement = () => {
                         <span className="text-gray-600">ราคาขาย:</span>
                         <span className="font-medium text-green-600">฿{order.sellingPrice.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between items-center">
                         <span className="text-gray-600">ต้นทุน:</span>
-                        <span className="text-red-600">฿{order.cost.toLocaleString()}</span>
+                        {editableOrder === order.id ? (
+                          <div className="flex gap-1">
+                            <input
+                              type="number"
+                              value={editCost}
+                              onChange={(e) => setEditCost(e.target.value)}
+                              className="w-20 px-1 py-0 text-xs border rounded"
+                              onBlur={() => saveCost(order.id)}
+                              onKeyPress={(e) => e.key === 'Enter' && saveCost(order.id)}
+                              autoFocus
+                            />
+                          </div>
+                        ) : (
+                          <span 
+                            className="text-red-600 cursor-pointer hover:bg-gray-100 px-1 rounded"
+                            onClick={() => startEditCost(order.id, order.cost)}
+                          >
+                            ฿{order.cost.toLocaleString()}
+                          </span>
+                        )}
                       </div>
                       <div className="flex justify-between border-t pt-1">
                         <span className="font-medium">กำไร:</span>
