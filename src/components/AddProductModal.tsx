@@ -12,12 +12,29 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
+interface Product {
+  sku: string;
+  name: string;
+  category: string;
+  image: string;
+  priceYuan: number;
+  exchangeRate: number;
+  priceThb: number;
+  costThb: number;
+  sellingPrice: number;
+  status: string;
+  shipmentDate: string;
+  link: string;
+  description: string;
+}
+
 interface AddProductModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAddProduct: (product: Product) => void;
 }
 
-const AddProductModal = ({ open, onOpenChange }: AddProductModalProps) => {
+const AddProductModal = ({ open, onOpenChange, onAddProduct }: AddProductModalProps) => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [productName, setProductName] = useState("");
   const [priceYuan, setPriceYuan] = useState("");
@@ -29,6 +46,7 @@ const AddProductModal = ({ open, onOpenChange }: AddProductModalProps) => {
   const [shipmentDate, setShipmentDate] = useState<Date>();
   const [orderCloseDate, setOrderCloseDate] = useState<Date>();
   const [productImage, setProductImage] = useState("");
+  const [status, setStatus] = useState("พรีออเดอร์");
 
   const categories = [
     { name: "League of Legends", code: "LOL" },
@@ -95,24 +113,30 @@ const AddProductModal = ({ open, onOpenChange }: AddProductModalProps) => {
   };
 
   const handleSubmit = () => {
-    console.log({
+    if (!productName || !selectedCategory || !sellingPrice) {
+      alert("กรุณากรอกข้อมูลที่จำเป็น");
+      return;
+    }
+
+    const newProduct: Product = {
       sku: autoSKU,
       category: selectedCategory,
       name: productName,
-      priceYuan: parseFloat(priceYuan),
+      priceYuan: parseFloat(priceYuan) || 0,
       exchangeRate: parseFloat(exchangeRate),
-      thaiPrice: calculateThaiPrice(),
-      importCost: parseFloat(importCost),
-      totalCost: calculateTotalCost(),
+      priceThb: parseFloat(calculateThaiPrice()) || 0,
+      costThb: parseFloat(calculateTotalCost()) || 0,
       sellingPrice: parseFloat(sellingPrice),
       description,
       link,
-      shipmentDate,
-      orderCloseDate,
-      image: productImage
-    });
+      shipmentDate: shipmentDate ? format(shipmentDate, "dd/MM/yyyy") : "",
+      image: productImage || "https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=100&h=100&fit=crop",
+      status
+    };
     
+    onAddProduct(newProduct);
     onOpenChange(false);
+    
     // Reset form
     setSelectedCategory("");
     setProductName("");
@@ -167,6 +191,19 @@ const AddProductModal = ({ open, onOpenChange }: AddProductModalProps) => {
                 value={productName}
                 onChange={(e) => setProductName(e.target.value)}
               />
+            </div>
+
+            <div>
+              <Label htmlFor="status">สถานะสินค้า</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="เลือกสถานะสินค้า" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="พรีออเดอร์">พรีออเดอร์</SelectItem>
+                  <SelectItem value="พร้อมส่ง">พร้อมส่ง</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
@@ -342,7 +379,7 @@ const AddProductModal = ({ open, onOpenChange }: AddProductModalProps) => {
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             ยกเลิก
           </Button>
-          <Button onClick={handleSubmit} className="bg-purple-600 hover:bg-purple-700">
+          <Button onClick={handleSubmit} className="bg-purple-400 hover:bg-purple-500 text-purple-800">
             บันทึก
           </Button>
         </div>

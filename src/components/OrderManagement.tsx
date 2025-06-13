@@ -3,52 +3,40 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { MoreHorizontal, Clock, Truck, CheckCircle, Edit, Trash2, Plus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import AddOrderModal from "./AddOrderModal";
 
-const OrderManagement = () => {
-  const [orders, setOrders] = useState([
-    {
-      id: 1,
-      customerName: "น้องแมว",
-      product: "ฟิกฟิกฟิก",
-      productImage: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=100&h=100&fit=crop",
-      sku: "GEN-399994",
-      quantity: 1,
-      sellingPrice: 8200,
-      cost: 8747,
-      profit: -547,
-      status: "รอชำระเงิน",
-      orderDate: "15/7/2567"
-    },
-    {
-      id: 2,
-      customerName: "คุณสมใจ",
-      product: "HSK - Pillow",
-      productImage: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=100&h=100&fit=crop",
-      sku: "HSR-368857",
-      quantity: 2,
-      sellingPrice: 760,
-      cost: 723.24,
-      profit: 36.76,
-      status: "รอจัดส่ง",
-      orderDate: "18/9/2568"
-    },
-    {
-      id: 3,
-      customerName: "พี่ใหญ่",
-      product: "Figure Garen",
-      productImage: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=100&h=100&fit=crop",
-      sku: "LEA-F-123456",
-      quantity: 1,
-      sellingPrice: 1800,
-      cost: 1449.8,
-      profit: 350.2,
-      status: "จัดส่งแล้ว",
-      orderDate: "30/6/2568"
-    }
-  ]);
+interface Order {
+  id: number;
+  product: string;
+  productImage: string;
+  sku: string;
+  quantity: number;
+  sellingPrice: number;
+  cost: number;
+  profit: number;
+  status: string;
+  orderDate: string;
+}
 
+interface Product {
+  id: number;
+  sku: string;
+  name: string;
+  sellingPrice: number;
+  costThb: number;
+  image: string;
+}
+
+interface OrderManagementProps {
+  products?: Product[];
+}
+
+const OrderManagement = ({ products = [] }: OrderManagementProps) => {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [editableOrder, setEditableOrder] = useState<number | null>(null);
   const [editCost, setEditCost] = useState<string>("");
 
@@ -68,11 +56,11 @@ const OrderManagement = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "รอชำระเงิน":
-        return "bg-yellow-100 text-yellow-800 border-yellow-300";
+        return "bg-yellow-200 text-yellow-800 border-yellow-300";
       case "รอจัดส่ง":
-        return "bg-blue-100 text-blue-800 border-blue-300";
+        return "bg-blue-200 text-blue-800 border-blue-300";
       case "จัดส่งแล้ว":
-        return "bg-green-100 text-green-800 border-green-300";
+        return "bg-green-200 text-green-800 border-green-300";
       default:
         return "bg-gray-100 text-gray-800 border-gray-300";
     }
@@ -105,6 +93,14 @@ const OrderManagement = () => {
     setEditableOrder(null);
   };
 
+  const addOrder = (newOrder: Omit<Order, 'id'>) => {
+    const order: Order = {
+      ...newOrder,
+      id: Date.now()
+    };
+    setOrders([...orders, order]);
+  };
+
   const groupedOrders = {
     "รอชำระเงิน": orders.filter(order => order.status === "รอชำระเงิน"),
     "รอจัดส่ง": orders.filter(order => order.status === "รอจัดส่ง"),
@@ -120,50 +116,53 @@ const OrderManagement = () => {
     <div>
       {/* Add Order Button */}
       <div className="mb-6">
-        <Button className="bg-purple-600 hover:bg-purple-700">
+        <Button 
+          onClick={() => setShowAddModal(true)}
+          className="bg-purple-400 hover:bg-purple-500 text-purple-800"
+        >
           <Plus className="w-4 h-4 mr-2" />
           เพิ่มออเดอร์
         </Button>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards - Pastel Colors */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+        <Card className="bg-gradient-to-r from-green-200 to-green-300 text-green-800">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100">มูลค่าขาย</p>
+                <p className="text-green-600">มูลค่าขาย</p>
                 <p className="text-2xl font-bold">฿{totalSales.toLocaleString()}</p>
               </div>
-              <div className="p-3 bg-green-400 rounded-lg">
+              <div className="p-3 bg-green-100 rounded-lg">
                 <CheckCircle className="w-6 h-6" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-red-500 to-red-600 text-white">
+        <Card className="bg-gradient-to-r from-red-200 to-red-300 text-red-800">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-red-100">ต้นทุนรวม</p>
+                <p className="text-red-600">ต้นทุนรวม</p>
                 <p className="text-2xl font-bold">฿{totalCost.toLocaleString()}</p>
               </div>
-              <div className="p-3 bg-red-400 rounded-lg">
+              <div className="p-3 bg-red-100 rounded-lg">
                 <Truck className="w-6 h-6" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+        <Card className="bg-gradient-to-r from-blue-200 to-blue-300 text-blue-800">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100">กำไรรวม</p>
+                <p className="text-blue-600">กำไรรวม</p>
                 <p className="text-2xl font-bold">฿{totalProfit.toLocaleString()}</p>
               </div>
-              <div className="p-3 bg-blue-400 rounded-lg">
+              <div className="p-3 bg-blue-100 rounded-lg">
                 <Clock className="w-6 h-6" />
               </div>
             </div>
@@ -188,7 +187,7 @@ const OrderManagement = () => {
               {statusOrders.map((order) => (
                 <Card key={order.id} className="p-4 hover:shadow-md transition-shadow">
                   <div className="space-y-3">
-                    {/* Customer Info */}
+                    {/* Product Info */}
                     <div className="flex items-center gap-3">
                       <img 
                         src={order.productImage} 
@@ -196,7 +195,7 @@ const OrderManagement = () => {
                         className="w-10 h-10 rounded-lg object-cover"
                       />
                       <div className="flex-1">
-                        <p className="font-medium">{order.customerName}</p>
+                        <p className="font-medium">{order.product}</p>
                         <p className="text-sm text-gray-500">{order.orderDate}</p>
                       </div>
                       <DropdownMenu>
@@ -230,10 +229,6 @@ const OrderManagement = () => {
                               รอชำระเงิน
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem>
-                            <Edit className="w-4 h-4 mr-2" />
-                            แก้ไข
-                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => deleteOrder(order.id)}
                             className="text-red-600"
@@ -245,11 +240,10 @@ const OrderManagement = () => {
                       </DropdownMenu>
                     </div>
 
-                    {/* Product Info */}
+                    {/* Product Details */}
                     <div className="space-y-2">
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-medium text-sm">{order.product}</p>
                           <p className="text-xs text-gray-500 font-mono">{order.sku}</p>
                         </div>
                         <Badge variant="outline" className="text-xs">
@@ -268,11 +262,11 @@ const OrderManagement = () => {
                         <span className="text-gray-600">ต้นทุน:</span>
                         {editableOrder === order.id ? (
                           <div className="flex gap-1">
-                            <input
+                            <Input
                               type="number"
                               value={editCost}
                               onChange={(e) => setEditCost(e.target.value)}
-                              className="w-20 px-1 py-0 text-xs border rounded"
+                              className="w-20 h-6 px-1 py-0 text-xs"
                               onBlur={() => saveCost(order.id)}
                               onKeyPress={(e) => e.key === 'Enter' && saveCost(order.id)}
                               autoFocus
@@ -313,6 +307,14 @@ const OrderManagement = () => {
           </Card>
         ))}
       </div>
+
+      {/* Add Order Modal */}
+      <AddOrderModal 
+        open={showAddModal} 
+        onOpenChange={setShowAddModal}
+        onAddOrder={addOrder}
+        products={products}
+      />
     </div>
   );
 };
