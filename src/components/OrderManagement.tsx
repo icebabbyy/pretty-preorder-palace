@@ -48,7 +48,7 @@ const OrderManagement = () => {
       status: "จัดส่งแล้ว",
       orderDate: "30/6/2568"
     }
-  ];
+  ]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
