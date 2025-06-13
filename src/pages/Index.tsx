@@ -36,24 +36,42 @@ interface Order {
   orderDate: string;
 }
 
-const Index = () => {
-  const [activeTab, setActiveTab] = useState("stock");
-  const [products, setProducts] = useState<Product[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
+// ...import เหมือนเดิม
 
-  // Load data from localStorage on component mount
+const Index = () => {
+  // ...state เหมือนเดิม
+
   useEffect(() => {
-    const savedProducts = localStorage.getItem('stockProducts');
-    const savedOrders = localStorage.getItem('stockOrders');
-    
-    if (savedProducts) {
-      setProducts(JSON.parse(savedProducts));
-    }
-    
-    if (savedOrders) {
-      setOrders(JSON.parse(savedOrders));
-    }
+    const initializeData = () => {
+      const savedCategories = localStorage.getItem('inventory-categories');
+      // ใช้ products จาก inventory-products ถ้าไม่มีให้ลอง key products
+      const savedProducts = localStorage.getItem('inventory-products') || localStorage.getItem('products');
+      if (savedCategories && savedProducts) {
+        setCategories(JSON.parse(savedCategories));
+        setProducts(JSON.parse(savedProducts));
+        console.log('Loaded data from localStorage');
+      } else {
+        // ...sample data เหมือนเดิม
+        setCategories(sampleCategories);
+        setProducts(sampleProducts);
+        localStorage.setItem('inventory-categories', JSON.stringify(sampleCategories));
+        localStorage.setItem('inventory-products', JSON.stringify(sampleProducts));
+        localStorage.setItem('products', JSON.stringify(sampleProducts)); // เพิ่มตรงนี้
+        console.log('Created initial sample data and saved to localStorage');
+      }
+    };
+    initializeData();
   }, []);
+
+  useEffect(() => {
+    if (products.length > 0) {
+      localStorage.setItem('inventory-products', JSON.stringify(products));
+      localStorage.setItem('products', JSON.stringify(products)); // เพิ่มตรงนี้
+      console.log('Saved products to localStorage:', products.length);
+    }
+  }, [products]);
+
+}
 
   // Save products to localStorage whenever products change
   useEffect(() => {
