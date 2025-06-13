@@ -4,10 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Filter, ExternalLink, Edit, Trash2, Settings, Package } from "lucide-react";
+import { Search, Plus, ExternalLink, Edit, Trash2, Settings, Package } from "lucide-react";
 import AddProductModal from "./AddProductModal";
+import CategoryManagementModal from "./CategoryManagementModal";
 
 interface Product {
   id: number;
@@ -26,14 +26,18 @@ interface Product {
   description: string;
 }
 
-const StockManagement = () => {
+interface StockManagementProps {
+  products: Product[];
+  setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
+}
+
+const StockManagement = ({ products, setProducts }: StockManagementProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
-
-  const categories = [
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categories, setCategories] = useState([
     "League of Legends",
     "Valorant", 
     "Zenless Zone Zero",
@@ -42,7 +46,7 @@ const StockManagement = () => {
     "Azur Lane",
     "Blue Archive",
     "ETC"
-  ];
+  ]);
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -69,46 +73,50 @@ const StockManagement = () => {
     setProducts([...products, product]);
   };
 
+  const updateProduct = (updatedProduct: Product) => {
+    setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+  };
+
   return (
     <div>
-      {/* Stats Cards - Pastel Colors */}
+      {/* Stats Cards - Clean white with dark borders */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="bg-gradient-to-r from-blue-200 to-blue-300 text-blue-800">
+        <Card className="bg-white border-2 border-gray-800 text-gray-800">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-600">สินค้าทั้งหมด</p>
+                <p className="text-gray-600">สินค้าทั้งหมด</p>
                 <p className="text-2xl font-bold">{totalProducts}</p>
               </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
+              <div className="p-3 bg-gray-100 rounded-lg border border-gray-300">
                 <Package className="w-6 h-6" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-green-200 to-green-300 text-green-800">
+        <Card className="bg-white border-2 border-gray-800 text-gray-800">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-600">พร้อมส่ง</p>
+                <p className="text-gray-600">พร้อมส่ง</p>
                 <p className="text-2xl font-bold">{inStockProducts}</p>
               </div>
-              <div className="p-3 bg-green-100 rounded-lg">
+              <div className="p-3 bg-gray-100 rounded-lg border border-gray-300">
                 <Package className="w-6 h-6" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-purple-200 to-purple-300 text-purple-800">
+        <Card className="bg-white border-2 border-gray-800 text-gray-800">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-600">พรีออเดอร์</p>
+                <p className="text-gray-600">พรีออเดอร์</p>
                 <p className="text-2xl font-bold">{preOrderProducts}</p>
               </div>
-              <div className="p-3 bg-purple-100 rounded-lg">
+              <div className="p-3 bg-gray-100 rounded-lg border border-gray-300">
                 <Package className="w-6 h-6" />
               </div>
             </div>
@@ -117,7 +125,7 @@ const StockManagement = () => {
       </div>
 
       {/* Search and Filters */}
-      <Card className="mb-6">
+      <Card className="mb-6 bg-white border-2 border-gray-800">
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex-1 max-w-md">
@@ -127,7 +135,7 @@ const StockManagement = () => {
                   placeholder="ค้นหาสินค้า SKU หรือชื่อสินค้า..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 border-2 border-gray-300"
                 />
               </div>
             </div>
@@ -135,7 +143,7 @@ const StockManagement = () => {
             <div className="flex gap-3 items-center">
               <div className="flex items-center gap-2">
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-48 border-2 border-gray-300">
                     <SelectValue placeholder="หมวดหมู่ทั้งหมด" />
                   </SelectTrigger>
                   <SelectContent>
@@ -145,13 +153,18 @@ const StockManagement = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowCategoryModal(true)}
+                  className="border-2 border-gray-800 hover:bg-gray-100"
+                >
                   <Settings className="w-4 h-4" />
                 </Button>
               </div>
 
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-32 border-2 border-gray-300">
                   <SelectValue placeholder="สถานะ" />
                 </SelectTrigger>
                 <SelectContent>
@@ -161,7 +174,10 @@ const StockManagement = () => {
                 </SelectContent>
               </Select>
 
-              <Button onClick={() => setShowAddModal(true)} className="bg-purple-400 hover:bg-purple-500 text-purple-800">
+              <Button 
+                onClick={() => setShowAddModal(true)} 
+                className="bg-gray-800 hover:bg-gray-700 text-white border-2 border-gray-800"
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 เพิ่มสินค้า
               </Button>
@@ -171,41 +187,40 @@ const StockManagement = () => {
       </Card>
 
       {/* Products Table */}
-      <Card>
+      <Card className="bg-white border-2 border-gray-800">
         <CardHeader>
-          <CardTitle className="text-purple-700">รายการสินค้า</CardTitle>
+          <CardTitle className="text-gray-800">รายการสินค้า</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-purple-50">
-                  <TableHead className="text-purple-700">รูปภาพ</TableHead>
-                  <TableHead className="text-purple-700">ชื่อสินค้า</TableHead>
-                  <TableHead className="text-purple-700">ราคาขาย</TableHead>
-                  <TableHead className="text-purple-700">ต้นทุน</TableHead>
-                  <TableHead className="text-purple-700">กำไร</TableHead>
-                  <TableHead className="text-purple-700">วันที่จัดส่ง</TableHead>
-                  <TableHead className="text-purple-700">รายละเอียด</TableHead>
-                  <TableHead className="text-purple-700">ลิงก์</TableHead>
-                  <TableHead className="text-purple-700">จัดการ</TableHead>
+                <TableRow className="bg-gray-100 border-b-2 border-gray-300">
+                  <TableHead className="text-gray-800 font-bold">รูปภาพ</TableHead>
+                  <TableHead className="text-gray-800 font-bold">ชื่อสินค้า</TableHead>
+                  <TableHead className="text-gray-800 font-bold">ราคาขาย</TableHead>
+                  <TableHead className="text-gray-800 font-bold">ต้นทุน</TableHead>
+                  <TableHead className="text-gray-800 font-bold">วันที่จัดส่ง</TableHead>
+                  <TableHead className="text-gray-800 font-bold">รายละเอียด</TableHead>
+                  <TableHead className="text-gray-800 font-bold">ลิงก์</TableHead>
+                  <TableHead className="text-gray-800 font-bold">จัดการ</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                       ไม่มีสินค้าในระบบ กรุณาเพิ่มสินค้าใหม่
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredProducts.map((product) => (
-                    <TableRow key={product.id} className="hover:bg-gray-50">
+                    <TableRow key={product.id} className="hover:bg-gray-50 border-b border-gray-200">
                       <TableCell>
                         <img 
                           src={product.image} 
                           alt={product.name}
-                          className="w-12 h-12 rounded-lg object-cover"
+                          className="w-12 h-12 rounded-lg object-cover border border-gray-300"
                         />
                       </TableCell>
                       <TableCell className="font-medium">{product.name}</TableCell>
@@ -214,9 +229,6 @@ const StockManagement = () => {
                       </TableCell>
                       <TableCell className="font-semibold text-red-600">
                         ฿{product.costThb.toLocaleString()}
-                      </TableCell>
-                      <TableCell className={`font-semibold ${product.sellingPrice - product.costThb >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        ฿{(product.sellingPrice - product.costThb).toLocaleString()}
                       </TableCell>
                       <TableCell className="text-sm">{product.shipmentDate}</TableCell>
                       <TableCell className="text-sm">{product.description}</TableCell>
@@ -256,6 +268,15 @@ const StockManagement = () => {
         open={showAddModal} 
         onOpenChange={setShowAddModal}
         onAddProduct={addProduct}
+        categories={categories}
+      />
+
+      {/* Category Management Modal */}
+      <CategoryManagementModal
+        open={showCategoryModal}
+        onOpenChange={setShowCategoryModal}
+        categories={categories}
+        setCategories={setCategories}
       />
     </div>
   );
