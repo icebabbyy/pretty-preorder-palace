@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Filter, ExternalLink, Edit, Trash2, Settings } from "lucide-react";
+import { Search, Plus, Filter, ExternalLink, Edit, Trash2, Settings, Package } from "lucide-react";
 import AddProductModal from "./AddProductModal";
 
 const StockManagement = () => {
