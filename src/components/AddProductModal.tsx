@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Upload, Image } from "lucide-react";
 
 interface Product {
+  id?: number;
   sku: string;
   name: string;
   category: string;
@@ -27,11 +27,12 @@ interface Product {
 interface AddProductModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddProduct: (product: Product) => void;
+  onAddProduct: (product: any) => void;
   categories: string[];
+  editingProduct?: Product | null;
 }
 
-const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddProductModalProps) => {
+const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editingProduct }: AddProductModalProps) => {
   const [formData, setFormData] = useState<Product>({
     sku: "",
     name: "",
@@ -47,6 +48,28 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
     link: "",
     description: ""
   });
+
+  useEffect(() => {
+    if (editingProduct) {
+      setFormData(editingProduct);
+    } else {
+      setFormData({
+        sku: "",
+        name: "",
+        category: "",
+        image: "",
+        priceYuan: 0,
+        exchangeRate: 1,
+        priceThb: 0,
+        costThb: 0,
+        sellingPrice: 0,
+        status: "พรีออเดอร์",
+        shipmentDate: "",
+        link: "",
+        description: ""
+      });
+    }
+  }, [editingProduct, open]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -86,29 +109,33 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
     onAddProduct(formData);
     onOpenChange(false);
     
-    // Reset form
-    setFormData({
-      sku: "",
-      name: "",
-      category: "",
-      image: "",
-      priceYuan: 0,
-      exchangeRate: 1,
-      priceThb: 0,
-      costThb: 0,
-      sellingPrice: 0,
-      status: "พรีออเดอร์",
-      shipmentDate: "",
-      link: "",
-      description: ""
-    });
+    // Reset form only if not editing
+    if (!editingProduct) {
+      setFormData({
+        sku: "",
+        name: "",
+        category: "",
+        image: "",
+        priceYuan: 0,
+        exchangeRate: 1,
+        priceThb: 0,
+        costThb: 0,
+        sellingPrice: 0,
+        status: "พรีออเดอร์",
+        shipmentDate: "",
+        link: "",
+        description: ""
+      });
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white border-2 border-gray-800">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
         <DialogHeader>
-          <DialogTitle className="text-xl text-gray-800">+ เพิ่มสินค้าใหม่</DialogTitle>
+          <DialogTitle className="text-xl text-purple-800">
+            {editingProduct ? "แก้ไขสินค้า" : "+ เพิ่มสินค้าใหม่"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 mt-6">
@@ -120,7 +147,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
                 value={formData.sku}
                 onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                 placeholder="รหัสสินค้า"
-                className="border-2 border-gray-300"
+                className="border border-purple-200 rounded-lg"
               />
             </div>
             <div>
@@ -130,7 +157,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="ชื่อสินค้า"
-                className="border-2 border-gray-300"
+                className="border border-purple-200 rounded-lg"
               />
             </div>
           </div>
@@ -138,7 +165,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
           <div>
             <Label htmlFor="category">หมวดหมู่ *</Label>
             <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-              <SelectTrigger className="border-2 border-gray-300">
+              <SelectTrigger className="border border-purple-200 rounded-lg">
                 <SelectValue placeholder="เลือกหมวดหมู่" />
               </SelectTrigger>
               <SelectContent>
@@ -152,7 +179,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
           <div>
             <Label>รูปภาพสินค้า</Label>
             <div 
-              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors"
+              className="border-2 border-dashed border-purple-300 rounded-lg p-6 text-center hover:border-purple-400 transition-colors cursor-pointer relative"
               onPaste={handlePaste}
             >
               {formData.image ? (
@@ -162,8 +189,8 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Image className="w-12 h-12 mx-auto text-gray-400" />
-                  <p className="text-gray-600">คลิกเพื่อเลือกรูป หรือ Ctrl+V เพื่อวาง</p>
+                  <Image className="w-12 h-12 mx-auto text-purple-400" />
+                  <p className="text-purple-600">คลิกเพื่อเลือกรูป หรือ Ctrl+V เพื่อวาง</p>
                 </div>
               )}
               <input 
@@ -184,7 +211,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
                 value={formData.priceYuan}
                 onChange={(e) => setFormData({ ...formData, priceYuan: parseFloat(e.target.value) || 0 })}
                 placeholder="0"
-                className="border-2 border-gray-300"
+                className="border border-purple-200 rounded-lg"
               />
             </div>
             <div>
@@ -196,7 +223,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
                 value={formData.exchangeRate}
                 onChange={(e) => setFormData({ ...formData, exchangeRate: parseFloat(e.target.value) || 1 })}
                 placeholder="1"
-                className="border-2 border-gray-300"
+                className="border border-purple-200 rounded-lg"
               />
             </div>
             <div>
@@ -207,7 +234,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
                 value={formData.priceThb}
                 onChange={(e) => setFormData({ ...formData, priceThb: parseFloat(e.target.value) || 0 })}
                 placeholder="0"
-                className="border-2 border-gray-300"
+                className="border border-purple-200 rounded-lg"
               />
             </div>
           </div>
@@ -221,7 +248,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
                 value={formData.costThb}
                 onChange={(e) => setFormData({ ...formData, costThb: parseFloat(e.target.value) || 0 })}
                 placeholder="0"
-                className="border-2 border-gray-300"
+                className="border border-purple-200 rounded-lg"
               />
             </div>
             <div>
@@ -232,7 +259,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
                 value={formData.sellingPrice}
                 onChange={(e) => setFormData({ ...formData, sellingPrice: parseFloat(e.target.value) || 0 })}
                 placeholder="0"
-                className="border-2 border-gray-300"
+                className="border border-purple-200 rounded-lg"
               />
             </div>
           </div>
@@ -241,7 +268,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
             <div>
               <Label htmlFor="status">สถานะ</Label>
               <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                <SelectTrigger className="border-2 border-gray-300">
+                <SelectTrigger className="border border-purple-200 rounded-lg">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -257,7 +284,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
                 type="date"
                 value={formData.shipmentDate}
                 onChange={(e) => setFormData({ ...formData, shipmentDate: e.target.value })}
-                className="border-2 border-gray-300"
+                className="border border-purple-200 rounded-lg"
               />
             </div>
           </div>
@@ -269,7 +296,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
               value={formData.link}
               onChange={(e) => setFormData({ ...formData, link: e.target.value })}
               placeholder="https://..."
-              className="border-2 border-gray-300"
+              className="border border-purple-200 rounded-lg"
             />
           </div>
 
@@ -280,26 +307,26 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories }: AddPr
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="รายละเอียดสินค้า"
-              className="border-2 border-gray-300"
+              className="border border-purple-200 rounded-lg"
               rows={3}
             />
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-300">
+        <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-purple-200">
           <Button 
             variant="outline" 
             onClick={() => onOpenChange(false)}
-            className="border-2 border-gray-800 hover:bg-gray-100"
+            className="border border-purple-300 text-purple-600 hover:bg-purple-50 rounded-lg"
           >
             ยกเลิก
           </Button>
           <Button 
             onClick={handleSubmit} 
-            className="bg-gray-800 hover:bg-gray-700 text-white"
+            className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
             disabled={!formData.name || !formData.category}
           >
-            บันทึก
+            {editingProduct ? "บันทึกการแก้ไข" : "บันทึก"}
           </Button>
         </div>
       </DialogContent>

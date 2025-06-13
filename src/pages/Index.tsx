@@ -66,20 +66,28 @@ const Index = () => {
   }, [orders]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header - Clean white with dark border */}
-      <div className="bg-white border-b-2 border-gray-800 text-gray-800 p-6">
+    <div className="min-h-screen bg-purple-50">
+      {/* Header - Purple gradient like in the image */}
+      <div className="bg-gradient-to-r from-purple-400 to-purple-600 text-white p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold">ระบบการจัดการสต็อกสินค้า</h1>
-              <p className="text-gray-600 mt-2">จัดการและติดตามสินค้าของคุณอย่างมีประสิทธิภาพ</p>
+              <p className="text-purple-100 mt-2">จัดการและติดตามสินค้าของคุณอย่างมีประสิทธิภาพ</p>
+            </div>
+            <div className="flex gap-3">
+              <Button className="bg-purple-500 hover:bg-purple-600 text-white border border-purple-300">
+                + เพิ่มสินค้าใหม่
+              </Button>
+              <Button className="bg-red-500 hover:bg-red-600 text-white border border-red-300">
+                ลำดับลอต
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Navigation - Clean white with dark border */}
+      {/* Navigation - Purple theme */}
       <div className="max-w-7xl mx-auto p-6">
         <div className="flex gap-4 mb-6">
           <Button
@@ -87,8 +95,8 @@ const Index = () => {
             variant={activeTab === "stock" ? "default" : "outline"}
             className={`flex items-center gap-2 ${
               activeTab === "stock" 
-                ? "bg-gray-800 hover:bg-gray-700 text-white border-2 border-gray-800" 
-                : "bg-white border-2 border-gray-800 text-gray-800 hover:bg-gray-100"
+                ? "bg-purple-500 hover:bg-purple-600 text-white border border-purple-400" 
+                : "bg-white border border-purple-300 text-purple-600 hover:bg-purple-50"
             }`}
           >
             <Package className="w-5 h-5" />
@@ -99,8 +107,8 @@ const Index = () => {
             variant={activeTab === "orders" ? "default" : "outline"}
             className={`flex items-center gap-2 ${
               activeTab === "orders" 
-                ? "bg-gray-800 hover:bg-gray-700 text-white border-2 border-gray-800" 
-                : "bg-white border-2 border-gray-800 text-gray-800 hover:bg-gray-100"
+                ? "bg-purple-500 hover:bg-purple-600 text-white border border-purple-400" 
+                : "bg-white border border-purple-300 text-purple-600 hover:bg-purple-50"
             }`}
           >
             <ShoppingCart className="w-5 h-5" />

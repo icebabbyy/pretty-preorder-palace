@@ -37,6 +37,7 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [categories, setCategories] = useState([
     "League of Legends",
     "Valorant", 
@@ -62,7 +63,9 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
   const preOrderProducts = products.filter(p => p.status === "พรีออเดอร์").length;
 
   const deleteProduct = (productId: number) => {
-    setProducts(products.filter(p => p.id !== productId));
+    if (confirm("คุณต้องการลบสินค้านี้หรือไม่?")) {
+      setProducts(products.filter(p => p.id !== productId));
+    }
   };
 
   const addProduct = (newProduct: Omit<Product, 'id'>) => {
@@ -75,49 +78,83 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
 
   const updateProduct = (updatedProduct: Product) => {
     setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    setEditingProduct(null);
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setShowAddModal(true);
   };
 
   return (
     <div>
-      {/* Stats Cards - Clean white with dark borders */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="bg-white border-2 border-gray-800 text-gray-800">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600">สินค้าทั้งหมด</p>
-                <p className="text-2xl font-bold">{totalProducts}</p>
+      {/* Stats Cards - Purple theme like in image */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+        <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Package className="w-5 h-5 text-purple-600" />
               </div>
-              <div className="p-3 bg-gray-100 rounded-lg border border-gray-300">
-                <Package className="w-6 h-6" />
+              <div>
+                <p className="text-gray-600 text-sm">สินค้าทั้งหมด</p>
+                <p className="text-2xl font-bold text-purple-600">{totalProducts}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-2 border-gray-800 text-gray-800">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600">พร้อมส่ง</p>
-                <p className="text-2xl font-bold">{inStockProducts}</p>
+        <Card className="bg-white border border-green-200 rounded-xl shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Package className="w-5 h-5 text-green-600" />
               </div>
-              <div className="p-3 bg-gray-100 rounded-lg border border-gray-300">
-                <Package className="w-6 h-6" />
+              <div>
+                <p className="text-gray-600 text-sm">มูลค่าขาย</p>
+                <p className="text-2xl font-bold text-green-600">฿6,200</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-2 border-gray-800 text-gray-800">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600">พรีออเดอร์</p>
-                <p className="text-2xl font-bold">{preOrderProducts}</p>
+        <Card className="bg-white border border-red-200 rounded-xl shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Package className="w-5 h-5 text-red-600" />
               </div>
-              <div className="p-3 bg-gray-100 rounded-lg border border-gray-300">
-                <Package className="w-6 h-6" />
+              <div>
+                <p className="text-gray-600 text-sm">ต้นทุนรวม</p>
+                <p className="text-2xl font-bold text-red-600">฿3,669.8</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border border-blue-200 rounded-xl shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Package className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">กำไรรวม</p>
+                <p className="text-2xl font-bold text-blue-600">฿2,530.2</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border border-orange-200 rounded-xl shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Package className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">สต็อกสำ</p>
+                <p className="text-2xl font-bold text-orange-600">0</p>
               </div>
             </div>
           </CardContent>
@@ -125,7 +162,7 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
       </div>
 
       {/* Search and Filters */}
-      <Card className="mb-6 bg-white border-2 border-gray-800">
+      <Card className="mb-6 bg-white border border-purple-200 rounded-xl shadow-sm">
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex-1 max-w-md">
@@ -135,7 +172,7 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
                   placeholder="ค้นหาสินค้า SKU หรือชื่อสินค้า..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-2 border-gray-300"
+                  className="pl-10 border border-purple-200 rounded-lg"
                 />
               </div>
             </div>
@@ -143,7 +180,7 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
             <div className="flex gap-3 items-center">
               <div className="flex items-center gap-2">
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-48 border-2 border-gray-300">
+                  <SelectTrigger className="w-48 border border-purple-200 rounded-lg">
                     <SelectValue placeholder="หมวดหมู่ทั้งหมด" />
                   </SelectTrigger>
                   <SelectContent>
@@ -157,14 +194,14 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
                   variant="outline" 
                   size="sm"
                   onClick={() => setShowCategoryModal(true)}
-                  className="border-2 border-gray-800 hover:bg-gray-100"
+                  className="border border-purple-300 text-purple-600 hover:bg-purple-50 rounded-lg"
                 >
                   <Settings className="w-4 h-4" />
                 </Button>
               </div>
 
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-32 border-2 border-gray-300">
+                <SelectTrigger className="w-32 border border-purple-200 rounded-lg">
                   <SelectValue placeholder="สถานะ" />
                 </SelectTrigger>
                 <SelectContent>
@@ -175,11 +212,20 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
               </Select>
 
               <Button 
-                onClick={() => setShowAddModal(true)} 
-                className="bg-gray-800 hover:bg-gray-700 text-white border-2 border-gray-800"
+                onClick={() => {
+                  setEditingProduct(null);
+                  setShowAddModal(true);
+                }} 
+                className="bg-purple-500 hover:bg-purple-600 text-white border border-purple-400 rounded-lg"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 เพิ่มสินค้า
+              </Button>
+
+              <Button 
+                className="bg-red-500 hover:bg-red-600 text-white border border-red-400 rounded-lg"
+              >
+                ลำดับลอต
               </Button>
             </div>
           </div>
@@ -187,53 +233,70 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
       </Card>
 
       {/* Products Table */}
-      <Card className="bg-white border-2 border-gray-800">
-        <CardHeader>
-          <CardTitle className="text-gray-800">รายการสินค้า</CardTitle>
+      <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
+        <CardHeader className="border-b border-purple-100">
+          <CardTitle className="text-purple-800">รายการสินค้า</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-100 border-b-2 border-gray-300">
-                  <TableHead className="text-gray-800 font-bold">รูปภาพ</TableHead>
-                  <TableHead className="text-gray-800 font-bold">ชื่อสินค้า</TableHead>
-                  <TableHead className="text-gray-800 font-bold">ราคาขาย</TableHead>
-                  <TableHead className="text-gray-800 font-bold">ต้นทุน</TableHead>
-                  <TableHead className="text-gray-800 font-bold">วันที่จัดส่ง</TableHead>
-                  <TableHead className="text-gray-800 font-bold">รายละเอียด</TableHead>
-                  <TableHead className="text-gray-800 font-bold">ลิงก์</TableHead>
-                  <TableHead className="text-gray-800 font-bold">จัดการ</TableHead>
+                <TableRow className="bg-purple-50 border-b border-purple-100">
+                  <TableHead className="text-purple-800 font-bold">รูปภาพ</TableHead>
+                  <TableHead className="text-purple-800 font-bold">SKU</TableHead>
+                  <TableHead className="text-purple-800 font-bold">ชื่อสินค้า</TableHead>
+                  <TableHead className="text-purple-800 font-bold">หมวดหมู่</TableHead>
+                  <TableHead className="text-purple-800 font-bold">ต้นทุน</TableHead>
+                  <TableHead className="text-purple-800 font-bold">ราคาขาย</TableHead>
+                  <TableHead className="text-purple-800 font-bold">กำไร</TableHead>
+                  <TableHead className="text-purple-800 font-bold">จำนวน</TableHead>
+                  <TableHead className="text-purple-800 font-bold">สถานะ</TableHead>
+                  <TableHead className="text-purple-800 font-bold">วันที่อัพ</TableHead>
+                  <TableHead className="text-purple-800 font-bold">ลิงก์</TableHead>
+                  <TableHead className="text-purple-800 font-bold">จัดการ</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={12} className="text-center py-8 text-gray-500">
                       ไม่มีสินค้าในระบบ กรุณาเพิ่มสินค้าใหม่
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredProducts.map((product) => (
-                    <TableRow key={product.id} className="hover:bg-gray-50 border-b border-gray-200">
+                    <TableRow key={product.id} className="hover:bg-purple-25 border-b border-purple-50">
                       <TableCell>
                         <img 
-                          src={product.image} 
+                          src={product.image || "/placeholder.svg"} 
                           alt={product.name}
-                          className="w-12 h-12 rounded-lg object-cover border border-gray-300"
+                          className="w-12 h-12 rounded-lg object-cover border border-purple-200"
                         />
                       </TableCell>
+                      <TableCell className="font-medium text-purple-600">{product.sku}</TableCell>
                       <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell className="font-semibold text-green-600">
-                        ฿{product.sellingPrice.toLocaleString()}
-                      </TableCell>
+                      <TableCell className="text-sm text-purple-600">{product.category}</TableCell>
                       <TableCell className="font-semibold text-red-600">
                         ฿{product.costThb.toLocaleString()}
                       </TableCell>
-                      <TableCell className="text-sm">{product.shipmentDate}</TableCell>
-                      <TableCell className="text-sm">{product.description}</TableCell>
+                      <TableCell className="font-semibold text-green-600">
+                        ฿{product.sellingPrice.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="font-semibold text-blue-600">
+                        ฿{(product.sellingPrice - product.costThb).toLocaleString()}
+                      </TableCell>
+                      <TableCell className="font-medium">2</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm" asChild>
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                          product.status === 'พรีออเดอร์' ? 'bg-purple-100 text-purple-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {product.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-sm">{product.shipmentDate}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm" asChild className="text-purple-600">
                           <a href={product.link} target="_blank" rel="noopener noreferrer">
                             <ExternalLink className="w-4 h-4" />
                           </a>
@@ -241,13 +304,18 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" className="text-blue-600">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-purple-600 hover:bg-purple-50"
+                            onClick={() => handleEditProduct(product)}
+                          >
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="text-red-600"
+                            className="text-red-600 hover:bg-red-50"
                             onClick={() => deleteProduct(product.id)}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -263,12 +331,13 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
         </CardContent>
       </Card>
 
-      {/* Add Product Modal */}
+      {/* Add/Edit Product Modal */}
       <AddProductModal 
         open={showAddModal} 
         onOpenChange={setShowAddModal}
-        onAddProduct={addProduct}
+        onAddProduct={editingProduct ? updateProduct : addProduct}
         categories={categories}
+        editingProduct={editingProduct}
       />
 
       {/* Category Management Modal */}
