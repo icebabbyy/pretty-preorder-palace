@@ -1,4 +1,14 @@
 
+export interface ProductOption {
+  id: string;
+  name: string;
+  image: string;
+  costThb: number;
+  sellingPrice: number;
+  quantity: number;
+  profit: number;
+}
+
 export interface Product {
   id: number;
   sku: string;
@@ -16,6 +26,7 @@ export interface Product {
   link: string;
   description: string;
   quantity?: number;
+  options?: ProductOption[]; // เพิ่ม array ของตัวเลือก
 }
 
 export interface OrderItem {
@@ -42,3 +53,4 @@ export interface Order {
   username: string;
   address: string;
 }
+

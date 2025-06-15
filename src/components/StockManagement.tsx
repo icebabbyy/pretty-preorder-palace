@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, Plus, ExternalLink, Edit, Trash2, Settings, Package } from "lucide-react";
 import AddProductModal from "./AddProductModal";
 import CategoryManagementModal from "./CategoryManagementModal";
+import type { Product, ProductOption } from "@/types";
 
 interface Product {
   id: number;
@@ -26,6 +26,7 @@ interface Product {
   link: string;
   description: string;
   quantity?: number;
+  options?: ProductOption[];
 }
 
 interface StockManagementProps {
@@ -202,9 +203,62 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
                   </TableRow>
                 ) : (
                   filteredProducts.map((product) => {
+                    // ถ้ามี options ให้โชว์เป็นรายการ
+                    if (product.options && product.options.length > 0) {
+                      return product.options.map((opt, idx) => (
+                        <TableRow key={product.id + "_opt_" + opt.id}>
+                          <TableCell>
+                            <img 
+                              src={opt.image || "/placeholder.svg"}
+                              alt={opt.name || product.name}
+                              className="w-12 h-12 rounded-lg object-cover border border-purple-200"
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium text-purple-600">{product.sku}</TableCell>
+                          <TableCell className="font-medium">{product.name} <span className="text-xs text-gray-400">({opt.name})</span></TableCell>
+                          <TableCell className="text-sm text-purple-600">{product.category}</TableCell>
+                          <TableCell className="font-semibold text-red-600">฿{opt.costThb.toLocaleString()}</TableCell>
+                          <TableCell className="font-semibold text-green-600">฿{opt.sellingPrice.toLocaleString()}</TableCell>
+                          <TableCell className="font-medium">{opt.quantity}</TableCell>
+                          <TableCell>
+                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(opt.quantity, product.status)}`}>
+                              {getStockStatus(opt.quantity, product.status)}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" asChild className="text-purple-600">
+                              <a href={product.link} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            </Button>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-purple-600 hover:bg-purple-50"
+                                onClick={() => handleEditProduct(product)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-red-600 hover:bg-red-50"
+                                onClick={() => deleteProduct(product.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ));
+                    }
+                    // ไม่มี options ให้โชว์ปกติ
                     const quantity = product.quantity || 2;
                     return (
-                      <TableRow key={product.id} className="hover:bg-purple-25 border-b border-purple-50">
+                      <TableRow key={product.id}>
                         <TableCell>
                           <img 
                             src={product.image || "/placeholder.svg"} 

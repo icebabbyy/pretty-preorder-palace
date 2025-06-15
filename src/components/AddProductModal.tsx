@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, Image } from "lucide-react";
+import { nanoid } from "nanoid";
+import { Product, ProductOption } from "@/types";
 
 interface Product {
   id?: number;
@@ -51,6 +53,8 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     description: ""
   });
 
+  const [options, setOptions] = useState<ProductOption[]>([]);
+
   // --- Auto-calculate ราคาบาท (THB) ---
   useEffect(() => {
     const y = parseFloat(formData.priceYuan as any) || 0;
@@ -79,6 +83,14 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   useEffect(() => {
     if (editingProduct) {
       setFormData(editingProduct);
+      if (editingProduct.options) {
+        setOptions(editingProduct.options.map(opt => ({
+          ...opt,
+          id: opt.id || nanoid()
+        })));
+      } else {
+        setOptions([]);
+      }
     } else {
       setFormData({
         sku: "",
@@ -96,6 +108,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
         link: "",
         description: ""
       });
+      setOptions([]);
     }
   }, [editingProduct, open]);
 
@@ -128,15 +141,97 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     }
   };
 
+  const handleOptionImageUpload = (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setOptions(opts => opts.map((op, i) =>
+          i === idx ? { ...op, image: ev.target?.result as string } : op
+        ));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleOptionPaste = (idx: number, e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            setOptions(opts => opts.map((op, ii) =>
+              ii === idx ? { ...op, image: ev.target?.result as string } : op
+            ));
+          };
+          reader.readAsDataURL(file);
+        }
+        break;
+      }
+    }
+  };
+
+  const addOption = () => {
+    setOptions(opts => [
+      ...opts,
+      {
+        id: nanoid(),
+        name: "",
+        image: "",
+        costThb: 0,
+        sellingPrice: 0,
+        quantity: 0,
+        profit: 0
+      }
+    ]);
+  };
+
+  const removeOption = (idx: number) => {
+    setOptions(opts => opts.filter((_, i) => i !== idx));
+  };
+
+  const updateOption = (idx: number, update: Partial<Omit<ProductOption, "id" | "profit">>) => {
+    setOptions(opts =>
+      opts.map((op, i) =>
+        i === idx
+          ? {
+              ...op,
+              ...update,
+              profit: ((update.sellingPrice ?? op.sellingPrice) - (update.costThb ?? op.costThb)),
+            }
+          : op
+      )
+    );
+  };
+
+  // อัปเดตกำไรออโต้ ทุกครั้งที่ option ตัวใดๆเปลี่ยน
+  useEffect(() => {
+    setOptions(opts =>
+      opts.map(op => ({ ...op, profit: op.sellingPrice - op.costThb }))
+    );
+  }, [options.length]);
+
   const handleSubmit = () => {
     if (!formData.name || !formData.category) {
       alert("กรุณากรอกชื่อสินค้าและเลือกหมวดหมู่");
       return;
     }
-
-    onAddProduct(formData);
+    // ถ้ามี options ให้อัปเดต quantity หลัก = จำนวนรวมทุก option 
+    let quantity = formData.quantity;
+    if (options.length > 0) {
+      quantity = options.reduce((sum, o) => sum + (o.quantity || 0), 0);
+    }
+    const dataToSave = {
+      ...formData,
+      quantity,
+      options: options.length > 0 ? options : undefined
+    };
+    onAddProduct(dataToSave);
     onOpenChange(false);
-    
+
     if (!editingProduct) {
       setFormData({
         sku: "",
@@ -154,18 +249,18 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
         link: "",
         description: ""
       });
+      setOptions([]);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
         <DialogHeader>
           <DialogTitle className="text-xl text-purple-800">
             {editingProduct ? "แก้ไขสินค้า" : "+ เพิ่มสินค้าใหม่"}
           </DialogTitle>
         </DialogHeader>
-
         <div className="space-y-4 mt-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -347,6 +442,99 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
               className="border border-purple-200 rounded-lg"
               rows={3}
             />
+          </div>
+
+          <div>
+            <Label className="font-semibold">ตัวเลือกสินค้า (ถ้ามี)</Label>
+            <div className="space-y-2">
+              {options.map((option, idx) => (
+                <div key={option.id} className="border border-purple-200 p-4 rounded-lg mb-2 relative bg-purple-50">
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-2">
+                      <Label>ชื่อ/ตัวเลือก</Label>
+                      <Input
+                        value={option.name}
+                        onChange={e => updateOption(idx, { name: e.target.value })}
+                        placeholder="เช่น สีแดง, L, หรือลายแมว"
+                        className="border border-purple-200 rounded-lg"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label>รูปภาพ</Label>
+                      <div
+                        className="border-2 border-dashed border-purple-300 rounded cursor-pointer relative text-center w-20 h-20 mx-auto bg-white"
+                        onPaste={e => handleOptionPaste(idx, e)}
+                      >
+                        {option.image ? (
+                          <img src={option.image} alt="Preview" className="w-20 h-20 object-cover rounded" />
+                        ) : (
+                          <span className="flex items-center justify-center h-full text-gray-400">+</span>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={e => handleOptionImageUpload(idx, e)}
+                          className="absolute inset-0 w-full h-full opacity-0"
+                        />
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <Label>ต้นทุนรวม (บาท)</Label>
+                      <Input
+                        type="number"
+                        value={option.costThb}
+                        onChange={e => updateOption(idx, { costThb: parseFloat(e.target.value) || 0 })}
+                        className="border border-purple-200 rounded-lg"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label>ราคาขาย (บาท)</Label>
+                      <Input
+                        type="number"
+                        value={option.sellingPrice}
+                        onChange={e => updateOption(idx, { sellingPrice: parseFloat(e.target.value) || 0 })}
+                        className="border border-purple-200 rounded-lg"
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <Label>จำนวน</Label>
+                      <Input
+                        type="number"
+                        value={option.quantity}
+                        onChange={e => updateOption(idx, { quantity: parseInt(e.target.value) || 0 })}
+                        className="border border-purple-200 rounded-lg"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label>กำไร</Label>
+                      <Input
+                        readOnly
+                        value={option.profit}
+                        className="border border-purple-200 rounded-lg bg-gray-50"
+                      />
+                    </div>
+                    <div className="col-span-1 flex items-center">
+                      <button
+                        type="button"
+                        className="text-red-500 underline text-sm ml-2"
+                        onClick={() => removeOption(idx)}
+                        tabIndex={-1}
+                      >
+                        ลบ
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="secondary"
+                className="text-purple-700 border border-purple-300 rounded"
+                onClick={addOption}
+              >
+                + เพิ่มตัวเลือกสินค้า
+              </Button>
+            </div>
           </div>
         </div>
 
