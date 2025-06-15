@@ -10,8 +10,9 @@ import {
   fetchProducts,
   addProduct,
   updateProduct,
-  deleteProduct
-} from "@/utils/googleSheets";
+  deleteProduct,
+  fetchOrders
+} from "@/utils/supabase";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("stock");
@@ -20,36 +21,64 @@ const Index = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
-  // LOAD PRODUCTS จาก Google Sheets
+  // LOAD PRODUCTS จาก Supabase
   useEffect(() => {
     setLoadingProducts(true);
     fetchProducts()
       .then((prods) => {
-        setProducts(prods);
+        // แปลงข้อมูลจาก Supabase format เป็น frontend format
+        const convertedProducts = prods.map(p => ({
+          ...p,
+          priceYuan: p.price_yuan || 0,
+          exchangeRate: p.exchange_rate || 5,
+          priceThb: p.price_thb || 0,
+          importCost: p.import_cost || 0,
+          costThb: p.cost_thb || 0,
+          sellingPrice: p.selling_price || 0,
+          shipmentDate: p.shipment_date || '',
+        }));
+        setProducts(convertedProducts);
         // unique categories from products
-        const uniqCats = [...new Set(prods.map((p) => p.category).filter(Boolean))];
+        const uniqCats = [...new Set(convertedProducts.map((p) => p.category).filter(Boolean))];
         setCategories(uniqCats);
       })
       .catch((err) => {
-        alert('โหลดสินค้าจาก Google Sheets ไม่สำเร็จ');
+        console.error('Error loading products:', err);
+        alert('โหลดสินค้าจาก Supabase ไม่สำเร็จ: ' + err.message);
         setProducts([]);
         setCategories([]);
       })
       .finally(() => setLoadingProducts(false));
   }, []);
 
-  // orders ส่วนนี้ใช้ Google Sheets อยู่แล้ว
+  // LOAD ORDERS จาก Supabase
   useEffect(() => {
-    const savedOrders = localStorage.getItem('stockOrders');
-    if (savedOrders) setOrders(JSON.parse(savedOrders));
+    fetchOrders()
+      .then((orderData) => {
+        // แปลงข้อมูลจาก Supabase format เป็น frontend format
+        const convertedOrders = orderData.map(o => ({
+          ...o,
+          totalSellingPrice: o.total_selling_price || 0,
+          totalCost: o.total_cost || 0,
+          shippingCost: o.shipping_cost || 0,
+          orderDate: o.order_date || '',
+        }));
+        setOrders(convertedOrders);
+      })
+      .catch((err) => {
+        console.error('Error loading orders:', err);
+        // ถ้าไม่สามารถโหลด orders ได้ ให้ใช้ localStorage เป็นทางเลือก
+        const savedOrders = localStorage.getItem('stockOrders');
+        if (savedOrders) setOrders(JSON.parse(savedOrders));
+      });
   }, []);
 
+  // บันทึก orders ใน localStorage เป็น backup
   useEffect(() => {
     if (orders.length > 0) {
       try {
         localStorage.setItem('stockOrders', JSON.stringify(orders));
       } catch (err: any) {
-        alert('ข้อผิดพลาด: ออเดอร์เก็บใน localStorage เต็ม ไม่สามารถบันทึกได้ กรุณาลบออเดอร์บางส่วน');
         console.warn('QuotaExceeded saving orders to localStorage', err);
       }
     }
@@ -125,4 +154,3 @@ const Index = () => {
 };
 
 export default Index;
-

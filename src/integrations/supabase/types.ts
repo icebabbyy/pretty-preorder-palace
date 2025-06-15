@@ -9,7 +9,117 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      orders: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          deposit: number | null
+          discount: number | null
+          id: number
+          items: Json
+          order_date: string | null
+          profit: number | null
+          shipping_cost: number | null
+          total_cost: number | null
+          total_selling_price: number | null
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          deposit?: number | null
+          discount?: number | null
+          id?: number
+          items: Json
+          order_date?: string | null
+          profit?: number | null
+          shipping_cost?: number | null
+          total_cost?: number | null
+          total_selling_price?: number | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          deposit?: number | null
+          discount?: number | null
+          id?: number
+          items?: Json
+          order_date?: string | null
+          profit?: number | null
+          shipping_cost?: number | null
+          total_cost?: number | null
+          total_selling_price?: number | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category: string | null
+          cost_thb: number | null
+          created_at: string | null
+          description: string | null
+          exchange_rate: number | null
+          id: number
+          image: string | null
+          import_cost: number | null
+          link: string | null
+          name: string
+          options: Json | null
+          price_yuan: number
+          quantity: number
+          selling_price: number | null
+          shipment_date: string | null
+          sku: string
+          "status TEXT DEFAULT": string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          cost_thb?: number | null
+          created_at?: string | null
+          description?: string | null
+          exchange_rate?: number | null
+          id?: number
+          image?: string | null
+          import_cost?: number | null
+          link?: string | null
+          name: string
+          options?: Json | null
+          price_yuan?: number
+          quantity?: number
+          selling_price?: number | null
+          shipment_date?: string | null
+          sku: string
+          "status TEXT DEFAULT"?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          cost_thb?: number | null
+          created_at?: string | null
+          description?: string | null
+          exchange_rate?: number | null
+          id?: number
+          image?: string | null
+          import_cost?: number | null
+          link?: string | null
+          name?: string
+          options?: Json | null
+          price_yuan?: number
+          quantity?: number
+          selling_price?: number | null
+          shipment_date?: string | null
+          sku?: string
+          "status TEXT DEFAULT"?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

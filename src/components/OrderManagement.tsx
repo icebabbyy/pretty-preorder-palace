@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,10 +14,10 @@ import OrderFilterBar from "./OrderFilterBar";
 import OrdersTable from "./OrdersTable";
 import {
   fetchOrders,
-  addOrder as addOrderToSheet,
-  updateOrder as updateOrderInSheet,
-  deleteOrder as deleteOrderFromSheet,
-} from "@/utils/googleSheets";
+  addOrder as addOrderToSupabase,
+  updateOrder as updateOrderInSupabase,
+  deleteOrder as deleteOrderFromSupabase,
+} from "@/utils/supabase";
 import type { Product, Order, OrderItem } from "@/types";
 
 interface OrderManagementProps {
@@ -31,12 +32,6 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
-
-  // LOAD DATA จาก Google Sheets
-  useEffect(() => {
-    fetchOrders().then(setOrders).catch(console.error);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch =
@@ -61,24 +56,55 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
     "จัดส่งแล้ว": orders.filter(o => o.status === "จัดส่งแล้ว").length,
   };
 
-  // ลบ order ใน Google Sheets
+  // ลบ order ใน Supabase
   const deleteOrder = async (orderId: number) => {
-    await deleteOrderFromSheet(orderId);
-    setOrders(orders.filter(o => o.id !== orderId));
+    try {
+      await deleteOrderFromSupabase(orderId);
+      setOrders(orders.filter(o => o.id !== orderId));
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      alert('ไม่สามารถลบออเดอร์ได้');
+    }
   };
 
-  // เพิ่ม order ใหม่ใน Google Sheets
+  // เพิ่ม order ใหม่ใน Supabase
   const addOrder = async (newOrder: Omit<Order, 'id'>) => {
-    const createdOrder = await addOrderToSheet(newOrder);
-    setOrders([...orders, createdOrder]);
+    try {
+      const createdOrder = await addOrderToSupabase(newOrder);
+      // แปลงข้อมูลจาก Supabase format เป็น frontend format
+      const convertedOrder = {
+        ...createdOrder,
+        totalSellingPrice: createdOrder.total_selling_price || 0,
+        totalCost: createdOrder.total_cost || 0,
+        shippingCost: createdOrder.shipping_cost || 0,
+        orderDate: createdOrder.order_date || '',
+      };
+      setOrders([...orders, convertedOrder]);
+    } catch (error) {
+      console.error('Error adding order:', error);
+      alert('ไม่สามารถเพิ่มออเดอร์ได้');
+    }
   };
 
-  // อัปเดต order ใน Google Sheets
+  // อัปเดต order ใน Supabase
   const updateOrder = async (updatedOrder: Order) => {
-    const result = await updateOrderInSheet(updatedOrder);
-    setOrders(orders.map(order =>
-      order.id === updatedOrder.id ? result : order
-    ));
+    try {
+      const result = await updateOrderInSupabase(updatedOrder);
+      // แปลงข้อมูลจาก Supabase format เป็น frontend format
+      const convertedOrder = {
+        ...result,
+        totalSellingPrice: result.total_selling_price || 0,
+        totalCost: result.total_cost || 0,
+        shippingCost: result.shipping_cost || 0,
+        orderDate: result.order_date || '',
+      };
+      setOrders(orders.map(order =>
+        order.id === updatedOrder.id ? convertedOrder : order
+      ));
+    } catch (error) {
+      console.error('Error updating order:', error);
+      alert('ไม่สามารถอัปเดตออเดอร์ได้');
+    }
   };
 
   const handleEdit = (order: Order) => {
