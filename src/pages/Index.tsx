@@ -1,11 +1,53 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Package, ShoppingCart } from "lucide-react";
 import StockManagement from "@/components/StockManagement";
 import OrderManagement from "@/components/OrderManagement";
-import { Product, Order } from "@/types/inventory";
+
+interface Product {
+  id: number;
+  sku: string;
+  name: string;
+  category: string;
+  image: string;
+  priceYuan: number;
+  exchangeRate: number;
+  priceThb: number;
+  importCost: number;
+  costThb: number;
+  sellingPrice: number;
+  status: string;
+  shipmentDate: string;
+  link: string;
+  description: string;
+  quantity?: number;
+}
+
+interface OrderItem {
+  productId: number;
+  productName: string;
+  productImage: string;
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+  unitCost: number;
+}
+
+interface Order {
+  id: number;
+  items: OrderItem[];
+  totalSellingPrice: number;
+  totalCost: number;
+  shippingCost: number;
+  deposit: number;
+  discount: number;
+  profit: number;
+  status: string;
+  orderDate: string;
+  username: string;
+  address: string;
+}
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("stock");
@@ -22,7 +64,7 @@ const Index = () => {
       if (savedCategories && savedProducts) {
         setCategories(JSON.parse(savedCategories));
         setProducts(JSON.parse(savedProducts));
-        // console.log('Loaded data from localStorage');
+        console.log('Loaded data from localStorage');
       } else {
         // Sample data
         const sampleCategories = [
@@ -53,8 +95,7 @@ const Index = () => {
             shipmentDate: "2024-01-15",
             link: "https://example.com",
             description: "RP Card สำหรับเกม League of Legends",
-            quantity: 5,
-            variants: [] // No variants for sample
+            quantity: 5
           },
           {
             id: 2,
@@ -72,8 +113,7 @@ const Index = () => {
             shipmentDate: "2024-02-01",
             link: "https://example.com",
             description: "VP สำหรับเกม Valorant",
-            quantity: 2,
-            variants: []
+            quantity: 2
           }
         ];
         
@@ -82,7 +122,7 @@ const Index = () => {
         localStorage.setItem('inventory-categories', JSON.stringify(sampleCategories));
         localStorage.setItem('inventory-products', JSON.stringify(sampleProducts));
         localStorage.setItem('products', JSON.stringify(sampleProducts));
-        // console.log('Created initial sample data and saved to localStorage');
+        console.log('Created initial sample data and saved to localStorage');
       }
       
       if (savedOrders) {
@@ -97,7 +137,7 @@ const Index = () => {
       localStorage.setItem('inventory-products', JSON.stringify(products));
       localStorage.setItem('products', JSON.stringify(products));
       localStorage.setItem('stockProducts', JSON.stringify(products));
-      // console.log('Saved products to localStorage:', products.length);
+      console.log('Saved products to localStorage:', products.length);
     }
   }, [products]);
 

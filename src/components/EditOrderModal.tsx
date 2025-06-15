@@ -4,7 +4,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Order, OrderItem } from "@/types/inventory";
+import { updateOrder as updateOrderInSheet } from "@/utils/googleSheets";
+
+interface OrderItem {
+  productId: number;
+  productName: string;
+  productImage: string;
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+  unitCost: number;
+}
+
+interface Order {
+  id: number;
+  items: OrderItem[];
+  totalSellingPrice: number;
+  totalCost: number;
+  shippingCost: number;
+  deposit: number;
+  discount: number;
+  profit: number;
+  status: string;
+  orderDate: string;
+  username: string;
+  address: string;
+}
 
 interface EditOrderModalProps {
   open: boolean;
@@ -21,6 +46,7 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
   const [username, setUsername] = useState("");
   const [address, setAddress] = useState("");
   const [items, setItems] = useState<OrderItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (order) {
@@ -35,13 +61,13 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
   }, [order]);
 
   const updateItemQuantity = (index: number, quantity: number) => {
-    setItems(items.map((item, i) => 
+    setItems(items.map((item, i) =>
       i === index ? { ...item, quantity } : item
     ));
   };
 
   const updateItemCost = (index: number, unitCost: number) => {
-    setItems(items.map((item, i) => 
+    setItems(items.map((item, i) =>
       i === index ? { ...item, unitCost } : item
     ));
   };
@@ -50,16 +76,18 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!order || !username || !address || items.length === 0) {
       alert("กรุณากรอกข้อมูลให้ครบถ้วน");
       return;
     }
+    setLoading(true);
 
     const totalSellingPrice = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
     const totalCost = items.reduce((sum, item) => sum + (item.unitCost * item.quantity), 0);
     const shipping = parseFloat(shippingCost) || 0;
     const discountAmount = parseFloat(discount) || 0;
+    const depositAmount = parseFloat(deposit) || 0;
     const finalSellingPrice = totalSellingPrice - discountAmount;
 
     const updatedOrder: Order = {
@@ -68,7 +96,7 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
       totalSellingPrice: finalSellingPrice,
       totalCost,
       shippingCost: shipping,
-      deposit: parseFloat(deposit) || 0,
+      deposit: depositAmount,
       discount: discountAmount,
       profit: finalSellingPrice - totalCost - shipping,
       status,
@@ -76,8 +104,15 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
       address
     };
 
-    onUpdateOrder(updatedOrder);
-    onOpenChange(false);
+    try {
+      const result = await updateOrderInSheet(updatedOrder);
+      onUpdateOrder(result);
+      onOpenChange(false);
+    } catch (e) {
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!order) return null;
@@ -85,9 +120,9 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
   const totalSellingPrice = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
   const totalCost = items.reduce((sum, item) => sum + (item.unitCost * item.quantity), 0);
   const discountAmount = parseFloat(discount) || 0;
+  const depositAmount = parseFloat(deposit) || 0;
   const finalSellingPrice = totalSellingPrice - discountAmount;
   const shipping = parseFloat(shippingCost) || 0;
-  const depositAmount = parseFloat(deposit) || 0;
   const profit = finalSellingPrice - totalCost - shipping;
 
   return (
@@ -96,11 +131,10 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
         <DialogHeader>
           <DialogTitle className="text-xl text-purple-700">✏️ แก้ไขออเดอร์</DialogTitle>
         </DialogHeader>
-
         <div className="space-y-4 mt-6">
           <div>
             <Label htmlFor="username">Username *</Label>
-            <Input 
+            <Input
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -108,10 +142,9 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
               className="border border-purple-200 rounded-lg"
             />
           </div>
-
           <div>
             <Label htmlFor="address">ที่อยู่ *</Label>
-            <Input 
+            <Input
               id="address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
@@ -119,15 +152,14 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
               className="border border-purple-200 rounded-lg"
             />
           </div>
-
           <div>
             <Label>รายการสินค้า</Label>
             <div className="space-y-3">
               {items.map((item, index) => (
                 <div key={index} className="p-3 bg-purple-50 rounded-lg border border-purple-200">
                   <div className="flex items-center gap-3 mb-3">
-                    <img 
-                      src={item.productImage} 
+                    <img
+                      src={item.productImage}
                       alt={item.productName}
                       className="w-12 h-12 rounded object-cover border border-purple-200"
                     />
@@ -144,7 +176,6 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
                       ลบ
                     </Button>
                   </div>
-                  
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label>จำนวน</Label>
@@ -170,11 +201,10 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
               ))}
             </div>
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="shippingCost">ค่าจัดส่ง (฿)</Label>
-              <Input 
+              <Input
                 id="shippingCost"
                 type="number"
                 value={shippingCost}
@@ -183,10 +213,9 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
                 className="border border-purple-200 rounded-lg"
               />
             </div>
-
             <div>
               <Label htmlFor="discount">ส่วนลด (฿)</Label>
-              <Input 
+              <Input
                 id="discount"
                 type="number"
                 value={discount}
@@ -196,11 +225,10 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
               />
             </div>
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="deposit">มัดจำ (฿)</Label>
-              <Input 
+              <Input
                 id="deposit"
                 type="number"
                 value={deposit}
@@ -209,7 +237,6 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
                 className="border border-purple-200 rounded-lg"
               />
             </div>
-
             <div>
               <Label htmlFor="status">สถานะ</Label>
               <Select value={status} onValueChange={setStatus}>
@@ -225,7 +252,6 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
               </Select>
             </div>
           </div>
-
           <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
             <h4 className="font-medium text-purple-700 mb-2">สรุปออเดอร์</h4>
             <div className="space-y-1 text-sm">
@@ -283,21 +309,21 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
             </div>
           </div>
         </div>
-
         <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-purple-200">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => onOpenChange(false)}
             className="border border-purple-300 text-purple-600 hover:bg-purple-50 rounded-lg"
+            disabled={loading}
           >
             ยกเลิก
           </Button>
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
-            disabled={!username || !address || items.length === 0}
+            disabled={!username || !address || items.length === 0 || loading}
           >
-            บันทึก
+            {loading ? "กำลังบันทึก..." : "บันทึก"}
           </Button>
         </div>
       </DialogContent>

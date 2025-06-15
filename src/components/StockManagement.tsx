@@ -1,13 +1,32 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, ExternalLink, Edit, Trash2, Settings } from "lucide-react";
+import { Search, Plus, ExternalLink, Edit, Trash2, Settings, Package } from "lucide-react";
 import AddProductModal from "./AddProductModal";
 import CategoryManagementModal from "./CategoryManagementModal";
-import { Product, ProductVariant } from "@/types/inventory";
+
+interface Product {
+  id: number;
+  sku: string;
+  name: string;
+  category: string;
+  image: string;
+  priceYuan: number;
+  exchangeRate: number;
+  priceThb: number;
+  importCost: number;
+  costThb: number;
+  sellingPrice: number;
+  status: string;
+  shipmentDate: string;
+  link: string;
+  description: string;
+  quantity?: number;
+}
 
 interface StockManagementProps {
   products: Product[];
@@ -32,15 +51,12 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
     "ETC"
   ]);
 
-  // DEBUG: log products for troubleshooting
-  // Remove or comment after debugging
-  // console.log("StockManagement products:", products);
-
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          product.sku.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
     const matchesStatus = statusFilter === "all" || product.status === statusFilter;
+    
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
@@ -50,7 +66,6 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
     }
   };
 
-  // ปรับให้รับ variants ด้วย เวลาสร้างใหม่ (แต่ logic หลักเหมือนเดิม)
   const addProduct = (newProduct: Omit<Product, 'id'>) => {
     const product: Product = {
       ...newProduct,
@@ -67,14 +82,6 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
     setShowAddModal(true);
-  };
-
-  // รวมจำนวนทั้งหมดของ variants ถ้ามี ถ้าไม่มีใช้ product.quantity
-  const getSumVariantQuantity = (product: Product) => {
-    if (product.variants && product.variants.length > 0) {
-      return product.variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
-    }
-    return product.quantity || 0;
   };
 
   const getStockStatus = (quantity: number, status: string) => {
@@ -156,7 +163,6 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
 
               <Button 
                 className="bg-red-500 hover:bg-red-600 text-white border border-red-400 rounded-lg"
-                // TODO: implement functionality for batch/lots
               >
                 ลำดับลอต
               </Button>
@@ -196,7 +202,7 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
                   </TableRow>
                 ) : (
                   filteredProducts.map((product) => {
-                    const quantity = getSumVariantQuantity(product);
+                    const quantity = product.quantity || 2;
                     return (
                       <TableRow key={product.id} className="hover:bg-purple-25 border-b border-purple-50">
                         <TableCell>
@@ -210,16 +216,10 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
                         <TableCell className="font-medium">{product.name}</TableCell>
                         <TableCell className="text-sm text-purple-600">{product.category}</TableCell>
                         <TableCell className="font-semibold text-red-600">
-                          ฿{(typeof product.costThb === "number" && product.costThb !== null
-                            ? product.costThb 
-                            : 0
-                          ).toLocaleString()}
+                          ฿{product.costThb.toLocaleString()}
                         </TableCell>
                         <TableCell className="font-semibold text-green-600">
-                          ฿{(typeof product.sellingPrice === "number" && product.sellingPrice !== null 
-                            ? product.sellingPrice 
-                            : 0
-                          ).toLocaleString()}
+                          ฿{product.sellingPrice.toLocaleString()}
                         </TableCell>
                         <TableCell className="font-medium">{quantity}</TableCell>
                         <TableCell>

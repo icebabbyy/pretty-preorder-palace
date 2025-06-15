@@ -1,288 +1,369 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Product, ProductVariant } from "@/types/inventory";
+import { Textarea } from "@/components/ui/textarea";
+import { Upload, Image } from "lucide-react";
+
+interface Product {
+  id?: number;
+  sku: string;
+  name: string;
+  category: string;
+  image: string;
+  priceYuan: number;
+  exchangeRate: number;
+  priceThb: number;
+  importCost: number;
+  costThb: number;
+  sellingPrice: number;
+  status: string;
+  shipmentDate: string;
+  link: string;
+  description: string;
+}
 
 interface AddProductModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddProduct: (product: Omit<Product, "id">) => void;
+  onAddProduct: (product: any) => void;
   categories: string[];
-  editingProduct: Product | null;
+  editingProduct?: Product | null;
 }
 
-const initialVariant = (): ProductVariant => ({
-  variantId: Date.now(),
-  productId: 0,
-  sku: "",
-  name: "",
-  option: "",
-  image: "",
-  priceThb: 0,
-  costThb: 0,
-  sellingPrice: 0,
-  quantity: 0,
-});
+const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editingProduct }: AddProductModalProps) => {
+  const [formData, setFormData] = useState<Product>({
+    sku: "",
+    name: "",
+    category: "",
+    image: "",
+    priceYuan: 0,
+    exchangeRate: 1,
+    priceThb: 0,
+    importCost: 0,
+    costThb: 0,
+    sellingPrice: 0,
+    status: "พรีออเดอร์",
+    shipmentDate: "",
+    link: "",
+    description: ""
+  });
 
-const AddProductModal = ({
-  open,
-  onOpenChange,
-  onAddProduct,
-  categories,
-  editingProduct,
-}: AddProductModalProps) => {
-  const [name, setName] = useState("");
-  const [sku, setSku] = useState("");
-  const [category, setCategory] = useState("");
-  const [image, setImage] = useState("");
-  const [description, setDescription] = useState("");
-  const [costThb, setCostThb] = useState<number | null>(null);
-  const [sellingPrice, setSellingPrice] = useState<number | null>(null);
-  const [status, setStatus] = useState("พร้อมส่ง");
-  const [link, setLink] = useState("");
-  const [quantity, setQuantity] = useState<number>(0);
-  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  // --- Auto-calculate ราคาบาท (THB) ---
+  useEffect(() => {
+    const y = parseFloat(formData.priceYuan as any) || 0;
+    const r = parseFloat(formData.exchangeRate as any) || 0;
+    if (y > 0 && r > 0) {
+      setFormData(prev => ({
+        ...prev,
+        priceThb: parseFloat((y * r).toFixed(2))
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        priceThb: 0
+      }));
+    }
+    // eslint-disable-next-line
+  }, [formData.priceYuan, formData.exchangeRate]);
+
+  // --- Auto-calculate ต้นทุนรวม (costThb) เมื่อราคาบาทหรือค่านำเข้าเปลี่ยน ---
+  useEffect(() => {
+    const totalCost = (parseFloat(formData.priceThb as any) || 0) + (parseFloat(formData.importCost as any) || 0);
+    setFormData(prev => ({ ...prev, costThb: totalCost }));
+    // eslint-disable-next-line
+  }, [formData.priceThb, formData.importCost]);
 
   useEffect(() => {
     if (editingProduct) {
-      setName(editingProduct.name || "");
-      setSku(editingProduct.sku || "");
-      setCategory(editingProduct.category || "");
-      setImage(editingProduct.image || "");
-      setDescription(editingProduct.description || "");
-      setCostThb(editingProduct.costThb ?? null);
-      setSellingPrice(editingProduct.sellingPrice ?? null);
-      setStatus(editingProduct.status || "พร้อมส่ง");
-      setLink(editingProduct.link || "");
-      setQuantity(editingProduct.quantity || 0);
-      setVariants(editingProduct.variants || []);
+      setFormData(editingProduct);
     } else {
-      setName("");
-      setSku("");
-      setCategory("");
-      setImage("");
-      setDescription("");
-      setCostThb(null);
-      setSellingPrice(null);
-      setStatus("พร้อมส่ง");
-      setLink("");
-      setQuantity(0);
-      setVariants([]);
+      setFormData({
+        sku: "",
+        name: "",
+        category: "",
+        image: "",
+        priceYuan: 0,
+        exchangeRate: 1,
+        priceThb: 0,
+        importCost: 0,
+        costThb: 0,
+        sellingPrice: 0,
+        status: "พรีออเดอร์",
+        shipmentDate: "",
+        link: "",
+        description: ""
+      });
     }
   }, [editingProduct, open]);
 
-  const handleAddVariant = () => {
-    setVariants([
-      ...variants,
-      {
-        ...initialVariant(),
-        variantId: Date.now(),
-        productId: editingProduct?.id || 0,
-      },
-    ]);
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setFormData({ ...formData, image: e.target?.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
-  const handleVariantChange = (
-    idx: number,
-    key: keyof ProductVariant,
-    value: string | number
-  ) => {
-    setVariants(
-      variants.map((v, vi) =>
-        vi === idx ? { ...v, [key]: value } : v
-      )
-    );
-  };
-
-  const handleRemoveVariant = (idx: number) => {
-    setVariants(variants.filter((_, vi) => vi !== idx));
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            setFormData({ ...formData, image: e.target?.result as string });
+          };
+          reader.readAsDataURL(file);
+        }
+        break;
+      }
+    }
   };
 
   const handleSubmit = () => {
-    if (!name || !sku || !category) {
-      alert("กรุณากรอกข้อมูลที่จำเป็น");
+    if (!formData.name || !formData.category) {
+      alert("กรุณากรอกชื่อสินค้าและเลือกหมวดหมู่");
       return;
     }
 
-    const product: Omit<Product, "id"> = {
-      sku,
-      name,
-      category,
-      image,
-      priceYuan: undefined, // Not handled in modal
-      exchangeRate: undefined,
-      priceThb: undefined,
-      importCost: undefined,
-      costThb: costThb ?? 0,
-      sellingPrice: sellingPrice ?? 0,
-      status,
-      shipmentDate: undefined,
-      link,
-      description,
-      quantity,
-      variants: variants.map((v, i) => ({
-        ...v,
-        variantId: v.variantId || Date.now() + i,
-        productId: editingProduct?.id || 0,
-        // default fallback values in case some are empty
-        sku: v.sku ?? "",
-        name: v.name ?? "",
-        option: v.option ?? "",
-        image: v.image ?? "",
-        priceThb: typeof v.priceThb === "number" ? v.priceThb : 0,
-        costThb: typeof v.costThb === "number" ? v.costThb : 0,
-        sellingPrice: typeof v.sellingPrice === "number" ? v.sellingPrice : 0,
-        quantity: typeof v.quantity === "number" ? v.quantity : 0,
-      })),
-    };
-
-    onAddProduct(product);
+    onAddProduct(formData);
     onOpenChange(false);
+    
+    if (!editingProduct) {
+      setFormData({
+        sku: "",
+        name: "",
+        category: "",
+        image: "",
+        priceYuan: 0,
+        exchangeRate: 1,
+        priceThb: 0,
+        importCost: 0,
+        costThb: 0,
+        sellingPrice: 0,
+        status: "พรีออเดอร์",
+        shipmentDate: "",
+        link: "",
+        description: ""
+      });
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg bg-white border border-purple-200 rounded-xl">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
         <DialogHeader>
-          <DialogTitle className="text-xl text-purple-700">
+          <DialogTitle className="text-xl text-purple-800">
             {editingProduct ? "แก้ไขสินค้า" : "+ เพิ่มสินค้าใหม่"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 mt-4">
-          <div>
-            <Label>ชื่อสินค้า *</Label>
-            <Input value={name} onChange={e => setName(e.target.value)} />
+        <div className="space-y-4 mt-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="sku">SKU</Label>
+              <Input 
+                id="sku"
+                value={formData.sku}
+                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                placeholder="รหัสสินค้า"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+            <div>
+              <Label htmlFor="name">ชื่อสินค้า *</Label>
+              <Input 
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="ชื่อสินค้า"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
           </div>
+
           <div>
-            <Label>SKU *</Label>
-            <Input value={sku} onChange={e => setSku(e.target.value)} />
-          </div>
-          <div>
-            <Label>หมวดหมู่ *</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger>
+            <Label htmlFor="category">หมวดหมู่ *</Label>
+            <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+              <SelectTrigger className="border border-purple-200 rounded-lg">
                 <SelectValue placeholder="เลือกหมวดหมู่" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map(cat => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                {categories.map(category => (
+                  <SelectItem key={category} value={category}>{category}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
           <div>
-            <Label>ลิงก์สั่งซื้อ</Label>
-            <Input value={link} onChange={e => setLink(e.target.value)} />
+            <Label>รูปภาพสินค้า</Label>
+            <div 
+              className="border-2 border-dashed border-purple-300 rounded-lg p-6 text-center hover:border-purple-400 transition-colors cursor-pointer relative"
+              onPaste={handlePaste}
+            >
+              {formData.image ? (
+                <div className="space-y-2">
+                  <img src={formData.image} alt="Preview" className="w-32 h-32 object-cover rounded mx-auto" />
+                  <p className="text-sm text-gray-600">คลิกเพื่อเปลี่ยนรูป หรือ Ctrl+V เพื่อวาง</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Image className="w-12 h-12 mx-auto text-purple-400" />
+                  <p className="text-purple-600">คลิกเพื่อเลือกรูป หรือ Ctrl+V เพื่อวาง</p>
+                </div>
+              )}
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleImageUpload}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+            </div>
           </div>
-          <div>
-            <Label>สถานะ</Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="พร้อมส่ง">พร้อมส่ง</SelectItem>
-                <SelectItem value="พรีออเดอร์">พรีออเดอร์</SelectItem>
-              </SelectContent>
-            </Select>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="priceYuan">ราคาหยวน</Label>
+              <Input 
+                id="priceYuan"
+                type="number"
+                value={formData.priceYuan}
+                onChange={(e) => setFormData({ ...formData, priceYuan: parseFloat(e.target.value) || 0 })}
+                placeholder="0"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+            <div>
+              <Label htmlFor="exchangeRate">อัตราแลกเปลี่ยน</Label>
+              <Input 
+                id="exchangeRate"
+                type="number"
+                step="0.01"
+                value={formData.exchangeRate}
+                onChange={(e) => setFormData({ ...formData, exchangeRate: parseFloat(e.target.value) || 1 })}
+                placeholder="1"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+            <div>
+              <Label htmlFor="priceThb">ราคาบาท</Label>
+              <Input 
+                id="priceThb"
+                type="number"
+                value={formData.priceThb}
+                readOnly
+                className="border border-purple-200 rounded-lg bg-gray-50"
+              />
+            </div>
           </div>
-          <div>
-            <Label>ต้นทุน (฿)</Label>
-            <Input
-              type="number"
-              value={costThb ?? ""}
-              onChange={e => setCostThb(Number(e.target.value))}
-            />
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="importCost">ค่านำเข้า (บาท)</Label>
+              <Input 
+                id="importCost"
+                type="number"
+                value={formData.importCost}
+                onChange={(e) => setFormData({ ...formData, importCost: parseFloat(e.target.value) || 0 })}
+                placeholder="0"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+            <div>
+              <Label htmlFor="costThb">ต้นทุนรวม (บาท)</Label>
+              <Input 
+                id="costThb"
+                type="number"
+                value={formData.costThb}
+                readOnly
+                className="border border-purple-200 rounded-lg bg-gray-50"
+              />
+            </div>
+            <div>
+              <Label htmlFor="sellingPrice">ราคาขาย</Label>
+              <Input 
+                id="sellingPrice"
+                type="number"
+                value={formData.sellingPrice}
+                onChange={(e) => setFormData({ ...formData, sellingPrice: parseFloat(e.target.value) || 0 })}
+                placeholder="0"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
           </div>
-          <div>
-            <Label>ราคาขาย (฿)</Label>
-            <Input
-              type="number"
-              value={sellingPrice ?? ""}
-              onChange={e => setSellingPrice(Number(e.target.value))}
-            />
-          </div>
-          <div>
-            <Label>จำนวนคงเหลือ</Label>
-            <Input
-              type="number"
-              value={quantity}
-              onChange={e => setQuantity(Number(e.target.value))}
-            />
-          </div>
-          <div>
-            <Label>รูปภาพ (URL)</Label>
-            <Input value={image} onChange={e => setImage(e.target.value)} />
-          </div>
-          <div>
-            <Label>รายละเอียด</Label>
-            <Input value={description} onChange={e => setDescription(e.target.value)} />
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="status">สถานะ</Label>
+              <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                <SelectTrigger className="border border-purple-200 rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="พรีออเดอร์">พรีออเดอร์</SelectItem>
+                  <SelectItem value="พร้อมส่ง">พร้อมส่ง</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="shipmentDate">วันที่จัดส่ง</Label>
+              <Input 
+                id="shipmentDate"
+                type="date"
+                value={formData.shipmentDate}
+                onChange={(e) => setFormData({ ...formData, shipmentDate: e.target.value })}
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
           </div>
 
           <div>
-            <Label>ตัวเลือก/แบบ (Variants)</Label>
-            <Button variant="outline" size="sm" onClick={handleAddVariant} className="mb-2">
-              + เพิ่มตัวเลือก
-            </Button>
-            {variants.map((variant, idx) => (
-              <div key={variant.variantId || idx} className="p-2 mb-2 bg-purple-50 rounded border flex gap-2 items-center">
-                <Input
-                  placeholder="ชื่อ"
-                  value={variant.name}
-                  onChange={e => handleVariantChange(idx, "name", e.target.value)}
-                  className="flex-1"
-                />
-                <Input
-                  placeholder="SKU"
-                  value={variant.sku}
-                  onChange={e => handleVariantChange(idx, "sku", e.target.value)}
-                  className="w-28"
-                />
-                <Input
-                  placeholder="ราคา"
-                  type="number"
-                  value={variant.sellingPrice}
-                  onChange={e => handleVariantChange(idx, "sellingPrice", Number(e.target.value))}
-                  className="w-20"
-                />
-                <Input
-                  placeholder="ต้นทุน"
-                  type="number"
-                  value={variant.costThb}
-                  onChange={e => handleVariantChange(idx, "costThb", Number(e.target.value))}
-                  className="w-20"
-                />
-                <Input
-                  placeholder="จำนวน"
-                  type="number"
-                  value={variant.quantity}
-                  onChange={e => handleVariantChange(idx, "quantity", Number(e.target.value))}
-                  className="w-16"
-                />
-                <Button size="sm" variant="ghost" className="text-red-600" onClick={() => handleRemoveVariant(idx)}>ลบ</Button>
-              </div>
-            ))}
+            <Label htmlFor="link">ลิงก์สินค้า</Label>
+            <Input 
+              id="link"
+              value={formData.link}
+              onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+              placeholder="https://..."
+              className="border border-purple-200 rounded-lg"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="description">รายละเอียด</Label>
+            <Textarea 
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="รายละเอียดสินค้า"
+              className="border border-purple-200 rounded-lg"
+              rows={3}
+            />
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 mt-6">
-          <Button
-            variant="outline"
+        <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-purple-200">
+          <Button 
+            variant="outline" 
             onClick={() => onOpenChange(false)}
             className="border border-purple-300 text-purple-600 hover:bg-purple-50 rounded-lg"
           >
             ยกเลิก
           </Button>
-          <Button
-            onClick={handleSubmit}
+          <Button 
+            onClick={handleSubmit} 
             className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
+            disabled={!formData.name || !formData.category}
           >
-            {editingProduct ? "อัปเดต" : "บันทึก"}
+            {editingProduct ? "บันทึกการแก้ไข" : "บันทึก"}
           </Button>
         </div>
       </DialogContent>
