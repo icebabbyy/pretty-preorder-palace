@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,16 +56,16 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
   const filteredOrders = orders.filter(order => {
-  const matchesSearch =
-    Array.isArray(order.items) &&
-    order.items.some(item =>
-      item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchTerm.toLowerCase())
-    ) ||
-    order.username.toLowerCase().includes(searchTerm.toLowerCase());
-  const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-  return matchesSearch && matchesStatus;
-});
+    const matchesSearch =
+      Array.isArray(order.items) &&
+      order.items.some(item =>
+        item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.sku.toLowerCase().includes(searchTerm.toLowerCase())
+      ) ||
+      order.username.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const totalRevenue = orders.reduce((sum, order) => sum + order.totalSellingPrice, 0);
   const totalCost = orders.reduce((sum, order) => sum + order.totalCost, 0);
@@ -301,10 +300,22 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                         ฿{order.profit.toLocaleString()}
                       </TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                          {getStatusIcon(order.status)}
-                          {order.status}
-                        </span>
+                        {/* ปุ่มเปลี่ยนสถานะแบบ dropdown */}
+                        <Select
+                          value={order.status}
+                          onValueChange={(newStatus) => updateOrder({ ...order, status: newStatus })}
+                        >
+                          <SelectTrigger className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                            {getStatusIcon(order.status)}
+                            <SelectValue placeholder={order.status} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="รอชำระเงิน">รอชำระเงิน</SelectItem>
+                            <SelectItem value="รอโรงงานจัดส่ง">รอโรงงานจัดส่ง</SelectItem>
+                            <SelectItem value="กำลังมาไทย">กำลังมาไทย</SelectItem>
+                            <SelectItem value="จัดส่งแล้ว">จัดส่งแล้ว</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className="text-sm">{order.orderDate}</TableCell>
                       <TableCell>
