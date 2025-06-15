@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Edit, Trash2, ShoppingCart } from "lucide-react";
+import { Search, Plus, Edit, Trash2, ShoppingCart, Package } from "lucide-react";
 import AddOrderModal from "./AddOrderModal";
 
 interface Product {
@@ -92,47 +92,47 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
 
   return (
     <div>
-      {/* Stats Cards - Clean white with dark borders */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="bg-white border-2 border-gray-800 text-gray-800">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+      {/* Stats Cards - Purple theme */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Package className="w-5 h-5 text-green-600" />
+              </div>
               <div>
-                <p className="text-gray-600">มูลค่าขาย</p>
+                <p className="text-gray-600 text-sm">มูลค่าขาย</p>
                 <p className="text-2xl font-bold text-green-600">฿{totalRevenue.toLocaleString()}</p>
               </div>
-              <div className="p-3 bg-gray-100 rounded-lg border border-gray-300">
-                <ShoppingCart className="w-6 h-6" />
-              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-2 border-gray-800 text-gray-800">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+        <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Package className="w-5 h-5 text-red-600" />
+              </div>
               <div>
-                <p className="text-gray-600">ต้นทุนรวม</p>
+                <p className="text-gray-600 text-sm">ต้นทุนรวม</p>
                 <p className="text-2xl font-bold text-red-600">฿{totalCost.toLocaleString()}</p>
               </div>
-              <div className="p-3 bg-gray-100 rounded-lg border border-gray-300">
-                <ShoppingCart className="w-6 h-6" />
-              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-2 border-gray-800 text-gray-800">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+        <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Package className="w-5 h-5 text-blue-600" />
+              </div>
               <div>
-                <p className="text-gray-600">กำไรรวม</p>
+                <p className="text-gray-600 text-sm">กำไรรวม</p>
                 <p className={`text-2xl font-bold ${totalProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
                   ฿{totalProfit.toLocaleString()}
                 </p>
-              </div>
-              <div className="p-3 bg-gray-100 rounded-lg border border-gray-300">
-                <ShoppingCart className="w-6 h-6" />
               </div>
             </div>
           </CardContent>
@@ -140,7 +140,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
       </div>
 
       {/* Search and Filters */}
-      <Card className="mb-6 bg-white border-2 border-gray-800">
+      <Card className="mb-6 bg-white border border-purple-200 rounded-xl shadow-sm">
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex-1 max-w-md">
@@ -150,14 +150,14 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                   placeholder="ค้นหาออเดอร์..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-2 border-gray-300"
+                  className="pl-10 border border-purple-200 rounded-lg"
                 />
               </div>
             </div>
             
             <div className="flex gap-3 items-center">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48 border-2 border-gray-300">
+                <SelectTrigger className="w-48 border border-purple-200 rounded-lg">
                   <SelectValue placeholder="สถานะทั้งหมด" />
                 </SelectTrigger>
                 <SelectContent>
@@ -170,7 +170,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
 
               <Button 
                 onClick={() => setShowAddModal(true)} 
-                className="bg-gray-800 hover:bg-gray-700 text-white border-2 border-gray-800"
+                className="bg-purple-500 hover:bg-purple-600 text-white border border-purple-400 rounded-lg"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 เพิ่มออเดอร์
@@ -181,24 +181,24 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
       </Card>
 
       {/* Orders Table */}
-      <Card className="bg-white border-2 border-gray-800">
-        <CardHeader>
-          <CardTitle className="text-gray-800">รายการออเดอร์</CardTitle>
+      <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
+        <CardHeader className="border-b border-purple-100">
+          <CardTitle className="text-purple-800">รายการออเดอร์</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-100 border-b-2 border-gray-300">
-                  <TableHead className="text-gray-800 font-bold">รูปสินค้า</TableHead>
-                  <TableHead className="text-gray-800 font-bold">สินค้า</TableHead>
-                  <TableHead className="text-gray-800 font-bold">จำนวน</TableHead>
-                  <TableHead className="text-gray-800 font-bold">ราคาขาย</TableHead>
-                  <TableHead className="text-gray-800 font-bold">ต้นทุน</TableHead>
-                  <TableHead className="text-gray-800 font-bold">กำไร</TableHead>
-                  <TableHead className="text-gray-800 font-bold">สถานะ</TableHead>
-                  <TableHead className="text-gray-800 font-bold">วันที่</TableHead>
-                  <TableHead className="text-gray-800 font-bold">จัดการ</TableHead>
+                <TableRow className="bg-purple-50 border-b border-purple-100">
+                  <TableHead className="text-purple-800 font-bold">รูปสินค้า</TableHead>
+                  <TableHead className="text-purple-800 font-bold">สินค้า</TableHead>
+                  <TableHead className="text-purple-800 font-bold">จำนวน</TableHead>
+                  <TableHead className="text-purple-800 font-bold">ราคาขาย</TableHead>
+                  <TableHead className="text-purple-800 font-bold">ต้นทุน</TableHead>
+                  <TableHead className="text-purple-800 font-bold">กำไร</TableHead>
+                  <TableHead className="text-purple-800 font-bold">สถานะ</TableHead>
+                  <TableHead className="text-purple-800 font-bold">วันที่</TableHead>
+                  <TableHead className="text-purple-800 font-bold">จัดการ</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -210,18 +210,18 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                   </TableRow>
                 ) : (
                   filteredOrders.map((order) => (
-                    <TableRow key={order.id} className="hover:bg-gray-50 border-b border-gray-200">
+                    <TableRow key={order.id} className="hover:bg-purple-25 border-b border-purple-50">
                       <TableCell>
                         <img 
                           src={order.productImage} 
                           alt={order.product}
-                          className="w-12 h-12 rounded-lg object-cover border border-gray-300"
+                          className="w-12 h-12 rounded-lg object-cover border border-purple-200"
                         />
                       </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium">{order.product}</p>
-                          <p className="text-sm text-gray-500">{order.sku}</p>
+                          <p className="text-sm text-purple-500">{order.sku}</p>
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{order.quantity}</TableCell>
@@ -235,7 +235,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                               type="number"
                               value={editCostValue}
                               onChange={(e) => setEditCostValue(e.target.value)}
-                              className="w-20 h-8 text-sm border border-gray-300"
+                              className="w-20 h-8 text-sm border border-purple-200"
                               onKeyPress={(e) => {
                                 if (e.key === 'Enter') saveCostEdit(order.id);
                                 if (e.key === 'Escape') cancelCostEdit();
@@ -253,14 +253,14 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                               size="sm"
                               variant="outline"
                               onClick={cancelCostEdit}
-                              className="h-6 px-2 text-xs"
+                              className="h-6 px-2 text-xs border border-purple-200"
                             >
                               ✕
                             </Button>
                           </div>
                         ) : (
                           <span 
-                            className="font-semibold text-red-600 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                            className="font-semibold text-red-600 cursor-pointer hover:bg-purple-50 px-2 py-1 rounded"
                             onClick={() => handleCostEdit(order.id, order.cost)}
                           >
                             ฿{order.cost.toLocaleString()}
@@ -271,9 +271,9 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                         ฿{order.profit.toLocaleString()}
                       </TableCell>
                       <TableCell>
-                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
                           order.status === 'รอชำระเงิน' ? 'bg-yellow-100 text-yellow-800' :
-                          order.status === 'รอจัดส่ง' ? 'bg-blue-100 text-blue-800' :
+                          order.status === 'รอจัดส่ง' ? 'bg-purple-100 text-purple-800' :
                           'bg-green-100 text-green-800'
                         }`}>
                           {order.status}
@@ -282,13 +282,13 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                       <TableCell className="text-sm">{order.orderDate}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" className="text-blue-600">
+                          <Button variant="ghost" size="sm" className="text-purple-600 hover:bg-purple-50">
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="text-red-600"
+                            className="text-red-600 hover:bg-red-50"
                             onClick={() => deleteOrder(order.id)}
                           >
                             <Trash2 className="w-4 h-4" />
