@@ -12,7 +12,7 @@ import {
   addOrder as addOrderToSheet,
   updateOrder as updateOrderInSheet,
   deleteOrder as deleteOrderFromSheet,
-} from "@/utils/googleSheets"; // <-- เพิ่มบรรทัดนี้
+} from "@/utils/googleSheets";
 
 interface Product {
   id: number;
@@ -60,7 +60,7 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
-  // โหลดข้อมูลจาก Google Sheets ตอน mount
+  // LOAD DATA จาก Google Sheets
   useEffect(() => {
     fetchOrders().then(setOrders).catch(console.error);
   }, []);
@@ -103,7 +103,7 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
   // อัปเดต order ใน Google Sheets
   const updateOrder = async (updatedOrder: Order) => {
     const result = await updateOrderInSheet(updatedOrder);
-    setOrders(orders.map(order => 
+    setOrders(orders.map(order =>
       order.id === updatedOrder.id ? result : order
     ));
   };
@@ -150,7 +150,6 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
             </div>
           </CardContent>
         </Card>
-
         <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -164,7 +163,6 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
             </div>
           </CardContent>
         </Card>
-
         <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -216,7 +214,6 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
                 />
               </div>
             </div>
-            
             <div className="flex gap-3 items-center">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-48 border border-purple-200 rounded-lg">
@@ -230,9 +227,8 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
                   <SelectItem value="จัดส่งแล้ว">จัดส่งแล้ว</SelectItem>
                 </SelectContent>
               </Select>
-
-              <Button 
-                onClick={() => setShowAddModal(true)} 
+              <Button
+                onClick={() => setShowAddModal(true)}
                 className="bg-purple-500 hover:bg-purple-600 text-white border border-purple-400 rounded-lg"
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -278,8 +274,8 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
                         <div className="space-y-2">
                           {order.items.map((item, index) => (
                             <div key={index} className="flex items-center gap-2">
-                              <img 
-                                src={item.productImage} 
+                              <img
+                                src={item.productImage}
                                 alt={item.productName}
                                 className="w-8 h-8 rounded object-cover border border-purple-200"
                               />
@@ -332,17 +328,17 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
                       <TableCell className="text-sm">{order.orderDate}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="text-purple-600 hover:bg-purple-50"
                             onClick={() => handleEdit(order)}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="text-red-600 hover:bg-red-50"
                             onClick={() => deleteOrder(order.id)}
                           >
@@ -359,15 +355,15 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
         </CardContent>
       </Card>
 
-      <AddOrderModal 
-        open={showAddModal} 
+      <AddOrderModal
+        open={showAddModal}
         onOpenChange={setShowAddModal}
         onAddOrder={addOrder}
         products={products}
       />
 
-      <EditOrderModal 
-        open={showEditModal} 
+      <EditOrderModal
+        open={showEditModal}
         onOpenChange={setShowEditModal}
         onUpdateOrder={updateOrder}
         order={editingOrder}
