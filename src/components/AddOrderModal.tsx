@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,18 +5,34 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+// เพิ่ม: ProductVariant interface
+interface ProductVariant {
+  variantId: number;
+  productId: number;
+  sku: string;
+  name: string;    // ชื่อแบบ/option เช่น "สีแดง ไซส์ S"
+  option: string;  // ข้อมูลเพิ่ม เช่น "สีแดง, ไซส์ S"
+  image: string;
+  priceThb: number;
+  costThb: number;
+  sellingPrice: number;
+  quantity: number;
+}
+
+// Product มี variants
 interface Product {
   id: number;
   sku: string;
   name: string;
-  sellingPrice: number;
-  costThb: number;
   image: string;
+  variants: ProductVariant[];
 }
 
 interface OrderItem {
   productId: number;
+  variantId: number;
   productName: string;
+  variantName: string;
   productImage: string;
   sku: string;
   quantity: number;
@@ -47,7 +62,9 @@ interface AddOrderModalProps {
 }
 
 const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderModalProps) => {
+  // เลือกสินค้าหลักและตัวเลือกย่อย
   const [selectedProductId, setSelectedProductId] = useState("");
+  const [selectedVariantId, setSelectedVariantId] = useState("");
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [shippingCost, setShippingCost] = useState("0");
   const [deposit, setDeposit] = useState("0");
@@ -56,48 +73,61 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const [username, setUsername] = useState("");
   const [address, setAddress] = useState("");
 
-  const addProductToOrder = () => {
-    const product = products.find(p => p.id.toString() === selectedProductId);
-    if (!product) return;
+  // หา product และ variants
+  const selectedProduct = products.find(p => p.id.toString() === selectedProductId);
+  const variantOptions = selectedProduct?.variants ?? [];
+  const selectedVariant = variantOptions.find(v => v.variantId.toString() === selectedVariantId);
 
-    const existingItem = orderItems.find(item => item.productId === product.id);
-    
+  // เพิ่มสินค้าเข้า order (variant)
+  const addProductToOrder = () => {
+    if (!selectedProduct || !selectedVariant) return;
+
+    const existingItem = orderItems.find(
+      item => item.productId === selectedProduct.id && item.variantId === selectedVariant.variantId
+    );
+
     if (existingItem) {
-      setOrderItems(orderItems.map(item => 
-        item.productId === product.id 
+      setOrderItems(orderItems.map(item =>
+        item.productId === selectedProduct.id && item.variantId === selectedVariant.variantId
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
     } else {
       const newItem: OrderItem = {
-        productId: product.id,
-        productName: product.name,
-        productImage: product.image,
-        sku: product.sku,
+        productId: selectedProduct.id,
+        variantId: selectedVariant.variantId,
+        productName: selectedProduct.name,
+        variantName: selectedVariant.name,
+        productImage: selectedVariant.image || selectedProduct.image,
+        sku: selectedVariant.sku,
         quantity: 1,
-        unitPrice: product.sellingPrice,
-        unitCost: product.costThb
+        unitPrice: selectedVariant.sellingPrice,
+        unitCost: selectedVariant.costThb
       };
       setOrderItems([...orderItems, newItem]);
     }
-    
     setSelectedProductId("");
+    setSelectedVariantId("");
   };
 
-  const updateItemQuantity = (productId: number, quantity: number) => {
-    setOrderItems(orderItems.map(item => 
-      item.productId === productId ? { ...item, quantity } : item
+  const updateItemQuantity = (productId: number, variantId: number, quantity: number) => {
+    setOrderItems(orderItems.map(item =>
+      item.productId === productId && item.variantId === variantId
+        ? { ...item, quantity }
+        : item
     ));
   };
 
-  const updateItemCost = (productId: number, unitCost: number) => {
-    setOrderItems(orderItems.map(item => 
-      item.productId === productId ? { ...item, unitCost } : item
+  const updateItemCost = (productId: number, variantId: number, unitCost: number) => {
+    setOrderItems(orderItems.map(item =>
+      item.productId === productId && item.variantId === variantId
+        ? { ...item, unitCost }
+        : item
     ));
   };
 
-  const removeItem = (productId: number) => {
-    setOrderItems(orderItems.filter(item => item.productId !== productId));
+  const removeItem = (productId: number, variantId: number) => {
+    setOrderItems(orderItems.filter(item => !(item.productId === productId && item.variantId === variantId)));
   };
 
   const handleSubmit = () => {
@@ -133,6 +163,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     // Reset form
     setOrderItems([]);
     setSelectedProductId("");
+    setSelectedVariantId("");
     setShippingCost("0");
     setDeposit("0");
     setDiscount("0");
@@ -159,7 +190,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
         <div className="space-y-4 mt-6">
           <div>
             <Label htmlFor="username">Username *</Label>
-            <Input 
+            <Input
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -170,7 +201,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
 
           <div>
             <Label htmlFor="address">ที่อยู่ *</Label>
-            <Input 
+            <Input
               id="address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
@@ -182,21 +213,40 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
           <div>
             <Label htmlFor="product">เพิ่มสินค้า</Label>
             <div className="flex gap-2">
-              <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+              {/* เลือกสินค้า */}
+              <Select value={selectedProductId} onValueChange={(val) => {
+                setSelectedProductId(val);
+                setSelectedVariantId(""); // reset variant เมื่อเปลี่ยนสินค้า
+              }}>
                 <SelectTrigger className="flex-1 border border-purple-200 rounded-lg">
                   <SelectValue placeholder="เลือกสินค้าจากสต็อค" />
                 </SelectTrigger>
                 <SelectContent>
                   {products.map((product) => (
                     <SelectItem key={product.id} value={product.id.toString()}>
-                      {product.name} - ฿{product.sellingPrice.toLocaleString()}
+                      {product.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Button 
+
+              {/* เลือกตัวเลือกย่อย */}
+              <Select value={selectedVariantId} onValueChange={setSelectedVariantId} disabled={!selectedProduct}>
+                <SelectTrigger className="flex-1 border border-purple-200 rounded-lg">
+                  <SelectValue placeholder={selectedProduct ? "เลือกตัวเลือก/แบบ" : "เลือกสินค้าก่อน"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {variantOptions.map(variant => (
+                    <SelectItem key={variant.variantId} value={variant.variantId.toString()}>
+                      {variant.name} ({variant.option}) - ฿{variant.sellingPrice}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button
                 onClick={addProductToOrder}
-                disabled={!selectedProductId}
+                disabled={!selectedProductId || !selectedVariantId}
                 className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
               >
                 เพิ่ม
@@ -209,28 +259,28 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
               <Label>รายการสินค้า</Label>
               <div className="space-y-3">
                 {orderItems.map((item) => (
-                  <div key={item.productId} className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <div key={`${item.productId}-${item.variantId}`} className="p-3 bg-purple-50 rounded-lg border border-purple-200">
                     <div className="flex items-center gap-3 mb-3">
-                      <img 
-                        src={item.productImage} 
+                      <img
+                        src={item.productImage}
                         alt={item.productName}
                         className="w-12 h-12 rounded object-cover border border-purple-200"
                       />
                       <div className="flex-1">
-                        <p className="font-medium">{item.productName}</p>
+                        <p className="font-medium">{item.productName} <span className="text-xs text-purple-700">({item.variantName})</span></p>
                         <p className="text-sm text-purple-600">{item.sku}</p>
                         <p className="text-sm font-medium text-green-600">฿{item.unitPrice.toLocaleString()}</p>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeItem(item.productId)}
+                        onClick={() => removeItem(item.productId, item.variantId)}
                         className="text-red-600 hover:bg-red-50"
                       >
                         ลบ
                       </Button>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label>จำนวน</Label>
@@ -238,7 +288,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                           type="number"
                           min="1"
                           value={item.quantity}
-                          onChange={(e) => updateItemQuantity(item.productId, parseInt(e.target.value) || 1)}
+                          onChange={(e) => updateItemQuantity(item.productId, item.variantId, parseInt(e.target.value) || 1)}
                           className="border border-purple-200 rounded-lg"
                         />
                       </div>
@@ -247,7 +297,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                         <Input
                           type="number"
                           value={item.unitCost}
-                          onChange={(e) => updateItemCost(item.productId, parseFloat(e.target.value) || 0)}
+                          onChange={(e) => updateItemCost(item.productId, item.variantId, parseFloat(e.target.value) || 0)}
                           className="border border-purple-200 rounded-lg"
                         />
                       </div>
@@ -261,7 +311,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="shippingCost">ค่าจัดส่ง (฿)</Label>
-              <Input 
+              <Input
                 id="shippingCost"
                 type="number"
                 value={shippingCost}
@@ -273,7 +323,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
 
             <div>
               <Label htmlFor="discount">ส่วนลด (฿)</Label>
-              <Input 
+              <Input
                 id="discount"
                 type="number"
                 value={discount}
@@ -287,7 +337,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="deposit">มัดจำ (฿)</Label>
-              <Input 
+              <Input
                 id="deposit"
                 type="number"
                 value={deposit}
@@ -374,15 +424,15 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
         </div>
 
         <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-purple-200">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => onOpenChange(false)}
             className="border border-purple-300 text-purple-600 hover:bg-purple-50 rounded-lg"
           >
             ยกเลิก
           </Button>
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
             disabled={!username || !address || orderItems.length === 0}
           >
