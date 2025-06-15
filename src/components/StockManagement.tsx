@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, Plus, ExternalLink, Edit, Trash2, Settings, Package } from "lucide-react";
 import AddProductModal from "./AddProductModal";
 import CategoryManagementModal from "./CategoryManagementModal";
+
+// ---- ปรับ Product ให้รองรับ variants ----
+interface ProductVariant {
+  variantId: number;
+  productId: number;
+  sku: string;
+  name: string;    // ชื่อแบบ/option เช่น "สีแดง ไซส์ S"
+  option: string;  // ข้อมูลเพิ่ม เช่น "สีแดง, ไซส์ S"
+  image: string;
+  priceThb: number;
+  costThb: number;
+  sellingPrice: number;
+  quantity: number;
+}
 
 interface Product {
   id: number;
@@ -26,6 +39,7 @@ interface Product {
   link: string;
   description: string;
   quantity?: number;
+  variants: ProductVariant[]; // เพิ่ม field นี้
 }
 
 interface StockManagementProps {
@@ -66,6 +80,7 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
     }
   };
 
+  // ปรับให้รับ variants ด้วย เวลาสร้างใหม่ (แต่ logic หลักเหมือนเดิม)
   const addProduct = (newProduct: Omit<Product, 'id'>) => {
     const product: Product = {
       ...newProduct,
@@ -82,6 +97,14 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
     setShowAddModal(true);
+  };
+
+  // รวมจำนวนทั้งหมดของ variants ถ้ามี ถ้าไม่มีใช้ product.quantity
+  const getSumVariantQuantity = (product: Product) => {
+    if (product.variants && product.variants.length > 0) {
+      return product.variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
+    }
+    return product.quantity || 0;
   };
 
   const getStockStatus = (quantity: number, status: string) => {
@@ -202,7 +225,10 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
                   </TableRow>
                 ) : (
                   filteredProducts.map((product) => {
-                    const quantity = product.quantity || 2;
+                    // ถ้ามี variants ให้แสดงเฉพาะ summary ของสินค้าหลัก
+                    // หรือจะ list รายละเอียด variant ใน modal เพิ่มภายหลัง
+                    const quantity = getSumVariantQuantity(product);
+                    // ให้แสดงราคาขาย/ต้นทุนหลัก (หรือจะปรับเป็น min/max ได้)
                     return (
                       <TableRow key={product.id} className="hover:bg-purple-25 border-b border-purple-50">
                         <TableCell>
