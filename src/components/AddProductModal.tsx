@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Upload, Image } from "lucide-react";
 import { nanoid } from "nanoid";
 import { Product, ProductOption } from "@/types";
+import { generateSKU } from "@/utils/sku";
 
 interface AddProductModalProps {
   open: boolean;
@@ -94,6 +95,30 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     }
   }, [editingProduct, open]);
 
+  // ถ้าเปิด modal ใหม่ หรือเลือกหมวดหมู่ใหม่และยังไม่มี sku -- auto-gen
+  useEffect(() => {
+    if (!editingProduct && (!formData.sku || formData.sku === "")) {
+      // wait until category is chosen, or if already has value
+      if (formData.category && formData.category.length >= 1) {
+        setFormData(prev => ({
+          ...prev,
+          sku: generateSKU(formData.category)
+        }));
+      }
+    }
+    // eslint-disable-next-line
+  }, [formData.category, open]);
+
+  // ถ้ากำลังสร้างสินค้าใหม่, แล้วเปลี่ยนชื่อ category,
+  // ให้ sku อัพเดต ถ้ายังไม่ได้ set ค่าเอง
+  const handleCategoryChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      category: value,
+      sku: !editingProduct ? generateSKU(value) : prev.sku,
+    }));
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -156,11 +181,12 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     }
   };
 
+  // เมื่อลูกค้ากด "เพิ่มตัวเลือกสินค้า" จะ auto gen รหัสให้ตัวเลือกด้วย
   const addOption = () => {
     setOptions(opts => [
       ...opts,
       {
-        id: nanoid(),
+        id: generateSKU(formData.category) + "-" + (opts.length + 1).toString().padStart(3,"0"),  // ให้ sku ชัดเจนเหมือน product
         name: "",
         image: "",
         costThb: 0,
@@ -251,7 +277,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
                 id="sku"
                 value={formData.sku}
                 onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                placeholder="รหัสสินค้า"
+                placeholder="รหัสสินค้า (Auto generate ถ้าเว้นว่าง)"
                 className="border border-purple-200 rounded-lg"
               />
             </div>
@@ -269,7 +295,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
 
           <div>
             <Label htmlFor="category">หมวดหมู่ *</Label>
-            <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+            <Select value={formData.category} onValueChange={handleCategoryChange}>
               <SelectTrigger className="border border-purple-200 rounded-lg">
                 <SelectValue placeholder="เลือกหมวดหมู่" />
               </SelectTrigger>
@@ -439,6 +465,14 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
                         onChange={e => updateOption(idx, { name: e.target.value })}
                         placeholder="เช่น สีแดง, L, หรือลายแมว"
                         className="border border-purple-200 rounded-lg"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <Label>SKU Option</Label>
+                      <Input
+                        readOnly
+                        value={option.id}
+                        className="border border-purple-200 rounded-lg bg-gray-50"
                       />
                     </div>
                     <div className="col-span-2">
