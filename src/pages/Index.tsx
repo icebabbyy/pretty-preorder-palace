@@ -15,6 +15,7 @@ interface Product {
   priceYuan: number;
   exchangeRate: number;
   priceThb: number;
+  importCost: number;
   costThb: number;
   sellingPrice: number;
   status: string;
@@ -32,9 +33,12 @@ interface Order {
   quantity: number;
   sellingPrice: number;
   cost: number;
+  shippingCost: number;
   profit: number;
   status: string;
   orderDate: string;
+  username: string;
+  address: string;
 }
 
 const Index = () => {
@@ -76,7 +80,8 @@ const Index = () => {
             priceYuan: 50,
             exchangeRate: 5.2,
             priceThb: 260,
-            costThb: 250,
+            importCost: 20,
+            costThb: 280,
             sellingPrice: 300,
             status: "พร้อมส่ง",
             shipmentDate: "2024-01-15",
@@ -93,7 +98,8 @@ const Index = () => {
             priceYuan: 45,
             exchangeRate: 5.2,
             priceThb: 234,
-            costThb: 230,
+            importCost: 15,
+            costThb: 249,
             sellingPrice: 280,
             status: "พรีออเดอร์",
             shipmentDate: "2024-02-01",
@@ -135,21 +141,13 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-purple-50">
-      {/* Header - Purple gradient like in the image */}
+      {/* Header - Purple gradient without buttons */}
       <div className="bg-gradient-to-r from-purple-400 to-purple-600 text-white p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold">ระบบการจัดการสต็อกสินค้า</h1>
               <p className="text-purple-100 mt-2">จัดการและติดตามสินค้าของคุณอย่างมีประสิทธิภาพ</p>
-            </div>
-            <div className="flex gap-3">
-              <Button className="bg-purple-500 hover:bg-purple-600 text-white border border-purple-300">
-                + เพิ่มสินค้าใหม่
-              </Button>
-              <Button className="bg-red-500 hover:bg-red-600 text-white border border-red-300">
-                ลำดับลอต
-              </Button>
             </div>
           </div>
         </div>

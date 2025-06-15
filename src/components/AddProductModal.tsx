@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ interface Product {
   priceYuan: number;
   exchangeRate: number;
   priceThb: number;
+  importCost: number;
   costThb: number;
   sellingPrice: number;
   status: string;
@@ -41,6 +43,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     priceYuan: 0,
     exchangeRate: 1,
     priceThb: 0,
+    importCost: 0,
     costThb: 0,
     sellingPrice: 0,
     status: "พรีออเดอร์",
@@ -61,6 +64,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
         priceYuan: 0,
         exchangeRate: 1,
         priceThb: 0,
+        importCost: 0,
         costThb: 0,
         sellingPrice: 0,
         status: "พรีออเดอร์",
@@ -70,6 +74,12 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
       });
     }
   }, [editingProduct, open]);
+
+  // Auto calculate total cost when priceThb or importCost changes
+  useEffect(() => {
+    const totalCost = formData.priceThb + formData.importCost;
+    setFormData(prev => ({ ...prev, costThb: totalCost }));
+  }, [formData.priceThb, formData.importCost]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -119,6 +129,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
         priceYuan: 0,
         exchangeRate: 1,
         priceThb: 0,
+        importCost: 0,
         costThb: 0,
         sellingPrice: 0,
         status: "พรีออเดอร์",
@@ -239,16 +250,26 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="costThb">ต้นทุน (บาท)</Label>
+              <Label htmlFor="importCost">ค่านำเข้า (บาท)</Label>
+              <Input 
+                id="importCost"
+                type="number"
+                value={formData.importCost}
+                onChange={(e) => setFormData({ ...formData, importCost: parseFloat(e.target.value) || 0 })}
+                placeholder="0"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+            <div>
+              <Label htmlFor="costThb">ต้นทุนรวม (บาท)</Label>
               <Input 
                 id="costThb"
                 type="number"
                 value={formData.costThb}
-                onChange={(e) => setFormData({ ...formData, costThb: parseFloat(e.target.value) || 0 })}
-                placeholder="0"
-                className="border border-purple-200 rounded-lg"
+                readOnly
+                className="border border-purple-200 rounded-lg bg-gray-50"
               />
             </div>
             <div>
