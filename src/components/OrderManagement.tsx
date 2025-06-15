@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, Plus, Edit, Trash2, Package, Clock, Truck, CheckCircle, AlertCircle } from "lucide-react";
 import AddOrderModal from "./AddOrderModal";
+import EditOrderModal from "./EditOrderModal";
 
 interface Product {
   id: number;
@@ -27,6 +28,7 @@ interface Order {
   cost: number;
   shippingCost: number;
   deposit: number;
+  discount: number;
   profit: number;
   status: string;
   orderDate: string;
@@ -44,6 +46,8 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [editingCost, setEditingCost] = useState<number | null>(null);
   const [editCostValue, setEditCostValue] = useState("");
 
@@ -78,6 +82,17 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
       id: Date.now()
     };
     setOrders([...orders, order]);
+  };
+
+  const updateOrder = (updatedOrder: Order) => {
+    setOrders(orders.map(order => 
+      order.id === updatedOrder.id ? updatedOrder : order
+    ));
+  };
+
+  const handleEdit = (order: Order) => {
+    setEditingOrder(order);
+    setShowEditModal(true);
   };
 
   const handleCostEdit = (orderId: number, currentCost: number) => {
@@ -248,6 +263,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                   <TableHead className="text-purple-800 font-bold">ลูกค้า</TableHead>
                   <TableHead className="text-purple-800 font-bold">จำนวน</TableHead>
                   <TableHead className="text-purple-800 font-bold">ราคาขาย</TableHead>
+                  <TableHead className="text-purple-800 font-bold">ส่วนลด</TableHead>
                   <TableHead className="text-purple-800 font-bold">ต้นทุน</TableHead>
                   <TableHead className="text-purple-800 font-bold">กำไร</TableHead>
                   <TableHead className="text-purple-800 font-bold">สถานะ</TableHead>
@@ -258,7 +274,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
               <TableBody>
                 {filteredOrders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={11} className="text-center py-8 text-gray-500">
                       ไม่มีออเดอร์ในระบบ กรุณาเพิ่มออเดอร์ใหม่
                     </TableCell>
                   </TableRow>
@@ -289,6 +305,9 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                       <TableCell className="font-medium">{order.quantity}</TableCell>
                       <TableCell className="font-semibold text-green-600">
                         ฿{order.sellingPrice.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="font-semibold text-red-600">
+                        {order.discount > 0 ? `-฿${order.discount.toLocaleString()}` : '-'}
                       </TableCell>
                       <TableCell>
                         {editingCost === order.id ? (
@@ -341,7 +360,12 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                       <TableCell className="text-sm">{order.orderDate}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" className="text-purple-600 hover:bg-purple-50">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-purple-600 hover:bg-purple-50"
+                            onClick={() => handleEdit(order)}
+                          >
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button 
@@ -369,6 +393,14 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
         onOpenChange={setShowAddModal}
         onAddOrder={addOrder}
         products={products}
+      />
+
+      {/* Edit Order Modal */}
+      <EditOrderModal 
+        open={showEditModal} 
+        onOpenChange={setShowEditModal}
+        onUpdateOrder={updateOrder}
+        order={editingOrder}
       />
     </div>
   );

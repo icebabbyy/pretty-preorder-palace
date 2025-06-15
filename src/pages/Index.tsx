@@ -35,6 +35,7 @@ interface Order {
   cost: number;
   shippingCost: number;
   deposit: number;
+  discount: number;
   profit: number;
   status: string;
   orderDate: string;
