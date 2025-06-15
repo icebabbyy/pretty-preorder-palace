@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, ExternalLink, Edit, Trash2, Settings, Package } from "lucide-react";
+import { Search, Plus, ExternalLink, Edit, Trash2, Settings } from "lucide-react";
 import AddProductModal from "./AddProductModal";
 import CategoryManagementModal from "./CategoryManagementModal";
 
@@ -39,7 +39,7 @@ interface Product {
   link: string;
   description: string;
   quantity?: number;
-  variants: ProductVariant[]; // เพิ่ม field นี้
+  variants: ProductVariant[];
 }
 
 interface StockManagementProps {
@@ -65,12 +65,15 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
     "ETC"
   ]);
 
+  // DEBUG: log products for troubleshooting
+  // Remove or comment after debugging
+  // console.log("StockManagement products:", products);
+
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          product.sku.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
     const matchesStatus = statusFilter === "all" || product.status === statusFilter;
-    
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
@@ -186,6 +189,7 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
 
               <Button 
                 className="bg-red-500 hover:bg-red-600 text-white border border-red-400 rounded-lg"
+                // TODO: implement functionality for batch/lots
               >
                 ลำดับลอต
               </Button>
@@ -225,10 +229,7 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
                   </TableRow>
                 ) : (
                   filteredProducts.map((product) => {
-                    // ถ้ามี variants ให้แสดงเฉพาะ summary ของสินค้าหลัก
-                    // หรือจะ list รายละเอียด variant ใน modal เพิ่มภายหลัง
                     const quantity = getSumVariantQuantity(product);
-                    // ให้แสดงราคาขาย/ต้นทุนหลัก (หรือจะปรับเป็น min/max ได้)
                     return (
                       <TableRow key={product.id} className="hover:bg-purple-25 border-b border-purple-50">
                         <TableCell>
