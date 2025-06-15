@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Product, Order, OrderItem } from "@/types";
 
@@ -16,7 +15,7 @@ function supabaseProductToProduct(p: any): Product {
     importCost: p.import_cost ?? 0,
     costThb: p.cost_thb ?? 0,
     sellingPrice: p.selling_price ?? 0,
-    status: p.status || "",
+    status: p["status TEXT DEFAULT"] || "",
     shipmentDate: p.shipment_date ? p.shipment_date.toString() : "",
     link: p.link || "",
     description: p.description || "",
@@ -34,11 +33,11 @@ function productToSupabaseInsert(product: Omit<Product, "id">) {
     image: product.image,
     price_yuan: product.priceYuan,
     exchange_rate: product.exchangeRate,
-    // price_thb: product.priceThb, // database ไม่มีคอลัมน์นี้ ลบทิ้ง
+    // price_thb: product.priceThb,
     import_cost: product.importCost,
     cost_thb: product.costThb,
     selling_price: product.sellingPrice,
-    status: product.status,
+    ["status TEXT DEFAULT"]: product.status,         // Fix column name here!
     shipment_date: product.shipmentDate,
     link: product.link,
     description: product.description,
