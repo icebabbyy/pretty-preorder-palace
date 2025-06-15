@@ -1,32 +1,12 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, ExternalLink, Edit, Trash2, Settings, Package } from "lucide-react";
-import AddProductModal from "./AddProductModal";
+import { Search, Plus, Edit, Trash2, Settings, ExternalLink } from "lucide-react";
+import AddProductModal, { Product, ProductVariant } from "./AddProductModal";
 import CategoryManagementModal from "./CategoryManagementModal";
-
-interface Product {
-  id: number;
-  sku: string;
-  name: string;
-  category: string;
-  image: string;
-  priceYuan: number;
-  exchangeRate: number;
-  priceThb: number;
-  importCost: number;
-  costThb: number;
-  sellingPrice: number;
-  status: string;
-  shipmentDate: string;
-  link: string;
-  description: string;
-  quantity?: number;
-}
 
 interface StockManagementProps {
   products: Product[];
@@ -42,7 +22,7 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [categories, setCategories] = useState([
     "League of Legends",
-    "Valorant", 
+    "Valorant",
     "Zenless Zone Zero",
     "Genshin Impact",
     "Honkai Star Rail",
@@ -51,12 +31,12 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
     "ETC"
   ]);
 
+  // รวมชื่อสินค้ากับตัวเลือกทุก variant ใน filter
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
+      || product.variants.some(v => v.sku.toLowerCase().includes(searchTerm.toLowerCase()) || v.name.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
     const matchesStatus = statusFilter === "all" || product.status === statusFilter;
-    
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
@@ -66,7 +46,7 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
     }
   };
 
-  const addProduct = (newProduct: Omit<Product, 'id'>) => {
+  const addProduct = (newProduct: Product) => {
     const product: Product = {
       ...newProduct,
       id: Date.now()
@@ -82,20 +62,6 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
     setShowAddModal(true);
-  };
-
-  const getStockStatus = (quantity: number, status: string) => {
-    if (status === "พร้อมส่ง" && quantity < 3) {
-      return "สต็อคต่ำ";
-    }
-    return status;
-  };
-
-  const getStatusColor = (quantity: number, status: string) => {
-    if (status === "พร้อมส่ง" && quantity < 3) {
-      return "bg-red-100 text-red-800";
-    }
-    return status === 'พรีออเดอร์' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800';
   };
 
   return (
@@ -115,7 +81,6 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
                 />
               </div>
             </div>
-            
             <div className="flex gap-3 items-center">
               <div className="flex items-center gap-2">
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -129,8 +94,8 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => setShowCategoryModal(true)}
                   className="border border-purple-300 text-purple-600 hover:bg-purple-50 rounded-lg"
@@ -138,7 +103,6 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
                   <Settings className="w-4 h-4" />
                 </Button>
               </div>
-
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-32 border border-purple-200 rounded-lg">
                   <SelectValue placeholder="สถานะ" />
@@ -149,22 +113,15 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
                   <SelectItem value="พร้อมส่ง">พร้อมส่ง</SelectItem>
                 </SelectContent>
               </Select>
-
-              <Button 
+              <Button
                 onClick={() => {
                   setEditingProduct(null);
                   setShowAddModal(true);
-                }} 
+                }}
                 className="bg-purple-500 hover:bg-purple-600 text-white border border-purple-400 rounded-lg"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 เพิ่มสินค้า
-              </Button>
-
-              <Button 
-                className="bg-red-500 hover:bg-red-600 text-white border border-red-400 rounded-lg"
-              >
-                ลำดับลอต
               </Button>
             </div>
           </div>
@@ -181,82 +138,94 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
             <Table>
               <TableHeader>
                 <TableRow className="bg-purple-50 border-b border-purple-100">
-                  <TableHead className="text-purple-800 font-bold">รูปภาพ</TableHead>
-                  <TableHead className="text-purple-800 font-bold">SKU</TableHead>
-                  <TableHead className="text-purple-800 font-bold">ชื่อสินค้า</TableHead>
-                  <TableHead className="text-purple-800 font-bold">หมวดหมู่</TableHead>
-                  <TableHead className="text-purple-800 font-bold">ต้นทุน</TableHead>
-                  <TableHead className="text-purple-800 font-bold">ราคาขาย</TableHead>
-                  <TableHead className="text-purple-800 font-bold">จำนวน</TableHead>
-                  <TableHead className="text-purple-800 font-bold">สถานะ</TableHead>
-                  <TableHead className="text-purple-800 font-bold">ลิงก์</TableHead>
-                  <TableHead className="text-purple-800 font-bold">จัดการ</TableHead>
+                  <TableHead>ชื่อสินค้าแม่</TableHead>
+                  <TableHead>หมวดหมู่</TableHead>
+                  <TableHead>สถานะ</TableHead>
+                  <TableHead>SKU</TableHead>
+                  <TableHead>ตัวเลือก/แบบ</TableHead>
+                  <TableHead>ราคาขาย</TableHead>
+                  <TableHead>รูป</TableHead>
+                  <TableHead>จัดการ</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                       ไม่มีสินค้าในระบบ กรุณาเพิ่มสินค้าใหม่
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredProducts.map((product) => {
-                    const quantity = product.quantity || 2;
-                    return (
-                      <TableRow key={product.id} className="hover:bg-purple-25 border-b border-purple-50">
+                  filteredProducts.map((product) =>
+                    product.variants.length === 0 ? (
+                      <TableRow key={product.id}>
+                        <TableCell>{product.name}</TableCell>
+                        <TableCell>{product.category}</TableCell>
+                        <TableCell>{product.status}</TableCell>
+                        <TableCell colSpan={4} className="text-center text-gray-400">ไม่มีตัวเลือกสินค้า</TableCell>
                         <TableCell>
-                          <img 
-                            src={product.image || "/placeholder.svg"} 
-                            alt={product.name}
-                            className="w-12 h-12 rounded-lg object-cover border border-purple-200"
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium text-purple-600">{product.sku}</TableCell>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell className="text-sm text-purple-600">{product.category}</TableCell>
-                        <TableCell className="font-semibold text-red-600">
-                          ฿{product.costThb.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="font-semibold text-green-600">
-                          ฿{product.sellingPrice.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="font-medium">{quantity}</TableCell>
-                        <TableCell>
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(quantity, product.status)}`}>
-                            {getStockStatus(quantity, product.status)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm" asChild className="text-purple-600">
-                            <a href={product.link} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="w-4 h-4" />
-                            </a>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-purple-600 hover:bg-purple-50"
+                            onClick={() => handleEditProduct(product)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:bg-red-50"
+                            onClick={() => deleteProduct(product.id!)}
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-purple-600 hover:bg-purple-50"
-                              onClick={() => handleEditProduct(product)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-red-600 hover:bg-red-50"
-                              onClick={() => deleteProduct(product.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
                       </TableRow>
-                    );
-                  })
+                    ) : (
+                      product.variants.map((variant, idx) => (
+                        <TableRow key={variant.id}>
+                          {idx === 0 && (
+                            <>
+                              <TableCell rowSpan={product.variants.length}>{product.name}</TableCell>
+                              <TableCell rowSpan={product.variants.length}>{product.category}</TableCell>
+                              <TableCell rowSpan={product.variants.length}>{product.status}</TableCell>
+                            </>
+                          )}
+                          <TableCell>{variant.sku}</TableCell>
+                          <TableCell>{variant.name} {variant.option && <>({variant.option})</>}</TableCell>
+                          <TableCell>฿{variant.sellingPrice.toLocaleString()}</TableCell>
+                          <TableCell>
+                            {variant.image ? (
+                              <img src={variant.image} alt={variant.name} className="w-14 h-14 object-cover rounded border" />
+                            ) : "-"}
+                          </TableCell>
+                          <TableCell>
+                            {idx === 0 && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-purple-600 hover:bg-purple-50"
+                                  onClick={() => handleEditProduct(product)}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-600 hover:bg-red-50"
+                                  onClick={() => deleteProduct(product.id!)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )
+                  )
                 )}
               </TableBody>
             </Table>
@@ -265,8 +234,8 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
       </Card>
 
       {/* Add/Edit Product Modal */}
-      <AddProductModal 
-        open={showAddModal} 
+      <AddProductModal
+        open={showAddModal}
         onOpenChange={setShowAddModal}
         onAddProduct={editingProduct ? updateProduct : addProduct}
         categories={categories}
