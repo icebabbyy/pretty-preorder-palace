@@ -6,7 +6,7 @@ import StockManagement from "@/components/StockManagement";
 import OrderManagement from "@/components/OrderManagement";
 import type { Product, Order } from "@/types";
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNqXpUqBYy6eFvmd6Vr_5agHwJSbPsqlY0LZWG-dAoahspK5rd-5peJCMHaKt402KfZA/exec"; // ใช้ URL Apps Script Web App จริง
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwB8_OgvgFUQbWvzr6USRtYrWrI2NRUNet2A8Bwt_qIbu4GuQvtXKCtbzO45Z0cvfPF/exec"; // ใช้ URL Apps Script Web App ใหม่
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("stock");
