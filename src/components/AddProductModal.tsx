@@ -9,8 +9,8 @@ interface ProductVariant {
   variantId: number;
   productId: number;
   sku: string;
-  name: string;    // ชื่อแบบ/option เช่น "สีแดง ไซส์ S"
-  option: string;  // ข้อมูลเพิ่ม เช่น "ไซส์ S", "รหัส ABC"
+  name: string;
+  option: string;
   image: string;
   costThb: number;
   sellingPrice: number;
@@ -74,29 +74,31 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   // หา product และ variants
   const selectedProduct = products.find(p => p.id.toString() === selectedProductId);
 
-  // ถ้าไม่มี variants ให้สร้าง variant หลักแทน
+  // ถ้าไม่มี variants ให้สร้าง variant หลักแทน และรองรับกรณี products.variants เป็น undefined
   let variantOptions: ProductVariant[] = [];
   if (selectedProduct) {
-    if (selectedProduct.variants && selectedProduct.variants.length > 0) {
+    if (Array.isArray(selectedProduct.variants) && selectedProduct.variants.length > 0) {
       variantOptions = selectedProduct.variants;
     } else {
-      // mock variant หลัก
+      // mock variant หลัก (ต้องแน่ใจว่า key ทุกตัวมีค่าไม่ undefined)
       variantOptions = [
         {
           variantId: 0,
           productId: selectedProduct.id,
-          sku: selectedProduct.sku,
-          name: selectedProduct.name,
+          sku: selectedProduct.sku ?? "",
+          name: selectedProduct.name ?? "",
           option: "",
-          image: selectedProduct.image,
-          costThb: selectedProduct.costThb || 0,
-          sellingPrice: selectedProduct.sellingPrice || 0,
+          image: selectedProduct.image ?? "",
+          costThb: typeof selectedProduct.costThb === "number" ? selectedProduct.costThb : 0,
+          sellingPrice: typeof selectedProduct.sellingPrice === "number" ? selectedProduct.sellingPrice : 0,
           quantity: 0,
         }
       ];
     }
   }
-  const selectedVariant = variantOptions.find(v => v.variantId.toString() === selectedVariantId);
+  const selectedVariant = variantOptions.find(
+    v => v.variantId.toString() === selectedVariantId
+  );
 
   // เพิ่มสินค้าเข้า order (variant)
   const addProductToOrder = () => {
