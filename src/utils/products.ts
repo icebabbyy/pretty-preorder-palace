@@ -38,7 +38,12 @@ function productToSupabaseInsert(product: Omit<Product, "id"> | Product) {
     cost_thb: product.costThb,
     selling_price: product.sellingPrice,
     ["status TEXT DEFAULT"]: product.status,
-    shipment_date: product.shipmentDate,
+    // ==== PATCH ====
+    shipment_date:
+      product.shipmentDate && product.shipmentDate !== ""
+        ? product.shipmentDate
+        : null,
+    // ==============
     link: product.link,
     description: product.description,
     quantity: product.quantity,
