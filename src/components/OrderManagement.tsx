@@ -7,6 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, Plus, Edit, Trash2, Package, Clock, Truck, CheckCircle, AlertCircle } from "lucide-react";
 import AddOrderModal from "./AddOrderModal";
 import EditOrderModal from "./EditOrderModal";
+import OrderStats from "./OrderStats";
+import OrderStatusBanner from "./OrderStatusBanner";
+import OrderFilterBar from "./OrderFilterBar";
+import OrdersTable from "./OrdersTable";
 import {
   fetchOrders,
   addOrder as addOrderToSheet,
@@ -82,247 +86,45 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
     setShowEditModal(true);
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "รอชำระเงิน": return <AlertCircle className="w-5 h-5" />;
-      case "รอโรงงานจัดส่ง": return <Clock className="w-5 h-5" />;
-      case "กำลังมาไทย": return <Truck className="w-5 h-5" />;
-      case "จัดส่งแล้ว": return <CheckCircle className="w-5 h-5" />;
-      default: return <Package className="w-5 h-5" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "รอชำระเงิน": return "text-yellow-600 bg-yellow-100";
-      case "รอโรงงานจัดส่ง": return "text-orange-600 bg-orange-100";
-      case "กำลังมาไทย": return "text-blue-600 bg-blue-100";
-      case "จัดส่งแล้ว": return "text-green-600 bg-green-100";
-      default: return "text-gray-600 bg-gray-100";
-    }
+  // The updateOrderStatus function, now separate for OrdersTable
+  const updateOrderStatus = (order: Order, newStatus: string) => {
+    updateOrder({ ...order, status: newStatus });
   };
 
   return (
     <div>
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Package className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-gray-600 text-sm">มูลค่าขาย</p>
-                <p className="text-2xl font-bold text-green-600">฿{(totalRevenue ?? 0).toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <Package className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-gray-600 text-sm">ต้นทุนรวม</p>
-                <p className="text-2xl font-bold text-red-600">฿{(totalCost ?? 0).toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Package className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-gray-600 text-sm">กำไรรวม</p>
-                <p className={`text-2xl font-bold ${totalProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                  ฿{(totalProfit ?? 0).toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <OrderStats
+        totalRevenue={totalRevenue}
+        totalCost={totalCost}
+        totalProfit={totalProfit}
+      />
 
       {/* Status Banner */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {Object.entries(statusCounts).map(([status, count]) => (
-          <Card key={status} className="bg-white border border-purple-200 rounded-xl shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${getStatusColor(status)}`}>
-                  {getStatusIcon(status)}
-                </div>
-                <div>
-                  <p className="text-xs text-gray-600">{status}</p>
-                  <p className="text-lg font-bold text-gray-800">{count} ออเดอร์</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <OrderStatusBanner statusCounts={statusCounts} />
 
       {/* Search and Filters */}
-      <Card className="mb-6 bg-white border border-purple-200 rounded-xl shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="flex-1 max-w-md">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="ค้นหาออเดอร์..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border border-purple-200 rounded-lg"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 items-center">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48 border border-purple-200 rounded-lg">
-                  <SelectValue placeholder="สถานะทั้งหมด" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">สถานะทั้งหมด</SelectItem>
-                  <SelectItem value="รอชำระเงิน">รอชำระเงิน</SelectItem>
-                  <SelectItem value="รอโรงงานจัดส่ง">รอโรงงานจัดส่ง</SelectItem>
-                  <SelectItem value="กำลังมาไทย">กำลังมาไทย</SelectItem>
-                  <SelectItem value="จัดส่งแล้ว">จัดส่งแล้ว</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={() => setShowAddModal(true)}
-                className="bg-purple-500 hover:bg-purple-600 text-white border border-purple-400 rounded-lg"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                เพิ่มออเดอร์
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mb-6 bg-white border border-purple-200 rounded-xl shadow-sm">
+        <div className="p-6">
+          <OrderFilterBar
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            onAddOrderClick={() => setShowAddModal(true)}
+          />
+        </div>
+      </div>
 
       {/* Orders Table */}
-      <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
-        <CardHeader className="border-b border-purple-100">
-          <CardTitle className="text-purple-800">รายการออเดอร์</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-purple-50 border-b border-purple-100">
-                  <TableHead className="text-purple-800 font-bold">สินค้า</TableHead>
-                  <TableHead className="text-purple-800 font-bold">ลูกค้า</TableHead>
-                  <TableHead className="text-purple-800 font-bold">ราคาขาย</TableHead>
-                  <TableHead className="text-purple-800 font-bold">ส่วนลด</TableHead>
-                  <TableHead className="text-purple-800 font-bold">ต้นทุน</TableHead>
-                  <TableHead className="text-purple-800 font-bold">กำไร</TableHead>
-                  <TableHead className="text-purple-800 font-bold">สถานะ</TableHead>
-                  <TableHead className="text-purple-800 font-bold">วันที่</TableHead>
-                  <TableHead className="text-purple-800 font-bold">จัดการ</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrders.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                      ไม่มีออเดอร์ในระบบ กรุณาเพิ่มออเดอร์ใหม่
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredOrders.map((order) => (
-                    <TableRow key={order.id} className="hover:bg-purple-25 border-b border-purple-50">
-                      <TableCell>
-                        <div className="space-y-2">
-                          {(Array.isArray(order.items) ? order.items : []).map((item, index) => (
-                            <div key={index} className="flex items-center gap-2">
-                              <img
-                                src={item.productImage}
-                                alt={item.productName}
-                                className="w-8 h-8 rounded object-cover border border-purple-200"
-                              />
-                              <div>
-                                <p className="text-sm font-medium">{item.productName}</p>
-                                <p className="text-xs text-purple-500">{item.sku} x{item.quantity}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium text-purple-700">{order.username}</p>
-                          {(order.deposit ?? 0) > 0 && (
-                            <p className="text-xs text-green-600">มัดจำ: ฿{(order.deposit ?? 0).toLocaleString()}</p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-semibold text-green-600">
-                        ฿{(order.totalSellingPrice ?? 0).toLocaleString()}
-                      </TableCell>
-                      <TableCell className="font-semibold text-red-600">
-                        {(order.discount ?? 0) > 0 ? `-฿${(order.discount ?? 0).toLocaleString()}` : '-'}
-                      </TableCell>
-                      <TableCell className="font-semibold text-red-600">
-                        ฿{(order.totalCost ?? 0).toLocaleString()}
-                      </TableCell>
-                      <TableCell className={`font-semibold ${(order.profit ?? 0) >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                        ฿{(order.profit ?? 0).toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        {/* ปุ่มเปลี่ยนสถานะแบบ dropdown */}
-                        <Select
-                          value={order.status}
-                          onValueChange={(newStatus) => updateOrder({ ...order, status: newStatus })}
-                        >
-                          <SelectTrigger className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                            {getStatusIcon(order.status)}
-                            <SelectValue placeholder={order.status} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="รอชำระเงิน">รอชำระเงิน</SelectItem>
-                            <SelectItem value="รอโรงงานจัดส่ง">รอโรงงานจัดส่ง</SelectItem>
-                            <SelectItem value="กำลังมาไทย">กำลังมาไทย</SelectItem>
-                            <SelectItem value="จัดส่งแล้ว">จัดส่งแล้ว</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-sm">{order.orderDate}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-purple-600 hover:bg-purple-50"
-                            onClick={() => handleEdit(order)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:bg-red-50"
-                            onClick={() => deleteOrder(order.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="bg-white border border-purple-200 rounded-xl shadow-sm">
+        <OrdersTable
+          orders={filteredOrders}
+          updateOrderStatus={updateOrderStatus}
+          onEdit={handleEdit}
+          onDelete={deleteOrder}
+        />
+      </div>
 
       <AddOrderModal
         open={showAddModal}
