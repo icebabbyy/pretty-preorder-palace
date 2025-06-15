@@ -10,7 +10,7 @@ export interface ProductOption {
 }
 
 export interface Product {
-  id: number;
+  id?: number; // Made optional so local state "new product" can omit it
   sku: string;
   name: string;
   category: string;
@@ -53,4 +53,3 @@ export interface Order {
   username: string;
   address: string;
 }
-
