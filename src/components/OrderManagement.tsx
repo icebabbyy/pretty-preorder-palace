@@ -241,7 +241,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                     <TableRow key={order.id} className="hover:bg-purple-25 border-b border-purple-50">
                       <TableCell>
                         <div className="space-y-2">
-                          {order.items.map((item, index) => (
+                          {(Array.isArray(order.items) ? order.items : []).map((item, index) => (
                             <div key={index} className="flex items-center gap-2">
                               <img
                                 src={item.productImage}
