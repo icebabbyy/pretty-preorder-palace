@@ -30,12 +30,12 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
   useEffect(() => {
     if (order) {
       setItems(order.items || []);
-      setShippingCost(order.shippingCost.toString());
-      setDeposit(order.deposit.toString());
-      setDiscount(order.discount.toString());
-      setStatus(order.status);
-      setUsername(order.username);
-      setAddress(order.address);
+      setShippingCost((order.shippingCost ?? 0).toString());
+      setDeposit((order.deposit ?? 0).toString());
+      setDiscount((order.discount ?? 0).toString());
+      setStatus(order.status ?? "รอชำระเงิน");
+      setUsername(order.username ?? "");
+      setAddress(order.address ?? "");
     }
   }, [order]);
 
