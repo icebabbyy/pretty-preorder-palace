@@ -72,44 +72,49 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const [username, setUsername] = useState("");
   const [address, setAddress] = useState("");
 
-  // --------------- SAFETY: products check ---------------
+  // SAFETY: products check
   if (!Array.isArray(products) || products.length === 0) {
-    // หาก products ยังโหลดไม่เสร็จ หรือเป็น undefined/null/[] ให้คืน null
     return null;
   }
 
-  // -------------------- SELECTED PRODUCT --------------------
+  // SELECTED PRODUCT
   const selectedProduct = products.find(p => p.id.toString() === selectedProductId);
 
-  // -------------------- VARIANT OPTIONS --------------------
+  // VARIANT OPTIONS (Always show "หลัก" if not duplicated)
   let variantOptions: ProductVariant[] = [];
   if (selectedProduct) {
-    if (Array.isArray(selectedProduct.variants) && selectedProduct.variants.length > 0) {
-      variantOptions = selectedProduct.variants;
+    const hasVariants = Array.isArray(selectedProduct.variants) && selectedProduct.variants.length > 0;
+    const mainAsVariant: ProductVariant = {
+      variantId: 0,
+      productId: selectedProduct.id,
+      sku: selectedProduct.sku ?? "",
+      name: selectedProduct.name ?? "(หลัก)",
+      option: "",
+      image: selectedProduct.image ?? "",
+      costThb: typeof selectedProduct.costThb === "number" ? selectedProduct.costThb : 0,
+      sellingPrice: typeof selectedProduct.sellingPrice === "number" ? selectedProduct.sellingPrice : 0,
+      quantity: 0,
+    };
+
+    if (hasVariants) {
+      // Check if any variant is basically "อันหลัก" (by sku or name), if not, add "หลัก" as first
+      const mainDuplicate = selectedProduct.variants!.some(
+        v => v.sku === selectedProduct.sku || v.name === selectedProduct.name
+      );
+      variantOptions = mainDuplicate
+        ? selectedProduct.variants!
+        : [mainAsVariant, ...selectedProduct.variants!];
     } else {
-      // mock variant หลัก (สินค้าไม่มีตัวเลือก)
-      variantOptions = [
-        {
-          variantId: 0,
-          productId: selectedProduct.id,
-          sku: selectedProduct.sku ?? "",
-          name: selectedProduct.name ?? "",
-          option: "",
-          image: selectedProduct.image ?? "",
-          costThb: typeof selectedProduct.costThb === "number" ? selectedProduct.costThb : 0,
-          sellingPrice: typeof selectedProduct.sellingPrice === "number" ? selectedProduct.sellingPrice : 0,
-          quantity: 0,
-        }
-      ];
+      variantOptions = [mainAsVariant];
     }
   }
 
-  // ----------------- SELECTED VARIANT -----------------
+  // SELECTED VARIANT
   const selectedVariant = variantOptions.find(
     v => v.variantId.toString() === selectedVariantId
   );
 
-  // ------------------ ADD PRODUCT ------------------
+  // ADD PRODUCT TO ORDER
   const addProductToOrder = () => {
     if (!selectedProduct || !selectedVariant) return;
 
@@ -141,7 +146,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     setSelectedVariantId("");
   };
 
-  // ------------------ ITEM HANDLERS ------------------
+  // ITEM HANDLERS
   const updateItemQuantity = (productId: number, variantId: number, quantity: number) => {
     setOrderItems(orderItems.map(item =>
       item.productId === productId && item.variantId === variantId
@@ -162,7 +167,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     setOrderItems(orderItems.filter(item => !(item.productId === productId && item.variantId === variantId)));
   };
 
-  // ----------------- SUBMIT -----------------
+  // SUBMIT
   const handleSubmit = () => {
     if (!username || !address || orderItems.length === 0) {
       alert("กรุณากรอกข้อมูลให้ครบถ้วน");
@@ -205,7 +210,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     setAddress("");
   };
 
-  // ----------------- SUMMARY -----------------
+  // SUMMARY
   const totalSellingPrice = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
   const totalCost = orderItems.reduce((sum, item) => sum + (item.unitCost * item.quantity), 0);
   const discountAmount = parseFloat(discount || "0");
@@ -214,7 +219,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const depositAmount = parseFloat(deposit || "0");
   const profit = finalSellingPrice - totalCost - shipping;
 
-  // ----------------- RENDER -----------------
+  // RENDER
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
@@ -268,7 +273,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                 </SelectContent>
               </Select>
 
-              {/* เลือกตัวเลือกย่อย */}
+              {/* เลือกตัวเลือกย่อย (มีหลัก/ไม่มีหลักก็เลือกได้) */}
               <Select
                 value={selectedVariantId}
                 onValueChange={setSelectedVariantId}
