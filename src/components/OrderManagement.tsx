@@ -57,14 +57,16 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.items.some(item => 
-      item.productName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const matchesSearch =
+    Array.isArray(order.items) &&
+    order.items.some(item =>
+      item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.sku.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || order.username.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+    ) ||
+    order.username.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+  return matchesSearch && matchesStatus;
+});
 
   const totalRevenue = orders.reduce((sum, order) => sum + order.totalSellingPrice, 0);
   const totalCost = orders.reduce((sum, order) => sum + order.totalCost, 0);
