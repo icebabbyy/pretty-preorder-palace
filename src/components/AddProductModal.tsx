@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// ProductVariant interface
+// --- INTERFACE ---
 interface ProductVariant {
   variantId: number;
   productId: number;
@@ -13,19 +13,21 @@ interface ProductVariant {
   name: string;
   option: string;
   image: string;
-  priceThb: number; // (ไม่ต้องใช้ก็ได้)
+  priceThb?: number;
   costThb: number;
   sellingPrice: number;
   quantity: number;
 }
 
-// Product interface
 interface Product {
   id: number;
   sku: string;
   name: string;
   image: string;
-  variants: ProductVariant[];
+  variants?: ProductVariant[];
+  priceThb?: number;
+  costThb: number;
+  sellingPrice: number;
 }
 
 interface OrderItem {
@@ -72,31 +74,45 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const [username, setUsername] = useState("");
   const [address, setAddress] = useState("");
 
-  // หา product ที่เลือก
+  // --- SAFETY: ป้องกัน products ว่าง ---
+  if (!Array.isArray(products) || products.length === 0) {
+    return null;
+  }
+
+  // --- SELECTED PRODUCT ---
   const selectedProduct = products.find(p => p.id.toString() === selectedProductId);
 
-  // ให้ "ตัวหลัก" เป็นตัวเลือกแรกเสมอ ตามด้วย variants จริง
-  const variantOptions: ProductVariant[] = selectedProduct
-    ? [
-        {
-          variantId: 0,
-          productId: selectedProduct.id,
-          sku: selectedProduct.sku,
-          name: selectedProduct.name,
-          option: "",
-          image: selectedProduct.image,
-          priceThb: 0,
-          costThb: 0,
-          sellingPrice: 0,
-          quantity: 0
-        },
-        ...(selectedProduct.variants ?? [])
-      ]
-    : [];
+  // --- VARIANT OPTIONS: "ตัวเลือกหลัก" + ตัวเลือกย่อย (ถ้ามี) ---
+  let variantOptions: ProductVariant[] = [];
+  if (selectedProduct) {
+    const mainVariant: ProductVariant = {
+      variantId: 0,
+      productId: selectedProduct.id,
+      sku: selectedProduct.sku ?? "",
+      name: selectedProduct.name ?? "(หลัก)",
+      option: "",
+      image: selectedProduct.image ?? "",
+      priceThb: selectedProduct.priceThb ?? 0,
+      costThb: selectedProduct.costThb ?? 0,
+      sellingPrice: selectedProduct.sellingPrice ?? 0,
+      quantity: 0,
+    };
+
+    const realVariants: ProductVariant[] = Array.isArray(selectedProduct.variants)
+      ? selectedProduct.variants.map(v => ({
+          ...v,
+          priceThb: v.priceThb ?? 0,
+          costThb: v.costThb ?? 0,
+          sellingPrice: v.sellingPrice ?? 0,
+        }))
+      : [];
+
+    variantOptions = [mainVariant, ...realVariants];
+  }
 
   const selectedVariant = variantOptions.find(v => v.variantId.toString() === selectedVariantId);
 
-  // เพิ่มสินค้าเข้า order
+  // --- ADD PRODUCT ---
   const addProductToOrder = () => {
     if (!selectedProduct || !selectedVariant) return;
 
@@ -119,8 +135,8 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
         productImage: selectedVariant.image || selectedProduct.image,
         sku: selectedVariant.sku,
         quantity: 1,
-        unitPrice: selectedVariant.sellingPrice,
-        unitCost: selectedVariant.costThb
+        unitPrice: selectedVariant.sellingPrice ?? 0,
+        unitCost: selectedVariant.costThb ?? 0
       };
       setOrderItems([...orderItems, newItem]);
     }
@@ -178,7 +194,6 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     onAddOrder(newOrder);
     onOpenChange(false);
 
-    // Reset form
     setOrderItems([]);
     setSelectedProductId("");
     setSelectedVariantId("");
@@ -234,7 +249,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
               {/* เลือกสินค้า */}
               <Select value={selectedProductId} onValueChange={(val) => {
                 setSelectedProductId(val);
-                setSelectedVariantId(""); // reset variant เมื่อเปลี่ยนสินค้า
+                setSelectedVariantId("");
               }}>
                 <SelectTrigger className="flex-1 border border-purple-200 rounded-lg">
                   <SelectValue placeholder="เลือกสินค้าจากสต็อค" />
