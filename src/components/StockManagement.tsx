@@ -216,10 +216,10 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
                         <TableCell className="font-medium">{product.name}</TableCell>
                         <TableCell className="text-sm text-purple-600">{product.category}</TableCell>
                         <TableCell className="font-semibold text-red-600">
-                          ฿{product.costThb.toLocaleString()}
+                          ฿{(product.costThb ?? 0).toLocaleString()}
                         </TableCell>
                         <TableCell className="font-semibold text-green-600">
-                          ฿{product.sellingPrice.toLocaleString()}
+                          ฿{(product.sellingPrice ?? 0).toLocaleString()}
                         </TableCell>
                         <TableCell className="font-medium">{quantity}</TableCell>
                         <TableCell>
