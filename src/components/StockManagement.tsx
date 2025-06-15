@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,11 @@ const StockManagement = ({
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [loadingSave, setLoadingSave] = useState(false);
 
+  // เพิ่ม log เพื่อตรวจสอบ products ทุกครั้งที่ products เปลี่ยน
+  useEffect(() => {
+    console.log("Current products state:", products);
+  }, [products]);
+
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          product.sku.toLowerCase().includes(searchTerm.toLowerCase());
@@ -49,26 +54,40 @@ const StockManagement = ({
     if (confirm("คุณต้องการลบสินค้านี้หรือไม่?")) {
       setLoadingSave(true);
       await deleteProductAPI(productId);
-      setProducts(products.filter(p => p.id !== productId));
+      const updatedProducts = products.filter(p => p.id !== productId);
+      setProducts(updatedProducts);
+      console.log("After delete, products state:", updatedProducts);
       setLoadingSave(false);
     }
   };
 
   const addProduct = async (newProduct: Omit<Product, 'id'>) => {
     setLoadingSave(true);
-    const prod = await addProductAPI(newProduct);
-    setProducts([...products, prod]);
-    // เพิ่ม categories ใหม่ถ้าจำเป็น
-    if (prod.category && !categories.includes(prod.category)) {
-      setCategories([...categories, prod.category]);
+    try {
+      const prod = await addProductAPI(newProduct);
+      const updatedProducts = [...products, prod];
+      setProducts(updatedProducts);
+      console.log("After add, products state:", updatedProducts);
+      // เพิ่ม categories ใหม่ถ้าจำเป็น
+      if (prod.category && !categories.includes(prod.category)) {
+        setCategories([...categories, prod.category]);
+      }
+    } catch (err) {
+      alert("เกิดข้อผิดพลาดขณะบันทึกสินค้า");
     }
     setLoadingSave(false);
   };
 
   const updateProduct = async (updatedProduct: Product) => {
     setLoadingSave(true);
-    const prod = await updateProductAPI(updatedProduct);
-    setProducts(products.map(p => p.id === prod.id ? prod : p));
+    try {
+      const prod = await updateProductAPI(updatedProduct);
+      const updatedProducts = products.map(p => p.id === prod.id ? prod : p);
+      setProducts(updatedProducts);
+      console.log("After update, products state:", updatedProducts);
+    } catch (err) {
+      alert("เกิดข้อผิดพลาดขณะอัปเดตสินค้า");
+    }
     setLoadingSave(false);
   };
 
