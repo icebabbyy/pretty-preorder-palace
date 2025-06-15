@@ -114,7 +114,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
               </div>
               <div>
                 <p className="text-gray-600 text-sm">มูลค่าขาย</p>
-                <p className="text-2xl font-bold text-green-600">฿{totalRevenue.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-green-600">฿{(totalRevenue ?? 0).toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -127,7 +127,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
               </div>
               <div>
                 <p className="text-gray-600 text-sm">ต้นทุนรวม</p>
-                <p className="text-2xl font-bold text-red-600">฿{totalCost.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-red-600">฿{(totalCost ?? 0).toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -141,7 +141,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
               <div>
                 <p className="text-gray-600 text-sm">กำไรรวม</p>
                 <p className={`text-2xl font-bold ${totalProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                  ฿{totalProfit.toLocaleString()}
+                  ฿{(totalProfit ?? 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -259,22 +259,22 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                       <TableCell>
                         <div>
                           <p className="font-medium text-purple-700">{order.username}</p>
-                          {order.deposit > 0 && (
-                            <p className="text-xs text-green-600">มัดจำ: ฿{order.deposit.toLocaleString()}</p>
+                          {(order.deposit ?? 0) > 0 && (
+                            <p className="text-xs text-green-600">มัดจำ: ฿{(order.deposit ?? 0).toLocaleString()}</p>
                           )}
                         </div>
                       </TableCell>
                       <TableCell className="font-semibold text-green-600">
-                        ฿{order.totalSellingPrice.toLocaleString()}
+                        ฿{(order.totalSellingPrice ?? 0).toLocaleString()}
                       </TableCell>
                       <TableCell className="font-semibold text-red-600">
-                        {order.discount > 0 ? `-฿${order.discount.toLocaleString()}` : '-'}
+                        {(order.discount ?? 0) > 0 ? `-฿${(order.discount ?? 0).toLocaleString()}` : '-'}
                       </TableCell>
                       <TableCell className="font-semibold text-red-600">
-                        ฿{order.totalCost.toLocaleString()}
+                        ฿{(order.totalCost ?? 0).toLocaleString()}
                       </TableCell>
-                      <TableCell className={`font-semibold ${order.profit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                        ฿{order.profit.toLocaleString()}
+                      <TableCell className={`font-semibold ${(order.profit ?? 0) >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                        ฿{(order.profit ?? 0).toLocaleString()}
                       </TableCell>
                       <TableCell>
                         {/* ปุ่มเปลี่ยนสถานะแบบ dropdown */}
