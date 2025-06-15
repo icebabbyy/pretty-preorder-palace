@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Edit, Trash2, ShoppingCart, Package } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Package, Clock, Truck, CheckCircle, AlertCircle } from "lucide-react";
 import AddOrderModal from "./AddOrderModal";
 
 interface Product {
@@ -25,9 +25,13 @@ interface Order {
   quantity: number;
   sellingPrice: number;
   cost: number;
+  shippingCost: number;
+  deposit: number;
   profit: number;
   status: string;
   orderDate: string;
+  username: string;
+  address: string;
 }
 
 interface OrderManagementProps {
@@ -45,7 +49,8 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = order.product.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         order.sku.toLowerCase().includes(searchTerm.toLowerCase());
+                         order.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.username.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     
     return matchesSearch && matchesStatus;
@@ -54,6 +59,14 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
   const totalRevenue = orders.reduce((sum, order) => sum + order.sellingPrice, 0);
   const totalCost = orders.reduce((sum, order) => sum + order.cost, 0);
   const totalProfit = totalRevenue - totalCost;
+
+  // Status counts
+  const statusCounts = {
+    "รอชำระเงิน": orders.filter(o => o.status === "รอชำระเงิน").length,
+    "รอโรงงานจัดส่ง": orders.filter(o => o.status === "รอโรงงานจัดส่ง").length,
+    "กำลังมาไทย": orders.filter(o => o.status === "กำลังมาไทย").length,
+    "จัดส่งแล้ว": orders.filter(o => o.status === "จัดส่งแล้ว").length,
+  };
 
   const deleteOrder = (orderId: number) => {
     setOrders(orders.filter(o => o.id !== orderId));
@@ -76,7 +89,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
     const newCost = parseFloat(editCostValue) || 0;
     setOrders(orders.map(order => {
       if (order.id === orderId) {
-        const newProfit = order.sellingPrice - newCost;
+        const newProfit = order.sellingPrice - newCost - (order.shippingCost || 0);
         return { ...order, cost: newCost, profit: newProfit };
       }
       return order;
@@ -90,10 +103,30 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
     setEditCostValue("");
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "รอชำระเงิน": return <AlertCircle className="w-5 h-5" />;
+      case "รอโรงงานจัดส่ง": return <Clock className="w-5 h-5" />;
+      case "กำลังมาไทย": return <Truck className="w-5 h-5" />;
+      case "จัดส่งแล้ว": return <CheckCircle className="w-5 h-5" />;
+      default: return <Package className="w-5 h-5" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "รอชำระเงิน": return "text-yellow-600 bg-yellow-100";
+      case "รอโรงงานจัดส่ง": return "text-orange-600 bg-orange-100";
+      case "กำลังมาไทย": return "text-blue-600 bg-blue-100";
+      case "จัดส่งแล้ว": return "text-green-600 bg-green-100";
+      default: return "text-gray-600 bg-gray-100";
+    }
+  };
+
   return (
     <div>
-      {/* Stats Cards - Purple theme */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -139,6 +172,25 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
         </Card>
       </div>
 
+      {/* Status Banner */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {Object.entries(statusCounts).map(([status, count]) => (
+          <Card key={status} className="bg-white border border-purple-200 rounded-xl shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${getStatusColor(status)}`}>
+                  {getStatusIcon(status)}
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">{status}</p>
+                  <p className="text-lg font-bold text-gray-800">{count} ออเดอร์</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       {/* Search and Filters */}
       <Card className="mb-6 bg-white border border-purple-200 rounded-xl shadow-sm">
         <CardContent className="p-6">
@@ -163,7 +215,8 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                 <SelectContent>
                   <SelectItem value="all">สถานะทั้งหมด</SelectItem>
                   <SelectItem value="รอชำระเงิน">รอชำระเงิน</SelectItem>
-                  <SelectItem value="รอจัดส่ง">รอจัดส่ง</SelectItem>
+                  <SelectItem value="รอโรงงานจัดส่ง">รอโรงงานจัดส่ง</SelectItem>
+                  <SelectItem value="กำลังมาไทย">กำลังมาไทย</SelectItem>
                   <SelectItem value="จัดส่งแล้ว">จัดส่งแล้ว</SelectItem>
                 </SelectContent>
               </Select>
@@ -192,6 +245,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                 <TableRow className="bg-purple-50 border-b border-purple-100">
                   <TableHead className="text-purple-800 font-bold">รูปสินค้า</TableHead>
                   <TableHead className="text-purple-800 font-bold">สินค้า</TableHead>
+                  <TableHead className="text-purple-800 font-bold">ลูกค้า</TableHead>
                   <TableHead className="text-purple-800 font-bold">จำนวน</TableHead>
                   <TableHead className="text-purple-800 font-bold">ราคาขาย</TableHead>
                   <TableHead className="text-purple-800 font-bold">ต้นทุน</TableHead>
@@ -204,7 +258,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
               <TableBody>
                 {filteredOrders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
                       ไม่มีออเดอร์ในระบบ กรุณาเพิ่มออเดอร์ใหม่
                     </TableCell>
                   </TableRow>
@@ -222,6 +276,14 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                         <div>
                           <p className="font-medium">{order.product}</p>
                           <p className="text-sm text-purple-500">{order.sku}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-purple-700">{order.username}</p>
+                          {order.deposit > 0 && (
+                            <p className="text-xs text-green-600">มัดจำ: ฿{order.deposit.toLocaleString()}</p>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{order.quantity}</TableCell>
@@ -271,11 +333,8 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                         ฿{order.profit.toLocaleString()}
                       </TableCell>
                       <TableCell>
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-                          order.status === 'รอชำระเงิน' ? 'bg-yellow-100 text-yellow-800' :
-                          order.status === 'รอจัดส่ง' ? 'bg-purple-100 text-purple-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
+                        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                          {getStatusIcon(order.status)}
                           {order.status}
                         </span>
                       </TableCell>

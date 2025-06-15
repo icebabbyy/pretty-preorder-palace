@@ -23,6 +23,7 @@ interface Order {
   sellingPrice: number;
   cost: number;
   shippingCost: number;
+  deposit: number;
   profit: number;
   status: string;
   orderDate: string;
@@ -42,6 +43,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const [quantity, setQuantity] = useState("1");
   const [customCost, setCustomCost] = useState("");
   const [shippingCost, setShippingCost] = useState("0");
+  const [deposit, setDeposit] = useState("0");
   const [status, setStatus] = useState("รอชำระเงิน");
   const [username, setUsername] = useState("");
   const [address, setAddress] = useState("");
@@ -56,6 +58,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
 
     const cost = customCost ? parseFloat(customCost) : selectedProduct.costThb;
     const shipping = parseFloat(shippingCost) || 0;
+    const depositAmount = parseFloat(deposit) || 0;
     const totalSellingPrice = selectedProduct.sellingPrice * parseInt(quantity);
     const totalCost = cost * parseInt(quantity);
 
@@ -67,6 +70,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
       sellingPrice: totalSellingPrice,
       cost: totalCost,
       shippingCost: shipping,
+      deposit: depositAmount,
       profit: totalSellingPrice - totalCost - shipping,
       status,
       orderDate: new Date().toLocaleDateString('th-TH'),
@@ -82,6 +86,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     setQuantity("1");
     setCustomCost("");
     setShippingCost("0");
+    setDeposit("0");
     setStatus("รอชำระเงิน");
     setUsername("");
     setAddress("");
@@ -193,6 +198,18 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
           </div>
 
           <div>
+            <Label htmlFor="deposit">มัดจำ (฿)</Label>
+            <Input 
+              id="deposit"
+              type="number"
+              value={deposit}
+              onChange={(e) => setDeposit(e.target.value)}
+              placeholder="0"
+              className="border border-purple-200 rounded-lg"
+            />
+          </div>
+
+          <div>
             <Label htmlFor="status">สถานะ</Label>
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger className="border border-purple-200 rounded-lg">
@@ -200,7 +217,8 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="รอชำระเงิน">รอชำระเงิน</SelectItem>
-                <SelectItem value="รอจัดส่ง">รอจัดส่ง</SelectItem>
+                <SelectItem value="รอโรงงานจัดส่ง">รอโรงงานจัดส่ง</SelectItem>
+                <SelectItem value="กำลังมาไทย">กำลังมาไทย</SelectItem>
                 <SelectItem value="จัดส่งแล้ว">จัดส่งแล้ว</SelectItem>
               </SelectContent>
             </Select>
@@ -228,6 +246,12 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                     ฿{parseFloat(shippingCost || "0").toLocaleString()}
                   </span>
                 </div>
+                <div className="flex justify-between">
+                  <span>มัดจำ:</span>
+                  <span className="font-medium text-blue-600">
+                    ฿{parseFloat(deposit || "0").toLocaleString()}
+                  </span>
+                </div>
                 <div className="flex justify-between border-t pt-1">
                   <span className="font-medium">กำไรรวม:</span>
                   <span className="font-bold text-blue-600">
@@ -238,6 +262,15 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                     ).toLocaleString()}
                   </span>
                 </div>
+                {parseFloat(deposit || "0") > 0 && (
+                  <div className="bg-yellow-50 p-2 rounded mt-2 border border-yellow-200">
+                    <p className="text-xs text-yellow-700">
+                      💡 ยอดที่เหลือ: ฿{(
+                        (selectedProduct.sellingPrice * parseInt(quantity)) - parseFloat(deposit || "0")
+                      ).toLocaleString()}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
