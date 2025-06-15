@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { addOrder as addOrderToSheet } from "@/utils/googleSheets";
 
 interface Product {
   id: number;
@@ -26,6 +26,7 @@ interface OrderItem {
 }
 
 interface Order {
+  id: number;
   items: OrderItem[];
   totalSellingPrice: number;
   totalCost: number;
@@ -55,16 +56,16 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const [status, setStatus] = useState("รอชำระเงิน");
   const [username, setUsername] = useState("");
   const [address, setAddress] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const addProductToOrder = () => {
     const product = products.find(p => p.id.toString() === selectedProductId);
     if (!product) return;
 
     const existingItem = orderItems.find(item => item.productId === product.id);
-    
     if (existingItem) {
-      setOrderItems(orderItems.map(item => 
-        item.productId === product.id 
+      setOrderItems(orderItems.map(item =>
+        item.productId === product.id
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
@@ -80,18 +81,17 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
       };
       setOrderItems([...orderItems, newItem]);
     }
-    
     setSelectedProductId("");
   };
 
   const updateItemQuantity = (productId: number, quantity: number) => {
-    setOrderItems(orderItems.map(item => 
+    setOrderItems(orderItems.map(item =>
       item.productId === productId ? { ...item, quantity } : item
     ));
   };
 
   const updateItemCost = (productId: number, unitCost: number) => {
-    setOrderItems(orderItems.map(item => 
+    setOrderItems(orderItems.map(item =>
       item.productId === productId ? { ...item, unitCost } : item
     ));
   };
@@ -100,11 +100,12 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     setOrderItems(orderItems.filter(item => item.productId !== productId));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!username || !address || orderItems.length === 0) {
       alert("กรุณากรอกข้อมูลให้ครบถ้วน");
       return;
     }
+    setLoading(true);
 
     const totalSellingPrice = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
     const totalCost = orderItems.reduce((sum, item) => sum + (item.unitCost * item.quantity), 0);
@@ -113,7 +114,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     const discountAmount = parseFloat(discount) || 0;
     const finalSellingPrice = totalSellingPrice - discountAmount;
 
-    const newOrder: Order = {
+    const newOrder: Omit<Order, "id"> = {
       items: orderItems,
       totalSellingPrice: finalSellingPrice,
       totalCost,
@@ -127,18 +128,24 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
       address
     };
 
-    onAddOrder(newOrder);
-    onOpenChange(false);
-
-    // Reset form
-    setOrderItems([]);
-    setSelectedProductId("");
-    setShippingCost("0");
-    setDeposit("0");
-    setDiscount("0");
-    setStatus("รอชำระเงิน");
-    setUsername("");
-    setAddress("");
+    try {
+      const createdOrder = await addOrderToSheet(newOrder); // Google Sheets API
+      onAddOrder(createdOrder);
+      onOpenChange(false);
+      // Reset form
+      setOrderItems([]);
+      setSelectedProductId("");
+      setShippingCost("0");
+      setDeposit("0");
+      setDiscount("0");
+      setStatus("รอชำระเงิน");
+      setUsername("");
+      setAddress("");
+    } catch (e) {
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const totalSellingPrice = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
@@ -159,7 +166,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
         <div className="space-y-4 mt-6">
           <div>
             <Label htmlFor="username">Username *</Label>
-            <Input 
+            <Input
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -167,10 +174,9 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
               className="border border-purple-200 rounded-lg"
             />
           </div>
-
           <div>
             <Label htmlFor="address">ที่อยู่ *</Label>
-            <Input 
+            <Input
               id="address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
@@ -178,7 +184,6 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
               className="border border-purple-200 rounded-lg"
             />
           </div>
-
           <div>
             <Label htmlFor="product">เพิ่มสินค้า</Label>
             <div className="flex gap-2">
@@ -194,7 +199,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                   ))}
                 </SelectContent>
               </Select>
-              <Button 
+              <Button
                 onClick={addProductToOrder}
                 disabled={!selectedProductId}
                 className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
@@ -203,7 +208,6 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
               </Button>
             </div>
           </div>
-
           {orderItems.length > 0 && (
             <div>
               <Label>รายการสินค้า</Label>
@@ -211,8 +215,8 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                 {orderItems.map((item) => (
                   <div key={item.productId} className="p-3 bg-purple-50 rounded-lg border border-purple-200">
                     <div className="flex items-center gap-3 mb-3">
-                      <img 
-                        src={item.productImage} 
+                      <img
+                        src={item.productImage}
                         alt={item.productName}
                         className="w-12 h-12 rounded object-cover border border-purple-200"
                       />
@@ -230,7 +234,6 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                         ลบ
                       </Button>
                     </div>
-                    
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label>จำนวน</Label>
@@ -257,11 +260,10 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
               </div>
             </div>
           )}
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="shippingCost">ค่าจัดส่ง (฿)</Label>
-              <Input 
+              <Input
                 id="shippingCost"
                 type="number"
                 value={shippingCost}
@@ -270,10 +272,9 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                 className="border border-purple-200 rounded-lg"
               />
             </div>
-
             <div>
               <Label htmlFor="discount">ส่วนลด (฿)</Label>
-              <Input 
+              <Input
                 id="discount"
                 type="number"
                 value={discount}
@@ -283,11 +284,10 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
               />
             </div>
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="deposit">มัดจำ (฿)</Label>
-              <Input 
+              <Input
                 id="deposit"
                 type="number"
                 value={deposit}
@@ -296,7 +296,6 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                 className="border border-purple-200 rounded-lg"
               />
             </div>
-
             <div>
               <Label htmlFor="status">สถานะ</Label>
               <Select value={status} onValueChange={setStatus}>
@@ -312,7 +311,6 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
               </Select>
             </div>
           </div>
-
           {orderItems.length > 0 && (
             <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
               <h4 className="font-medium text-purple-700 mb-2">สรุปออเดอร์</h4>
@@ -372,21 +370,21 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
             </div>
           )}
         </div>
-
         <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-purple-200">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => onOpenChange(false)}
             className="border border-purple-300 text-purple-600 hover:bg-purple-50 rounded-lg"
+            disabled={loading}
           >
             ยกเลิก
           </Button>
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
-            disabled={!username || !address || orderItems.length === 0}
+            disabled={!username || !address || orderItems.length === 0 || loading}
           >
-            บันทึก
+            {loading ? "กำลังบันทึก..." : "บันทึก"}
           </Button>
         </div>
       </DialogContent>
