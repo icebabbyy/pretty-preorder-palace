@@ -85,10 +85,22 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
 
     try {
       const result = await updateOrderInSheet(updatedOrder);
+      // log response type
+      if (typeof result !== "object" || result == null) {
+        console.error("Unexpected API result in updateOrder:", result);
+        alert("เกิดข้อผิดพลาด (API ไม่ตอบเป็น JSON): " + (typeof result === "string" ? result : ""));
+        return;
+      }
       onUpdateOrder(result);
       onOpenChange(false);
-    } catch (e) {
-      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่");
+    } catch (e: any) {
+      if (e instanceof SyntaxError) {
+        alert("เกิดข้อผิดพลาด: ไม่สามารถอ่านข้อมูลที่ได้จากเซิฟเวอร์ (คาดว่า API Backend มีปัญหา หรือไม่ได้รันอยู่)\n" +
+        "รายละเอียด: " + e.message + "\nโปรดตรวจสอบว่าคุณมี backend API ที่ URL /api/orders/:id รองรับอยู่หรือไม่");
+      } else {
+        alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่");
+      }
+      console.error("Update order error:", e);
     } finally {
       setLoading(false);
     }
@@ -226,3 +238,4 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
 };
 
 export default EditOrderModal;
+
