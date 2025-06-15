@@ -89,14 +89,21 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
       return;
     }
 
-    const totalSellingPrice = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-    const totalCost = orderItems.reduce((sum, item) => sum + (item.unitCost * item.quantity), 0);
+    const totalSellingPrice = orderItems.reduce(
+      (sum, item) => sum + item.unitPrice * item.quantity,
+      0
+    );
+    const totalCost = orderItems.reduce(
+      (sum, item) => sum + item.unitCost * item.quantity,
+      0
+    );
     const shipping = parseFloat(shippingCost) || 0;
     const depositAmount = parseFloat(deposit) || 0;
     const discountAmount = parseFloat(discount) || 0;
     const finalSellingPrice = totalSellingPrice - discountAmount;
 
-    const newOrder: Order = {
+    const newOrder = {
+      id: Date.now(),
       items: orderItems,
       totalSellingPrice: finalSellingPrice,
       totalCost,
@@ -105,15 +112,14 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
       discount: discountAmount,
       profit: finalSellingPrice - totalCost - shipping,
       status,
-      orderDate: new Date().toLocaleDateString('th-TH'),
+      orderDate: new Date().toLocaleDateString("th-TH"),
       username,
-      address
+      address,
     };
 
     onAddOrder(newOrder);
     onOpenChange(false);
 
-    // Reset form
     setOrderItems([]);
     setSelectedProductId("");
     setSelectedVariantId("");
