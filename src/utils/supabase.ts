@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Product, Order, OrderItem } from "@/types";
 
@@ -11,6 +12,7 @@ function supabaseProductToProduct(p: any): Product {
     image: p.image || "",
     priceYuan: p.price_yuan ?? 0,
     exchangeRate: p.exchange_rate ?? 5,
+    priceThb: (p.price_yuan ?? 0) * (p.exchange_rate ?? 1), // <-- ใส่ priceThb คำนวณอัตโนมัติ
     importCost: p.import_cost ?? 0,
     costThb: p.cost_thb ?? 0,
     sellingPrice: p.selling_price ?? 0,
@@ -32,6 +34,7 @@ function productToSupabaseInsert(product: Omit<Product, "id">) {
     image: product.image,
     price_yuan: product.priceYuan,
     exchange_rate: product.exchangeRate,
+    // price_thb: product.priceThb, // database ไม่มีคอลัมน์นี้ ลบทิ้ง
     import_cost: product.importCost,
     cost_thb: product.costThb,
     selling_price: product.sellingPrice,
