@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// ---------- INTERFACE ----------
+// ProductVariant interface
 interface ProductVariant {
   variantId: number;
   productId: number;
@@ -13,19 +13,19 @@ interface ProductVariant {
   name: string;
   option: string;
   image: string;
+  priceThb: number; // (ไม่ต้องใช้ก็ได้)
   costThb: number;
   sellingPrice: number;
   quantity: number;
 }
 
+// Product interface
 interface Product {
   id: number;
   sku: string;
   name: string;
   image: string;
-  costThb: number;
-  sellingPrice: number;
-  variants?: ProductVariant[];
+  variants: ProductVariant[];
 }
 
 interface OrderItem {
@@ -58,12 +58,12 @@ interface AddOrderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAddOrder: (order: Order) => void;
-  products?: Product[];
+  products: Product[];
 }
 
 const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderModalProps) => {
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
-  const [selectedVariantId, setSelectedVariantId] = useState<string>("");
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [selectedVariantId, setSelectedVariantId] = useState("");
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [shippingCost, setShippingCost] = useState("0");
   const [deposit, setDeposit] = useState("0");
@@ -72,38 +72,31 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const [username, setUsername] = useState("");
   const [address, setAddress] = useState("");
 
-  if (!Array.isArray(products) || products.length === 0) {
-    return null;
-  }
-
+  // หา product ที่เลือก
   const selectedProduct = products.find(p => p.id.toString() === selectedProductId);
 
-  // **** ส่วนสำคัญ: ให้ dropdown มี "ตัวหลัก" เสมอ ****
-  let variantOptions: ProductVariant[] = [];
-  if (selectedProduct) {
-    const mainVariant: ProductVariant = {
-      variantId: 0,
-      productId: selectedProduct.id,
-      sku: selectedProduct.sku ?? "",
-      name: selectedProduct.name ?? "(หลัก)",
-      option: "",
-      image: selectedProduct.image ?? "",
-      costThb: typeof selectedProduct.costThb === "number" ? selectedProduct.costThb : 0,
-      sellingPrice: typeof selectedProduct.sellingPrice === "number" ? selectedProduct.sellingPrice : 0,
-      quantity: 0,
-    };
+  // ให้ "ตัวหลัก" เป็นตัวเลือกแรกเสมอ ตามด้วย variants จริง
+  const variantOptions: ProductVariant[] = selectedProduct
+    ? [
+        {
+          variantId: 0,
+          productId: selectedProduct.id,
+          sku: selectedProduct.sku,
+          name: selectedProduct.name,
+          option: "",
+          image: selectedProduct.image,
+          priceThb: 0,
+          costThb: 0,
+          sellingPrice: 0,
+          quantity: 0
+        },
+        ...(selectedProduct.variants ?? [])
+      ]
+    : [];
 
-    const variants: ProductVariant[] = Array.isArray(selectedProduct.variants)
-      ? selectedProduct.variants
-      : [];
+  const selectedVariant = variantOptions.find(v => v.variantId.toString() === selectedVariantId);
 
-    variantOptions = [mainVariant, ...variants];
-  }
-
-  const selectedVariant = variantOptions.find(
-    v => v.variantId.toString() === selectedVariantId
-  );
-
+  // เพิ่มสินค้าเข้า order
   const addProductToOrder = () => {
     if (!selectedProduct || !selectedVariant) return;
 
@@ -185,6 +178,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     onAddOrder(newOrder);
     onOpenChange(false);
 
+    // Reset form
     setOrderItems([]);
     setSelectedProductId("");
     setSelectedVariantId("");
@@ -206,7 +200,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
         <DialogHeader>
           <DialogTitle className="text-xl text-purple-700">+ เพิ่มออเดอร์ใหม่</DialogTitle>
         </DialogHeader>
@@ -237,14 +231,12 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
           <div>
             <Label htmlFor="product">เพิ่มสินค้า</Label>
             <div className="flex gap-2">
-              <Select
-                value={selectedProductId}
-                onValueChange={(val) => {
-                  setSelectedProductId(val);
-                  setSelectedVariantId("");
-                }}
-              >
-                <SelectTrigger className="min-w-[210px] border border-purple-200 rounded-lg">
+              {/* เลือกสินค้า */}
+              <Select value={selectedProductId} onValueChange={(val) => {
+                setSelectedProductId(val);
+                setSelectedVariantId(""); // reset variant เมื่อเปลี่ยนสินค้า
+              }}>
+                <SelectTrigger className="flex-1 border border-purple-200 rounded-lg">
                   <SelectValue placeholder="เลือกสินค้าจากสต็อค" />
                 </SelectTrigger>
                 <SelectContent>
@@ -256,12 +248,9 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                 </SelectContent>
               </Select>
 
-              <Select
-                value={selectedVariantId}
-                onValueChange={setSelectedVariantId}
-                disabled={!selectedProduct}
-              >
-                <SelectTrigger className="min-w-[210px] border border-purple-200 rounded-lg">
+              {/* เลือกตัวเลือกย่อย */}
+              <Select value={selectedVariantId} onValueChange={setSelectedVariantId} disabled={!selectedProduct}>
+                <SelectTrigger className="flex-1 border border-purple-200 rounded-lg">
                   <SelectValue placeholder={selectedProduct ? "เลือกตัวเลือก/แบบ" : "เลือกสินค้าก่อน"} />
                 </SelectTrigger>
                 <SelectContent>
@@ -269,8 +258,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                     <SelectItem key={variant.variantId} value={variant.variantId.toString()}>
                       {variant.name}
                       {variant.option ? ` (${variant.option})` : ""}
-                      {" - ฿"}
-                      {variant.sellingPrice}
+                      {variant.sellingPrice ? ` - ฿${variant.sellingPrice}` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
