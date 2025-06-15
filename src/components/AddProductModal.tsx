@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -52,6 +51,31 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     description: ""
   });
 
+  // --- Auto-calculate ราคาบาท (THB) ---
+  useEffect(() => {
+    const y = parseFloat(formData.priceYuan as any) || 0;
+    const r = parseFloat(formData.exchangeRate as any) || 0;
+    if (y > 0 && r > 0) {
+      setFormData(prev => ({
+        ...prev,
+        priceThb: parseFloat((y * r).toFixed(2))
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        priceThb: 0
+      }));
+    }
+    // eslint-disable-next-line
+  }, [formData.priceYuan, formData.exchangeRate]);
+
+  // --- Auto-calculate ต้นทุนรวม (costThb) เมื่อราคาบาทหรือค่านำเข้าเปลี่ยน ---
+  useEffect(() => {
+    const totalCost = (parseFloat(formData.priceThb as any) || 0) + (parseFloat(formData.importCost as any) || 0);
+    setFormData(prev => ({ ...prev, costThb: totalCost }));
+    // eslint-disable-next-line
+  }, [formData.priceThb, formData.importCost]);
+
   useEffect(() => {
     if (editingProduct) {
       setFormData(editingProduct);
@@ -74,12 +98,6 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
       });
     }
   }, [editingProduct, open]);
-
-  // Auto calculate total cost when priceThb or importCost changes
-  useEffect(() => {
-    const totalCost = formData.priceThb + formData.importCost;
-    setFormData(prev => ({ ...prev, costThb: totalCost }));
-  }, [formData.priceThb, formData.importCost]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -119,7 +137,6 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     onAddProduct(formData);
     onOpenChange(false);
     
-    // Reset form only if not editing
     if (!editingProduct) {
       setFormData({
         sku: "",
@@ -243,9 +260,8 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
                 id="priceThb"
                 type="number"
                 value={formData.priceThb}
-                onChange={(e) => setFormData({ ...formData, priceThb: parseFloat(e.target.value) || 0 })}
-                placeholder="0"
-                className="border border-purple-200 rounded-lg"
+                readOnly
+                className="border border-purple-200 rounded-lg bg-gray-50"
               />
             </div>
           </div>
