@@ -1,22 +1,17 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, ExternalLink, Edit, Trash2, Settings, Package } from "lucide-react";
-import AddProductModal from "./AddProductModal";
-import CategoryManagementModal from "./CategoryManagementModal";
 
-// ---- ปรับ Product ให้รองรับ variants ----
 interface ProductVariant {
   variantId: number;
   productId: number;
   sku: string;
-  name: string;    // ชื่อแบบ/option เช่น "สีแดง ไซส์ S"
-  option: string;  // ข้อมูลเพิ่ม เช่น "สีแดง, ไซส์ S"
+  name: string;
+  option: string;
   image: string;
-  priceThb: number;
   costThb: number;
   sellingPrice: number;
   quantity: number;
@@ -26,288 +21,460 @@ interface Product {
   id: number;
   sku: string;
   name: string;
-  category: string;
   image: string;
-  priceYuan: number;
-  exchangeRate: number;
-  priceThb: number;
-  importCost: number;
   costThb: number;
   sellingPrice: number;
+  variants?: ProductVariant[];
+}
+
+interface OrderItem {
+  productId: number;
+  variantId: number;
+  productName: string;
+  variantName: string;
+  productImage: string;
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+  unitCost: number;
+}
+
+interface Order {
+  items: OrderItem[];
+  totalSellingPrice: number;
+  totalCost: number;
+  shippingCost: number;
+  deposit: number;
+  discount: number;
+  profit: number;
   status: string;
-  shipmentDate: string;
-  link: string;
-  description: string;
-  quantity?: number;
-  variants: ProductVariant[]; // เพิ่ม field นี้
+  orderDate: string;
+  username: string;
+  address: string;
 }
 
-interface StockManagementProps {
+interface AddOrderModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAddOrder: (order: Order) => void;
   products: Product[];
-  setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
 }
 
-const StockManagement = ({ products, setProducts }: StockManagementProps) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [categories, setCategories] = useState([
-    "League of Legends",
-    "Valorant", 
-    "Zenless Zone Zero",
-    "Genshin Impact",
-    "Honkai Star Rail",
-    "Azur Lane",
-    "Blue Archive",
-    "ETC"
-  ]);
+const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderModalProps) => {
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [selectedVariantId, setSelectedVariantId] = useState("");
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [shippingCost, setShippingCost] = useState("0");
+  const [deposit, setDeposit] = useState("0");
+  const [discount, setDiscount] = useState("0");
+  const [status, setStatus] = useState("รอชำระเงิน");
+  const [username, setUsername] = useState("");
+  const [address, setAddress] = useState("");
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         product.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
-    const matchesStatus = statusFilter === "all" || product.status === statusFilter;
-    
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+  // --- SAFETY: products check ---
+  if (!Array.isArray(products) || products.length === 0) {
+    return null;
+  }
 
-  const deleteProduct = (productId: number) => {
-    if (confirm("คุณต้องการลบสินค้านี้หรือไม่?")) {
-      setProducts(products.filter(p => p.id !== productId));
-    }
-  };
+  // --- SELECTED PRODUCT ---
+  const selectedProduct = products.find(p => p.id.toString() === selectedProductId);
 
-  // ปรับให้รับ variants ด้วย เวลาสร้างใหม่ (แต่ logic หลักเหมือนเดิม)
-  const addProduct = (newProduct: Omit<Product, 'id'>) => {
-    const product: Product = {
-      ...newProduct,
-      id: Date.now()
+  // --- VARIANT OPTIONS: Always include ตัวเลือกหลัก as first ---
+  let variantOptions: ProductVariant[] = [];
+  if (selectedProduct) {
+    const mainVariant: ProductVariant = {
+      variantId: 0,
+      productId: selectedProduct.id,
+      sku: selectedProduct.sku ?? "",
+      name: selectedProduct.name, // ชื่อสินค้า
+      option: "", // ตัวหลักไม่มี option
+      image: selectedProduct.image ?? "",
+      costThb: typeof selectedProduct.costThb === "number" ? selectedProduct.costThb : 0,
+      sellingPrice: typeof selectedProduct.sellingPrice === "number" ? selectedProduct.sellingPrice : 0,
+      quantity: 0,
     };
-    setProducts([...products, product]);
-  };
 
-  const updateProduct = (updatedProduct: Product) => {
-    setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
-    setEditingProduct(null);
-  };
+    const variants: ProductVariant[] = Array.isArray(selectedProduct.variants)
+      ? selectedProduct.variants
+      : [];
 
-  const handleEditProduct = (product: Product) => {
-    setEditingProduct(product);
-    setShowAddModal(true);
-  };
+    variantOptions = [mainVariant, ...variants];
+  }
 
-  // รวมจำนวนทั้งหมดของ variants ถ้ามี ถ้าไม่มีใช้ product.quantity
-  const getSumVariantQuantity = (product: Product) => {
-    if (product.variants && product.variants.length > 0) {
-      return product.variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
+  const selectedVariant = variantOptions.find(v => v.variantId.toString() === selectedVariantId);
+
+  const addProductToOrder = () => {
+    if (!selectedProduct || !selectedVariant) return;
+
+    const existingItem = orderItems.find(
+      item => item.productId === selectedProduct.id && item.variantId === selectedVariant.variantId
+    );
+
+    if (existingItem) {
+      setOrderItems(orderItems.map(item =>
+        item.productId === selectedProduct.id && item.variantId === selectedVariant.variantId
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ));
+    } else {
+      const newItem: OrderItem = {
+        productId: selectedProduct.id,
+        variantId: selectedVariant.variantId,
+        productName: selectedProduct.name,
+        variantName: selectedVariant.variantId === 0
+          ? "ตัวหลัก"
+          : selectedVariant.name + (selectedVariant.option ? ` (${selectedVariant.option})` : ""),
+        productImage: selectedVariant.image || selectedProduct.image,
+        sku: selectedVariant.sku,
+        quantity: 1,
+        unitPrice: selectedVariant.sellingPrice,
+        unitCost: selectedVariant.costThb
+      };
+      setOrderItems([...orderItems, newItem]);
     }
-    return product.quantity || 0;
+    setSelectedProductId("");
+    setSelectedVariantId("");
   };
 
-  const getStockStatus = (quantity: number, status: string) => {
-    if (status === "พร้อมส่ง" && quantity < 3) {
-      return "สต็อคต่ำ";
-    }
-    return status;
+  const updateItemQuantity = (productId: number, variantId: number, quantity: number) => {
+    setOrderItems(orderItems.map(item =>
+      item.productId === productId && item.variantId === variantId
+        ? { ...item, quantity }
+        : item
+    ));
   };
 
-  const getStatusColor = (quantity: number, status: string) => {
-    if (status === "พร้อมส่ง" && quantity < 3) {
-      return "bg-red-100 text-red-800";
-    }
-    return status === 'พรีออเดอร์' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800';
+  const updateItemCost = (productId: number, variantId: number, unitCost: number) => {
+    setOrderItems(orderItems.map(item =>
+      item.productId === productId && item.variantId === variantId
+        ? { ...item, unitCost }
+        : item
+    ));
   };
+
+  const removeItem = (productId: number, variantId: number) => {
+    setOrderItems(orderItems.filter(item => !(item.productId === productId && item.variantId === variantId)));
+  };
+
+  const handleSubmit = () => {
+    if (!username || !address || orderItems.length === 0) {
+      alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+      return;
+    }
+
+    const totalSellingPrice = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+    const totalCost = orderItems.reduce((sum, item) => sum + (item.unitCost * item.quantity), 0);
+    const shipping = parseFloat(shippingCost) || 0;
+    const depositAmount = parseFloat(deposit) || 0;
+    const discountAmount = parseFloat(discount) || 0;
+    const finalSellingPrice = totalSellingPrice - discountAmount;
+
+    const newOrder: Order = {
+      items: orderItems,
+      totalSellingPrice: finalSellingPrice,
+      totalCost,
+      shippingCost: shipping,
+      deposit: depositAmount,
+      discount: discountAmount,
+      profit: finalSellingPrice - totalCost - shipping,
+      status,
+      orderDate: new Date().toLocaleDateString('th-TH'),
+      username,
+      address
+    };
+
+    onAddOrder(newOrder);
+    onOpenChange(false);
+
+    setOrderItems([]);
+    setSelectedProductId("");
+    setSelectedVariantId("");
+    setShippingCost("0");
+    setDeposit("0");
+    setDiscount("0");
+    setStatus("รอชำระเงิน");
+    setUsername("");
+    setAddress("");
+  };
+
+  const totalSellingPrice = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+  const totalCost = orderItems.reduce((sum, item) => sum + (item.unitCost * item.quantity), 0);
+  const discountAmount = parseFloat(discount || "0");
+  const finalSellingPrice = totalSellingPrice - discountAmount;
+  const shipping = parseFloat(shippingCost || "0");
+  const depositAmount = parseFloat(deposit || "0");
+  const profit = finalSellingPrice - totalCost - shipping;
 
   return (
-    <div>
-      {/* Search and Filters */}
-      <Card className="mb-6 bg-white border border-purple-200 rounded-xl shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="flex-1 max-w-md">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="ค้นหาสินค้า SKU หรือชื่อสินค้า..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border border-purple-200 rounded-lg"
-                />
-              </div>
-            </div>
-            
-            <div className="flex gap-3 items-center">
-              <div className="flex items-center gap-2">
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-48 border border-purple-200 rounded-lg">
-                    <SelectValue placeholder="หมวดหมู่ทั้งหมด" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">หมวดหมู่ทั้งหมด</SelectItem>
-                    {categories.map(category => (
-                      <SelectItem key={category} value={category}>{category}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowCategoryModal(true)}
-                  className="border border-purple-300 text-purple-600 hover:bg-purple-50 rounded-lg"
-                >
-                  <Settings className="w-4 h-4" />
-                </Button>
-              </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
+        <DialogHeader>
+          <DialogTitle className="text-xl text-purple-700">+ เพิ่มออเดอร์ใหม่</DialogTitle>
+        </DialogHeader>
 
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-32 border border-purple-200 rounded-lg">
-                  <SelectValue placeholder="สถานะ" />
+        <div className="space-y-4 mt-6">
+          <div>
+            <Label htmlFor="username">Username *</Label>
+            <Input
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="ชื่อผู้ใช้"
+              className="border border-purple-200 rounded-lg"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="address">ที่อยู่ *</Label>
+            <Input
+              id="address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="ที่อยู่จัดส่ง"
+              className="border border-purple-200 rounded-lg"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="product">เพิ่มสินค้า</Label>
+            <div className="flex gap-2">
+              {/* เลือกสินค้า */}
+              <Select value={selectedProductId} onValueChange={(val) => {
+                setSelectedProductId(val);
+                setSelectedVariantId("");
+              }}>
+                <SelectTrigger className="flex-1 border border-purple-200 rounded-lg">
+                  <SelectValue placeholder="เลือกสินค้าจากสต็อค" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">ทั้งหมด</SelectItem>
-                  <SelectItem value="พรีออเดอร์">พรีออเดอร์</SelectItem>
-                  <SelectItem value="พร้อมส่ง">พร้อมส่ง</SelectItem>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id.toString()}>
+                      {product.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
-              <Button 
-                onClick={() => {
-                  setEditingProduct(null);
-                  setShowAddModal(true);
-                }} 
-                className="bg-purple-500 hover:bg-purple-600 text-white border border-purple-400 rounded-lg"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                เพิ่มสินค้า
-              </Button>
+              {/* เลือกตัวเลือกย่อย */}
+              <Select value={selectedVariantId} onValueChange={setSelectedVariantId} disabled={!selectedProduct}>
+                <SelectTrigger className="flex-1 border border-purple-200 rounded-lg">
+                  <SelectValue placeholder={selectedProduct ? "เลือกตัวเลือก/แบบ" : "เลือกสินค้าก่อน"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {variantOptions.map(variant => (
+                    <SelectItem key={variant.variantId} value={variant.variantId.toString()}>
+                      {variant.variantId === 0
+                        ? "ตัวเลือกหลัก"
+                        : variant.name + (variant.option ? ` (${variant.option})` : "")
+                      }
+                      {" - ฿"}
+                      {variant.sellingPrice}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-              <Button 
-                className="bg-red-500 hover:bg-red-600 text-white border border-red-400 rounded-lg"
+              <Button
+                onClick={addProductToOrder}
+                disabled={!selectedProductId || !selectedVariantId}
+                className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
               >
-                ลำดับลอต
+                เพิ่ม
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Products Table */}
-      <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
-        <CardHeader className="border-b border-purple-100">
-          <CardTitle className="text-purple-800">รายการสินค้า</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-purple-50 border-b border-purple-100">
-                  <TableHead className="text-purple-800 font-bold">รูปภาพ</TableHead>
-                  <TableHead className="text-purple-800 font-bold">SKU</TableHead>
-                  <TableHead className="text-purple-800 font-bold">ชื่อสินค้า</TableHead>
-                  <TableHead className="text-purple-800 font-bold">หมวดหมู่</TableHead>
-                  <TableHead className="text-purple-800 font-bold">ต้นทุน</TableHead>
-                  <TableHead className="text-purple-800 font-bold">ราคาขาย</TableHead>
-                  <TableHead className="text-purple-800 font-bold">จำนวน</TableHead>
-                  <TableHead className="text-purple-800 font-bold">สถานะ</TableHead>
-                  <TableHead className="text-purple-800 font-bold">ลิงก์</TableHead>
-                  <TableHead className="text-purple-800 font-bold">จัดการ</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProducts.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                      ไม่มีสินค้าในระบบ กรุณาเพิ่มสินค้าใหม่
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredProducts.map((product) => {
-                    // ถ้ามี variants ให้แสดงเฉพาะ summary ของสินค้าหลัก
-                    // หรือจะ list รายละเอียด variant ใน modal เพิ่มภายหลัง
-                    const quantity = getSumVariantQuantity(product);
-                    // ให้แสดงราคาขาย/ต้นทุนหลัก (หรือจะปรับเป็น min/max ได้)
-                    return (
-                      <TableRow key={product.id} className="hover:bg-purple-25 border-b border-purple-50">
-                        <TableCell>
-                          <img 
-                            src={product.image || "/placeholder.svg"} 
-                            alt={product.name}
-                            className="w-12 h-12 rounded-lg object-cover border border-purple-200"
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium text-purple-600">{product.sku}</TableCell>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell className="text-sm text-purple-600">{product.category}</TableCell>
-                        <TableCell className="font-semibold text-red-600">
-                          ฿{product.costThb.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="font-semibold text-green-600">
-                          ฿{product.sellingPrice.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="font-medium">{quantity}</TableCell>
-                        <TableCell>
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(quantity, product.status)}`}>
-                            {getStockStatus(quantity, product.status)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm" asChild className="text-purple-600">
-                            <a href={product.link} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="w-4 h-4" />
-                            </a>
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-purple-600 hover:bg-purple-50"
-                              onClick={() => handleEditProduct(product)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-red-600 hover:bg-red-50"
-                              onClick={() => deleteProduct(product.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+          {orderItems.length > 0 && (
+            <div>
+              <Label>รายการสินค้า</Label>
+              <div className="space-y-3">
+                {orderItems.map((item) => (
+                  <div key={`${item.productId}-${item.variantId}`} className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                    <div className="flex items-center gap-3 mb-3">
+                      <img
+                        src={item.productImage}
+                        alt={item.productName}
+                        className="w-12 h-12 rounded object-cover border border-purple-200"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium">
+                          {item.productName}
+                          {item.variantName ? <span className="text-xs text-purple-700"> ({item.variantName})</span> : null}
+                        </p>
+                        <p className="text-sm text-purple-600">{item.sku}</p>
+                        <p className="text-sm font-medium text-green-600">฿{item.unitPrice.toLocaleString()}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeItem(item.productId, item.variantId)}
+                        className="text-red-600 hover:bg-red-50"
+                      >
+                        ลบ
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>จำนวน</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => updateItemQuantity(item.productId, item.variantId, parseInt(e.target.value) || 1)}
+                          className="border border-purple-200 rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <Label>ต้นทุนต่อชิ้น (฿)</Label>
+                        <Input
+                          type="number"
+                          value={item.unitCost}
+                          onChange={(e) => updateItemCost(item.productId, item.variantId, parseFloat(e.target.value) || 0)}
+                          className="border border-purple-200 rounded-lg"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="shippingCost">ค่าจัดส่ง (฿)</Label>
+              <Input
+                id="shippingCost"
+                type="number"
+                value={shippingCost}
+                onChange={(e) => setShippingCost(e.target.value)}
+                placeholder="0"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="discount">ส่วนลด (฿)</Label>
+              <Input
+                id="discount"
+                type="number"
+                value={discount}
+                onChange={(e) => setDiscount(e.target.value)}
+                placeholder="0"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Add/Edit Product Modal */}
-      <AddProductModal 
-        open={showAddModal} 
-        onOpenChange={setShowAddModal}
-        onAddProduct={editingProduct ? updateProduct : addProduct}
-        categories={categories}
-        editingProduct={editingProduct}
-      />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="deposit">มัดจำ (฿)</Label>
+              <Input
+                id="deposit"
+                type="number"
+                value={deposit}
+                onChange={(e) => setDeposit(e.target.value)}
+                placeholder="0"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
 
-      {/* Category Management Modal */}
-      <CategoryManagementModal
-        open={showCategoryModal}
-        onOpenChange={setShowCategoryModal}
-        categories={categories}
-        setCategories={setCategories}
-      />
-    </div>
+            <div>
+              <Label htmlFor="status">สถานะ</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger className="border border-purple-200 rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="รอชำระเงิน">รอชำระเงิน</SelectItem>
+                  <SelectItem value="รอโรงงานจัดส่ง">รอโรงงานจัดส่ง</SelectItem>
+                  <SelectItem value="กำลังมาไทย">กำลังมาไทย</SelectItem>
+                  <SelectItem value="จัดส่งแล้ว">จัดส่งแล้ว</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {orderItems.length > 0 && (
+            <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+              <h4 className="font-medium text-purple-700 mb-2">สรุปออเดอร์</h4>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span>ราคาขายรวม:</span>
+                  <span className="font-medium text-green-600">
+                    ฿{totalSellingPrice.toLocaleString()}
+                  </span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span>ส่วนลด:</span>
+                    <span className="font-medium text-red-600">
+                      -฿{discountAmount.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span>ราคาขายสุทธิ:</span>
+                  <span className="font-medium text-green-600">
+                    ฿{finalSellingPrice.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>ต้นทุนรวม:</span>
+                  <span className="font-medium text-red-600">
+                    ฿{totalCost.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>ค่าจัดส่ง:</span>
+                  <span className="font-medium text-orange-600">
+                    ฿{shipping.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>มัดจำ:</span>
+                  <span className="font-medium text-blue-600">
+                    ฿{depositAmount.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t pt-1">
+                  <span className="font-medium">กำไรรวม:</span>
+                  <span className={`font-bold ${profit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                    ฿{profit.toLocaleString()}
+                  </span>
+                </div>
+                {depositAmount > 0 && (
+                  <div className="bg-yellow-50 p-2 rounded mt-2 border border-yellow-200">
+                    <p className="text-xs text-yellow-700">
+                      💡 ยอดที่เหลือ: ฿{(finalSellingPrice - depositAmount).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-purple-200">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="border border-purple-300 text-purple-600 hover:bg-purple-50 rounded-lg"
+          >
+            ยกเลิก
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
+            disabled={!username || !address || orderItems.length === 0}
+          >
+            บันทึก
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
-export default StockManagement;
+export default AddOrderModal;
