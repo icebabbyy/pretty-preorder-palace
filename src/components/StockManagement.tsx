@@ -18,6 +18,7 @@ interface Product {
   priceYuan: number;
   exchangeRate: number;
   priceThb: number;
+  importCost: number;
   costThb: number;
   sellingPrice: number;
   status: string;
