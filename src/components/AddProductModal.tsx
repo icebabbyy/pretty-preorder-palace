@@ -59,10 +59,9 @@ interface AddOrderModalProps {
   onOpenChange: (open: boolean) => void;
   onAddOrder: (order: Order) => void;
   products?: Product[];
-  onEditProduct?: (product: Product) => void; // เพิ่มสำหรับกดแก้ไข
 }
 
-const AddOrderModal = ({ open, onOpenChange, onAddOrder, products, onEditProduct }: AddOrderModalProps) => {
+const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderModalProps) => {
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -79,7 +78,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products, onEditProduct
 
   const selectedProduct = products.find(p => p.id.toString() === selectedProductId);
 
-  // ตัวเลือกหลักเสมอ และตามด้วย variants จริง (ไม่มี mock)
+  // **** ส่วนสำคัญ: ให้ dropdown มี "ตัวหลัก" เสมอ ****
   let variantOptions: ProductVariant[] = [];
   if (selectedProduct) {
     const mainVariant: ProductVariant = {
@@ -252,17 +251,6 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products, onEditProduct
                   {products.map((product) => (
                     <SelectItem key={product.id} value={product.id.toString()}>
                       {product.name}
-                      <Button
-                        type="button"
-                        size="xs"
-                        className="ml-2 px-2 py-0 text-xs border border-gray-200"
-                        onClick={e => {
-                          e.stopPropagation();
-                          if (onEditProduct) onEditProduct(product);
-                        }}
-                      >
-                        แก้ไข
-                      </Button>
                     </SelectItem>
                   ))}
                 </SelectContent>
