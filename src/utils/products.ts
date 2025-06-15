@@ -67,6 +67,14 @@ export async function fetchProducts(): Promise<Product[]> {
 
 export async function addProduct(product: Omit<Product, "id">): Promise<Product> {
   const obj = productToSupabaseInsert(product);
+  console.log("addProduct: data to insert:", obj);
+  // log ว่า fields สำคัญขาดหรือไม่
+  ['sku', 'name', 'price_yuan', 'quantity'].forEach((key) => {
+    if (!obj[key]) {
+      console.warn(`Field "${key}" is missing or falsy in product insert!`);
+    }
+  });
+
   const { data, error } = await supabase
     .from('products')
     .insert([obj as any])
@@ -74,6 +82,12 @@ export async function addProduct(product: Omit<Product, "id">): Promise<Product>
     .maybeSingle();
   if (error) {
     console.error('Error adding product:', error);
+    // เพิ่มการแสดงข้อความจาก Supabase API (error.message, error.details)
+    alert(
+      'Failed to add product: ' +
+      (error.message || '') +
+      (error.details ? '\nDetails: ' + error.details : '')
+    );
     throw new Error('Failed to add product');
   }
   return supabaseProductToProduct(data);
@@ -81,6 +95,7 @@ export async function addProduct(product: Omit<Product, "id">): Promise<Product>
 
 export async function updateProduct(product: Product): Promise<Product> {
   const obj = productToSupabaseInsert(product);
+  console.log("updateProduct: data to update:", obj, "ID:", product.id);
   const { data, error } = await supabase
     .from('products')
     .update({ ...obj, updated_at: new Date().toISOString() } as any)
@@ -89,6 +104,11 @@ export async function updateProduct(product: Product): Promise<Product> {
     .maybeSingle();
   if (error) {
     console.error('Error updating product:', error);
+    alert(
+      'Failed to update product: ' +
+      (error.message || '') +
+      (error.details ? '\nDetails: ' + error.details : '')
+    );
     throw new Error('Failed to update product');
   }
   return supabaseProductToProduct(data);
