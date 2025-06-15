@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useMemo } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 interface ProductVariant {
   variantId: number;
@@ -66,8 +66,9 @@ const AddOrderModal = ({
   onAddOrder,
   products,
 }: AddOrderModalProps) => {
-  const [selectedProductId, setSelectedProductId] = useState("");
-  const [selectedVariantId, setSelectedVariantId] = useState("");
+  // always keep as string to match Select
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [selectedVariantId, setSelectedVariantId] = useState<string>("");
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [shippingCost, setShippingCost] = useState("0");
   const [deposit, setDeposit] = useState("0");
@@ -81,14 +82,15 @@ const AddOrderModal = ({
     return null;
   }
 
-  // หาสินค้าที่ถูกเลือก
-  const selectedProduct = products.find(
-    (p) => p.id.toString() === selectedProductId
+  // หาสินค้าที่ถูกเลือก (ใช้ string-to-string เทียบ)
+  const selectedProduct = useMemo(() => 
+    products.find((p) => p.id.toString() === selectedProductId),
+    [products, selectedProductId]
   );
 
-  // สร้างตัวเลือก variant: ตัวหลักเป็นอันแรกเสมอ
-  let variantOptions: ProductVariant[] = [];
-  if (selectedProduct) {
+  // สร้างตัวเลือก variant: ตัวหลักเป็นอันแรกเสมอ (และทุก field ต้องมี)
+  const variantOptions: ProductVariant[] = useMemo(() => {
+    if (!selectedProduct) return [];
     const mainVariant: ProductVariant = {
       variantId: 0,
       productId: selectedProduct.id,
@@ -96,26 +98,24 @@ const AddOrderModal = ({
       name: selectedProduct.name,
       option: "",
       image: selectedProduct.image ?? "",
-      costThb:
-        typeof selectedProduct.costThb === "number"
-          ? selectedProduct.costThb
-          : 0,
-      sellingPrice:
-        typeof selectedProduct.sellingPrice === "number"
-          ? selectedProduct.sellingPrice
-          : 0,
+      costThb: typeof selectedProduct.costThb === "number" ? selectedProduct.costThb : 0,
+      sellingPrice: typeof selectedProduct.sellingPrice === "number" ? selectedProduct.sellingPrice : 0,
       quantity: 0,
     };
-
     const variants: ProductVariant[] = Array.isArray(selectedProduct.variants)
-      ? selectedProduct.variants
+      ? selectedProduct.variants.map((variant) => ({
+          ...variant,
+          sku: variant.sku ?? "",
+          costThb: typeof variant.costThb === "number" ? variant.costThb : 0,
+          sellingPrice: typeof variant.sellingPrice === "number" ? variant.sellingPrice : 0,
+        }))
       : [];
+    return [mainVariant, ...variants];
+  }, [selectedProduct]);
 
-    variantOptions = [mainVariant, ...variants];
-  }
-
-  const selectedVariant = variantOptions.find(
-    (v) => v.variantId.toString() === selectedVariantId
+  const selectedVariant = useMemo(
+    () => variantOptions.find((v) => v.variantId.toString() === selectedVariantId),
+    [variantOptions, selectedVariantId]
   );
 
   // เพิ่มสินค้าเข้า order
@@ -409,7 +409,7 @@ const AddOrderModal = ({
                             updateItemQuantity(
                               item.productId,
                               item.variantId,
-                              parseInt(e.target.value) || 1
+                              Math.max(1, parseInt(e.target.value) || 1)
                             )
                           }
                           className="border border-purple-200 rounded-lg"
@@ -424,7 +424,7 @@ const AddOrderModal = ({
                             updateItemCost(
                               item.productId,
                               item.variantId,
-                              parseFloat(e.target.value) || 0
+                              Math.max(0, parseFloat(e.target.value) || 0)
                             )
                           }
                           className="border border-purple-200 rounded-lg"
