@@ -6,6 +6,8 @@ import StockManagement from "@/components/StockManagement";
 import OrderManagement from "@/components/OrderManagement";
 import type { Product, Order } from "@/types";
 
+const GOOGLE_SCRIPT_URL = "YOUR_SCRIPT_URL"; // TODO: เปลี่ยนเป็น URL ที่ได้จาก Apps Script Web App
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState("stock");
   const [categories, setCategories] = useState<string[]>([]);
@@ -87,25 +89,29 @@ const Index = () => {
         }
         console.log('Created initial sample data and saved to localStorage');
       }
-      
-      if (savedOrders) {
-        setOrders(JSON.parse(savedOrders));
-      }
+
+      if (savedOrders) setOrders(JSON.parse(savedOrders));
     };
     initializeData();
   }, []);
 
+  // เมื่อ products เปลี่ยน → ส่งไป google sheets ทันที
   useEffect(() => {
     if (products.length > 0) {
-      try {
-        localStorage.setItem('inventory-products', JSON.stringify(products));
-        localStorage.setItem('products', JSON.stringify(products));
-        localStorage.setItem('stockProducts', JSON.stringify(products));
-        console.log('Saved products to localStorage:', products.length);
-      } catch (err: any) {
-        alert('ข้อผิดพลาด: ข้อมูลสินค้าเก็บใน localStorage เต็ม ไม่สามารถบันทึกได้ กรุณาลบสินค้าหรือเลือกรูปภาพขนาดเล็กลง');
-        console.warn('QuotaExceeded saving products to localStorage', err);
-      }
+      // Backup to Google Sheets ด้วย Apps Script Web App
+      fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(products),
+      })
+        .then(res => res.text())
+        .then(txt => {
+          console.log("บันทึกข้อมูลลง Google Sheets:", txt);
+        })
+        .catch(err => {
+          alert('บันทึกข้อมูลไป Google Sheets ไม่สำเร็จ');
+          console.warn('Backup to Google Sheets failed', err);
+        });
     }
   }, [products]);
 
