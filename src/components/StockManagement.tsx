@@ -9,26 +9,6 @@ import AddProductModal from "./AddProductModal";
 import CategoryManagementModal from "./CategoryManagementModal";
 import type { Product, ProductOption } from "@/types";
 
-interface Product {
-  id: number;
-  sku: string;
-  name: string;
-  category: string;
-  image: string;
-  priceYuan: number;
-  exchangeRate: number;
-  priceThb: number;
-  importCost: number;
-  costThb: number;
-  sellingPrice: number;
-  status: string;
-  shipmentDate: string;
-  link: string;
-  description: string;
-  quantity?: number;
-  options?: ProductOption[];
-}
-
 interface StockManagementProps {
   products: Product[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;

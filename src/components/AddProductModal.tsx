@@ -9,24 +9,6 @@ import { Upload, Image } from "lucide-react";
 import { nanoid } from "nanoid";
 import { Product, ProductOption } from "@/types";
 
-interface Product {
-  id?: number;
-  sku: string;
-  name: string;
-  category: string;
-  image: string;
-  priceYuan: number;
-  exchangeRate: number;
-  priceThb: number;
-  importCost: number;
-  costThb: number;
-  sellingPrice: number;
-  status: string;
-  shipmentDate: string;
-  link: string;
-  description: string;
-}
-
 interface AddProductModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
