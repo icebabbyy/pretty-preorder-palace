@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2, Plus } from "lucide-react";
+import { addCategory, deleteCategory } from "@/utils/supabase";
 
 interface CategoryManagementModalProps {
   open: boolean;
@@ -15,16 +16,33 @@ interface CategoryManagementModalProps {
 
 const CategoryManagementModal = ({ open, onOpenChange, categories, setCategories }: CategoryManagementModalProps) => {
   const [newCategory, setNewCategory] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const addCategory = () => {
-    if (newCategory.trim() && !categories.includes(newCategory.trim())) {
-      setCategories([...categories, newCategory.trim()]);
+  const addCategoryHandler = async () => {
+    const trimmed = newCategory.trim();
+    if (!trimmed || categories.includes(trimmed)) return;
+    setLoading(true);
+    try {
+      await addCategory(trimmed);
+      setCategories([...categories, trimmed]);
       setNewCategory("");
+    } catch (e) {
+      alert("ไม่สามารถเพิ่มหมวดหมู่ได้");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const deleteCategory = (categoryToDelete: string) => {
-    setCategories(categories.filter(cat => cat !== categoryToDelete));
+  const deleteCategoryHandler = async (categoryToDelete: string) => {
+    setLoading(true);
+    try {
+      await deleteCategory(categoryToDelete);
+      setCategories(categories.filter(cat => cat !== categoryToDelete));
+    } catch (e) {
+      alert("ไม่สามารถลบหมวดหมู่นี้ได้");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -44,11 +62,15 @@ const CategoryManagementModal = ({ open, onOpenChange, categories, setCategories
                 onChange={(e) => setNewCategory(e.target.value)}
                 placeholder="ชื่อหมวดหมู่"
                 className="border-2 border-gray-300"
-                onKeyPress={(e) => e.key === 'Enter' && addCategory()}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') addCategoryHandler();
+                }}
+                disabled={loading}
               />
               <Button 
-                onClick={addCategory}
+                onClick={addCategoryHandler}
                 className="bg-gray-800 hover:bg-gray-700 text-white"
+                disabled={loading}
               >
                 <Plus className="w-4 h-4" />
               </Button>
@@ -65,7 +87,8 @@ const CategoryManagementModal = ({ open, onOpenChange, categories, setCategories
                     variant="ghost" 
                     size="sm" 
                     className="text-red-600"
-                    onClick={() => deleteCategory(category)}
+                    onClick={() => deleteCategoryHandler(category)}
+                    disabled={loading}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -80,6 +103,7 @@ const CategoryManagementModal = ({ open, onOpenChange, categories, setCategories
             variant="outline" 
             onClick={() => onOpenChange(false)}
             className="border-2 border-gray-800 hover:bg-gray-100"
+            disabled={loading}
           >
             ปิด
           </Button>

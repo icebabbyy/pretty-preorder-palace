@@ -199,3 +199,40 @@ export async function deleteOrder(orderId: number): Promise<void> {
     throw new Error('Failed to delete order');
   }
 }
+
+// ----------- Categories Management -----------
+export async function fetchCategories(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("name")
+    .order("name", { ascending: true });
+  if (error) {
+    console.error("Error fetching categories:", error);
+    throw new Error("Failed to fetch categories");
+  }
+  return (data ?? []).map((row: any) => row.name);
+}
+
+export async function addCategory(categoryName: string): Promise<void> {
+  const { error } = await supabase
+    .from("categories")
+    .insert([{ name: categoryName }]);
+  if (error) {
+    // ถ้าซ้ำจะ error, ไม่ต้อง throw ก็ได้แต่แจ้งเตือน
+    if (error.code !== "23505") { // Unique violation
+      console.error("Error adding category:", error);
+      throw new Error("Failed to add category");
+    }
+  }
+}
+
+export async function deleteCategory(categoryName: string): Promise<void> {
+  const { error } = await supabase
+    .from("categories")
+    .delete()
+    .eq("name", categoryName);
+  if (error) {
+    console.error("Error deleting category:", error);
+    throw new Error("Failed to delete category");
+  }
+}

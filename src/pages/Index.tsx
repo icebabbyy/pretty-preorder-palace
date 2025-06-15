@@ -10,7 +10,8 @@ import {
   addProduct,
   updateProduct,
   deleteProduct,
-  fetchOrders
+  fetchOrders,
+  fetchCategories,
 } from "@/utils/supabase";
 
 const Index = () => {
@@ -20,18 +21,20 @@ const Index = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
-  // LOAD PRODUCTS จาก Supabase
+  // LOAD PRODUCTS และดึงหมวดหมู่ จาก Supabase
   useEffect(() => {
     setLoadingProducts(true);
-    fetchProducts()
-      .then((prods) => {
+    Promise.all([
+      fetchProducts(),
+      fetchCategories(),
+    ])
+      .then(([prods, cats]) => {
         setProducts(prods);
-        const uniqCats = [...new Set(prods.map((p) => p.category).filter(Boolean))];
-        setCategories(uniqCats);
+        setCategories(cats);
       })
       .catch((err) => {
-        console.error('Error loading products:', err);
-        alert('โหลดสินค้าจาก Supabase ไม่สำเร็จ: ' + err.message);
+        console.error('Error loading products/categories:', err);
+        alert('โหลดสินค้าหรือหมวดหมู่จาก Supabase ไม่สำเร็จ: ' + err.message);
         setProducts([]);
         setCategories([]);
       })
