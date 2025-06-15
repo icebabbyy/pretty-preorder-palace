@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -5,13 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, Image, Plus, Trash2 } from "lucide-react";
+import { Upload, Image } from "lucide-react";
 
-export interface ProductVariant {
-  id: number;
+interface Product {
+  id?: number;
   sku: string;
-  name: string; // เช่น "แบบที่ 1"
-  option: string; // เช่น "สีเหลือง", "แมว A"
+  name: string;
+  category: string;
   image: string;
   priceYuan: number;
   exchangeRate: number;
@@ -19,307 +20,332 @@ export interface ProductVariant {
   importCost: number;
   costThb: number;
   sellingPrice: number;
-}
-
-export interface Product {
-  id?: number;
-  name: string; // ชื่อสินค้าแม่
-  category: string;
   status: string;
+  shipmentDate: string;
+  link: string;
   description: string;
-  variants: ProductVariant[];
 }
 
 interface AddProductModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddProduct: (product: Product) => void;
+  onAddProduct: (product: any) => void;
   categories: string[];
   editingProduct?: Product | null;
 }
 
-// สร้าง variant เปล่า
-const defaultVariant = (): ProductVariant => ({
-  id: Date.now() + Math.random(), // unique-ish
-  sku: "",
-  name: "",
-  option: "",
-  image: "",
-  priceYuan: 0,
-  exchangeRate: 1,
-  priceThb: 0,
-  importCost: 0,
-  costThb: 0,
-  sellingPrice: 0,
-});
+const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editingProduct }: AddProductModalProps) => {
+  const [formData, setFormData] = useState<Product>({
+    sku: "",
+    name: "",
+    category: "",
+    image: "",
+    priceYuan: 0,
+    exchangeRate: 1,
+    priceThb: 0,
+    importCost: 0,
+    costThb: 0,
+    sellingPrice: 0,
+    status: "พรีออเดอร์",
+    shipmentDate: "",
+    link: "",
+    description: ""
+  });
 
-const AddProductModal = ({
-  open,
-  onOpenChange,
-  onAddProduct,
-  categories,
-  editingProduct
-}: AddProductModalProps) => {
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState(categories[0] || "");
-  const [status, setStatus] = useState("พรีออเดอร์");
-  const [description, setDescription] = useState("");
-  const [variants, setVariants] = useState<ProductVariant[]>([defaultVariant()]);
-
-  // โหลดค่าเดิมตอน edit
   useEffect(() => {
     if (editingProduct) {
-      setName(editingProduct.name ?? "");
-      setCategory(editingProduct.category ?? categories[0] || "");
-      setStatus(editingProduct.status ?? "พรีออเดอร์");
-      setDescription(editingProduct.description ?? "");
-      setVariants(editingProduct.variants?.length ? editingProduct.variants : [defaultVariant()]);
+      setFormData(editingProduct);
     } else {
-      setName("");
-      setCategory(categories[0] || "");
-      setStatus("พรีออเดอร์");
-      setDescription("");
-      setVariants([defaultVariant()]);
+      setFormData({
+        sku: "",
+        name: "",
+        category: "",
+        image: "",
+        priceYuan: 0,
+        exchangeRate: 1,
+        priceThb: 0,
+        importCost: 0,
+        costThb: 0,
+        sellingPrice: 0,
+        status: "พรีออเดอร์",
+        shipmentDate: "",
+        link: "",
+        description: ""
+      });
     }
-    // eslint-disable-next-line
-  }, [editingProduct, open, categories]);
+  }, [editingProduct, open]);
 
-  // คำนวณอัตโนมัติในแต่ละ variant
+  // Auto calculate total cost when priceThb or importCost changes
   useEffect(() => {
-    setVariants(variants =>
-      variants.map(v => {
-        const priceThb = v.priceYuan > 0 && v.exchangeRate > 0 ? parseFloat((v.priceYuan * v.exchangeRate).toFixed(2)) : 0;
-        const costThb = priceThb + (v.importCost || 0);
-        return { ...v, priceThb, costThb };
-      })
-    );
-  }, [variants.map(v => [v.priceYuan, v.exchangeRate, v.importCost].join())]);
+    const totalCost = formData.priceThb + formData.importCost;
+    setFormData(prev => ({ ...prev, costThb: totalCost }));
+  }, [formData.priceThb, formData.importCost]);
 
-  // เพิ่ม/ลบ/แก้ไข variant
-  const handleVariantChange = (idx: number, field: keyof ProductVariant, value: any) => {
-    setVariants(variants =>
-      variants.map((v, i) =>
-        i === idx ? { ...v, [field]: value } : v
-      )
-    );
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setFormData({ ...formData, image: e.target?.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
-  const handleVariantImage = (idx: number, file: File | null) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      setVariants(variants =>
-        variants.map((v, i) =>
-          i === idx ? { ...v, image: e.target?.result as string } : v
-        )
-      );
-    };
-    reader.readAsDataURL(file);
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            setFormData({ ...formData, image: e.target?.result as string });
+          };
+          reader.readAsDataURL(file);
+        }
+        break;
+      }
+    }
   };
-
-  const handleAddVariant = () => setVariants(variants => [...variants, defaultVariant()]);
-  const handleRemoveVariant = (idx: number) => setVariants(variants => variants.length > 1 ? variants.filter((_, i) => i !== idx) : variants);
 
   const handleSubmit = () => {
-    if (!name || !category || !variants.length || variants.some(v => !v.name || !v.sku)) {
-      alert("กรอกข้อมูลสินค้าและตัวเลือกให้ครบถ้วน");
+    if (!formData.name || !formData.category) {
+      alert("กรุณากรอกชื่อสินค้าและเลือกหมวดหมู่");
       return;
     }
-    onAddProduct({
-      name,
-      category,
-      status,
-      description,
-      variants
-    });
+
+    onAddProduct(formData);
     onOpenChange(false);
+    
+    // Reset form only if not editing
+    if (!editingProduct) {
+      setFormData({
+        sku: "",
+        name: "",
+        category: "",
+        image: "",
+        priceYuan: 0,
+        exchangeRate: 1,
+        priceThb: 0,
+        importCost: 0,
+        costThb: 0,
+        sellingPrice: 0,
+        status: "พรีออเดอร์",
+        shipmentDate: "",
+        link: "",
+        description: ""
+      });
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
         <DialogHeader>
           <DialogTitle className="text-xl text-purple-800">
             {editingProduct ? "แก้ไขสินค้า" : "+ เพิ่มสินค้าใหม่"}
           </DialogTitle>
         </DialogHeader>
+
         <div className="space-y-4 mt-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="name">ชื่อสินค้าแม่ *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="เช่น ตุ๊กตาแมว ZZZ"
+              <Label htmlFor="sku">SKU</Label>
+              <Input 
+                id="sku"
+                value={formData.sku}
+                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                placeholder="รหัสสินค้า"
                 className="border border-purple-200 rounded-lg"
               />
             </div>
             <div>
-              <Label htmlFor="category">หมวดหมู่ *</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="border border-purple-200 rounded-lg">
-                  <SelectValue placeholder="เลือกหมวดหมู่" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="name">ชื่อสินค้า *</Label>
+              <Input 
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="ชื่อสินค้า"
+                className="border border-purple-200 rounded-lg"
+              />
             </div>
           </div>
+
           <div>
-            <Label htmlFor="status">สถานะ</Label>
-            <Select value={status} onValueChange={setStatus}>
+            <Label htmlFor="category">หมวดหมู่ *</Label>
+            <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
               <SelectTrigger className="border border-purple-200 rounded-lg">
-                <SelectValue />
+                <SelectValue placeholder="เลือกหมวดหมู่" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="พรีออเดอร์">พรีออเดอร์</SelectItem>
-                <SelectItem value="พร้อมส่ง">พร้อมส่ง</SelectItem>
+                {categories.map(category => (
+                  <SelectItem key={category} value={category}>{category}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
+
           <div>
-            <Label htmlFor="description">รายละเอียด</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="รายละเอียดสินค้าแม่"
+            <Label>รูปภาพสินค้า</Label>
+            <div 
+              className="border-2 border-dashed border-purple-300 rounded-lg p-6 text-center hover:border-purple-400 transition-colors cursor-pointer relative"
+              onPaste={handlePaste}
+            >
+              {formData.image ? (
+                <div className="space-y-2">
+                  <img src={formData.image} alt="Preview" className="w-32 h-32 object-cover rounded mx-auto" />
+                  <p className="text-sm text-gray-600">คลิกเพื่อเปลี่ยนรูป หรือ Ctrl+V เพื่อวาง</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Image className="w-12 h-12 mx-auto text-purple-400" />
+                  <p className="text-purple-600">คลิกเพื่อเลือกรูป หรือ Ctrl+V เพื่อวาง</p>
+                </div>
+              )}
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleImageUpload}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="priceYuan">ราคาหยวน</Label>
+              <Input 
+                id="priceYuan"
+                type="number"
+                value={formData.priceYuan}
+                onChange={(e) => setFormData({ ...formData, priceYuan: parseFloat(e.target.value) || 0 })}
+                placeholder="0"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+            <div>
+              <Label htmlFor="exchangeRate">อัตราแลกเปลี่ยน</Label>
+              <Input 
+                id="exchangeRate"
+                type="number"
+                step="0.01"
+                value={formData.exchangeRate}
+                onChange={(e) => setFormData({ ...formData, exchangeRate: parseFloat(e.target.value) || 1 })}
+                placeholder="1"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+            <div>
+              <Label htmlFor="priceThb">ราคาบาท</Label>
+              <Input 
+                id="priceThb"
+                type="number"
+                value={formData.priceThb}
+                onChange={(e) => setFormData({ ...formData, priceThb: parseFloat(e.target.value) || 0 })}
+                placeholder="0"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="importCost">ค่านำเข้า (บาท)</Label>
+              <Input 
+                id="importCost"
+                type="number"
+                value={formData.importCost}
+                onChange={(e) => setFormData({ ...formData, importCost: parseFloat(e.target.value) || 0 })}
+                placeholder="0"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+            <div>
+              <Label htmlFor="costThb">ต้นทุนรวม (บาท)</Label>
+              <Input 
+                id="costThb"
+                type="number"
+                value={formData.costThb}
+                readOnly
+                className="border border-purple-200 rounded-lg bg-gray-50"
+              />
+            </div>
+            <div>
+              <Label htmlFor="sellingPrice">ราคาขาย</Label>
+              <Input 
+                id="sellingPrice"
+                type="number"
+                value={formData.sellingPrice}
+                onChange={(e) => setFormData({ ...formData, sellingPrice: parseFloat(e.target.value) || 0 })}
+                placeholder="0"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="status">สถานะ</Label>
+              <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                <SelectTrigger className="border border-purple-200 rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="พรีออเดอร์">พรีออเดอร์</SelectItem>
+                  <SelectItem value="พร้อมส่ง">พร้อมส่ง</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="shipmentDate">วันที่จัดส่ง</Label>
+              <Input 
+                id="shipmentDate"
+                type="date"
+                value={formData.shipmentDate}
+                onChange={(e) => setFormData({ ...formData, shipmentDate: e.target.value })}
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="link">ลิงก์สินค้า</Label>
+            <Input 
+              id="link"
+              value={formData.link}
+              onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+              placeholder="https://..."
               className="border border-purple-200 rounded-lg"
-              rows={2}
             />
           </div>
+
           <div>
-            <Label>ตัวเลือกสินค้า (Variant) <span className="font-normal text-sm text-gray-400">(เช่น สี แบบ ฯลฯ)</span></Label>
-            {variants.map((v, idx) => (
-              <div key={v.id} className="border rounded-lg mb-4 p-4 space-y-2 relative bg-gray-50">
-                <div className="absolute right-2 top-2">
-                  <Button variant="ghost" size="icon" onClick={() => handleRemoveVariant(idx)} disabled={variants.length === 1}>
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <Label>SKU *</Label>
-                    <Input
-                      value={v.sku}
-                      onChange={e => handleVariantChange(idx, "sku", e.target.value)}
-                      placeholder="SKU เฉพาะตัวเลือก"
-                      className="border border-purple-200 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <Label>ชื่อแบบ/option *</Label>
-                    <Input
-                      value={v.name}
-                      onChange={e => handleVariantChange(idx, "name", e.target.value)}
-                      placeholder="เช่น แมวเหลือง, แมวชมพู"
-                      className="border border-purple-200 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <Label>รายละเอียดตัวเลือก</Label>
-                    <Input
-                      value={v.option}
-                      onChange={e => handleVariantChange(idx, "option", e.target.value)}
-                      placeholder="เช่น สีเหลือง/แบบที่ 1"
-                      className="border border-purple-200 rounded-lg"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 gap-3 mt-2">
-                  <div>
-                    <Label>รูปภาพ</Label>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={e => handleVariantImage(idx, e.target.files?.[0] || null)}
-                    />
-                    {v.image && (
-                      <img src={v.image} alt="img" className="w-16 h-16 rounded mt-1 border border-purple-200" />
-                    )}
-                  </div>
-                  <div>
-                    <Label>ราคาหยวน</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={v.priceYuan}
-                      onChange={e => handleVariantChange(idx, "priceYuan", parseFloat(e.target.value) || 0)}
-                      className="border border-purple-200 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <Label>อัตราแลกเปลี่ยน</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={v.exchangeRate}
-                      onChange={e => handleVariantChange(idx, "exchangeRate", parseFloat(e.target.value) || 1)}
-                      className="border border-purple-200 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <Label>ราคาบาท (auto)</Label>
-                    <Input
-                      type="number"
-                      value={v.priceThb}
-                      readOnly
-                      className="border border-purple-200 rounded-lg bg-gray-50"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3 mt-2">
-                  <div>
-                    <Label>ค่านำเข้า (บาท)</Label>
-                    <Input
-                      type="number"
-                      value={v.importCost}
-                      onChange={e => handleVariantChange(idx, "importCost", parseFloat(e.target.value) || 0)}
-                      className="border border-purple-200 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <Label>ต้นทุนรวม (auto)</Label>
-                    <Input
-                      type="number"
-                      value={v.costThb}
-                      readOnly
-                      className="border border-purple-200 rounded-lg bg-gray-50"
-                    />
-                  </div>
-                  <div>
-                    <Label>ราคาขาย</Label>
-                    <Input
-                      type="number"
-                      value={v.sellingPrice}
-                      onChange={e => handleVariantChange(idx, "sellingPrice", parseFloat(e.target.value) || 0)}
-                      className="border border-purple-200 rounded-lg"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-            <Button onClick={handleAddVariant} variant="outline" className="mt-2 text-purple-600 border-purple-300">
-              <Plus className="w-4 h-4 mr-1" /> เพิ่มตัวเลือกสินค้า
-            </Button>
+            <Label htmlFor="description">รายละเอียด</Label>
+            <Textarea 
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="รายละเอียดสินค้า"
+              className="border border-purple-200 rounded-lg"
+              rows={3}
+            />
           </div>
         </div>
+
         <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-purple-200">
-          <Button
-            variant="outline"
+          <Button 
+            variant="outline" 
             onClick={() => onOpenChange(false)}
             className="border border-purple-300 text-purple-600 hover:bg-purple-50 rounded-lg"
           >
             ยกเลิก
           </Button>
-          <Button
-            onClick={handleSubmit}
+          <Button 
+            onClick={handleSubmit} 
             className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
-            disabled={!name || !category || !variants.length}
+            disabled={!formData.name || !formData.category}
           >
             {editingProduct ? "บันทึกการแก้ไข" : "บันทึก"}
           </Button>

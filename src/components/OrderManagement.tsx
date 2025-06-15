@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,12 +8,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, Plus, Edit, Trash2, Package, Clock, Truck, CheckCircle, AlertCircle } from "lucide-react";
 import AddOrderModal from "./AddOrderModal";
 import EditOrderModal from "./EditOrderModal";
-import {
-  fetchOrders,
-  addOrder as addOrderToSheet,
-  updateOrder as updateOrderInSheet,
-  deleteOrder as deleteOrderFromSheet,
-} from "@/utils/googleSheets";
 
 interface Product {
   id: number;
@@ -50,32 +45,28 @@ interface Order {
 
 interface OrderManagementProps {
   products: Product[];
+  orders: Order[];
+  setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
 }
 
-const OrderManagement = ({ products }: OrderManagementProps) => {
-  const [orders, setOrders] = useState<Order[]>([]);
+const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
-  // LOAD DATA จาก Google Sheets
-  useEffect(() => {
-    fetchOrders().then(setOrders).catch(console.error);
-  }, []);
-
   const filteredOrders = orders.filter(order => {
-    const matchesSearch =
-      Array.isArray(order.items) &&
-      order.items.some(item =>
-        item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.sku.toLowerCase().includes(searchTerm.toLowerCase())
-      ) ||
-      order.username.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const matchesSearch =
+    Array.isArray(order.items) &&
+    order.items.some(item =>
+      item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    ) ||
+    order.username.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+  return matchesSearch && matchesStatus;
+});
 
   const totalRevenue = orders.reduce((sum, order) => sum + order.totalSellingPrice, 0);
   const totalCost = orders.reduce((sum, order) => sum + order.totalCost, 0);
@@ -88,23 +79,21 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
     "จัดส่งแล้ว": orders.filter(o => o.status === "จัดส่งแล้ว").length,
   };
 
-  // ลบ order ใน Google Sheets
-  const deleteOrder = async (orderId: number) => {
-    await deleteOrderFromSheet(orderId);
+  const deleteOrder = (orderId: number) => {
     setOrders(orders.filter(o => o.id !== orderId));
   };
 
-  // เพิ่ม order ใหม่ใน Google Sheets
-  const addOrder = async (newOrder: Omit<Order, 'id'>) => {
-    const createdOrder = await addOrderToSheet(newOrder);
-    setOrders([...orders, createdOrder]);
+  const addOrder = (newOrder: Omit<Order, 'id'>) => {
+    const order: Order = {
+      ...newOrder,
+      id: Date.now()
+    };
+    setOrders([...orders, order]);
   };
 
-  // อัปเดต order ใน Google Sheets
-  const updateOrder = async (updatedOrder: Order) => {
-    const result = await updateOrderInSheet(updatedOrder);
-    setOrders(orders.map(order =>
-      order.id === updatedOrder.id ? result : order
+  const updateOrder = (updatedOrder: Order) => {
+    setOrders(orders.map(order => 
+      order.id === updatedOrder.id ? updatedOrder : order
     ));
   };
 
@@ -150,6 +139,7 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
             </div>
           </CardContent>
         </Card>
+
         <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -163,6 +153,7 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
             </div>
           </CardContent>
         </Card>
+
         <Card className="bg-white border border-purple-200 rounded-xl shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -214,6 +205,7 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
                 />
               </div>
             </div>
+            
             <div className="flex gap-3 items-center">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-48 border border-purple-200 rounded-lg">
@@ -227,8 +219,9 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
                   <SelectItem value="จัดส่งแล้ว">จัดส่งแล้ว</SelectItem>
                 </SelectContent>
               </Select>
-              <Button
-                onClick={() => setShowAddModal(true)}
+
+              <Button 
+                onClick={() => setShowAddModal(true)} 
                 className="bg-purple-500 hover:bg-purple-600 text-white border border-purple-400 rounded-lg"
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -274,8 +267,8 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
                         <div className="space-y-2">
                           {order.items.map((item, index) => (
                             <div key={index} className="flex items-center gap-2">
-                              <img
-                                src={item.productImage}
+                              <img 
+                                src={item.productImage} 
                                 alt={item.productName}
                                 className="w-8 h-8 rounded object-cover border border-purple-200"
                               />
@@ -308,37 +301,25 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
                         ฿{order.profit.toLocaleString()}
                       </TableCell>
                       <TableCell>
-                        {/* ปุ่มเปลี่ยนสถานะแบบ dropdown */}
-                        <Select
-                          value={order.status}
-                          onValueChange={(newStatus) => updateOrder({ ...order, status: newStatus })}
-                        >
-                          <SelectTrigger className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                            {getStatusIcon(order.status)}
-                            <SelectValue placeholder={order.status} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="รอชำระเงิน">รอชำระเงิน</SelectItem>
-                            <SelectItem value="รอโรงงานจัดส่ง">รอโรงงานจัดส่ง</SelectItem>
-                            <SelectItem value="กำลังมาไทย">กำลังมาไทย</SelectItem>
-                            <SelectItem value="จัดส่งแล้ว">จัดส่งแล้ว</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                          {getStatusIcon(order.status)}
+                          {order.status}
+                        </span>
                       </TableCell>
                       <TableCell className="text-sm">{order.orderDate}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
                             className="text-purple-600 hover:bg-purple-50"
                             onClick={() => handleEdit(order)}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
                             className="text-red-600 hover:bg-red-50"
                             onClick={() => deleteOrder(order.id)}
                           >
@@ -355,15 +336,15 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
         </CardContent>
       </Card>
 
-      <AddOrderModal
-        open={showAddModal}
+      <AddOrderModal 
+        open={showAddModal} 
         onOpenChange={setShowAddModal}
         onAddOrder={addOrder}
         products={products}
       />
 
-      <EditOrderModal
-        open={showEditModal}
+      <EditOrderModal 
+        open={showEditModal} 
         onOpenChange={setShowEditModal}
         onUpdateOrder={updateOrder}
         order={editingOrder}
