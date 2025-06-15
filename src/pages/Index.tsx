@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,115 +6,43 @@ import { Package, ShoppingCart } from "lucide-react";
 import StockManagement from "@/components/StockManagement";
 import OrderManagement from "@/components/OrderManagement";
 import type { Product, Order } from "@/types";
-
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwB8_OgvgFUQbWvzr6USRtYrWrI2NRUNet2A8Bwt_qIbu4GuQvtXKCtbzO45Z0cvfPF/exec"; // ใช้ URL Apps Script Web App ใหม่
+import {
+  fetchProducts,
+  addProduct,
+  updateProduct,
+  deleteProduct
+} from "@/utils/googleSheets";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("stock");
   const [categories, setCategories] = useState<string[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
+  // LOAD PRODUCTS จาก Google Sheets
   useEffect(() => {
-    const initializeData = () => {
-      const savedCategories = localStorage.getItem('inventory-categories');
-      const savedProducts = localStorage.getItem('inventory-products') || localStorage.getItem('products');
-      const savedOrders = localStorage.getItem('stockOrders');
-      
-      if (savedCategories && savedProducts) {
-        setCategories(JSON.parse(savedCategories));
-        setProducts(JSON.parse(savedProducts));
-        console.log('Loaded data from localStorage');
-      } else {
-        // Sample data
-        const sampleCategories = [
-          "League of Legends",
-          "Valorant", 
-          "Zenless Zone Zero",
-          "Genshin Impact",
-          "Honkai Star Rail",
-          "Azur Lane",
-          "Blue Archive",
-          "ETC"
-        ];
-        
-        const sampleProducts: Product[] = [
-          {
-            id: 1,
-            sku: "LOL001",
-            name: "League of Legends RP Card 1000",
-            category: "League of Legends",
-            image: "/placeholder.svg",
-            priceYuan: 50,
-            exchangeRate: 5.2,
-            priceThb: 260,
-            importCost: 20,
-            costThb: 280,
-            sellingPrice: 300,
-            status: "พร้อมส่ง",
-            shipmentDate: "2024-01-15",
-            link: "https://example.com",
-            description: "RP Card สำหรับเกม League of Legends",
-            quantity: 5
-          },
-          {
-            id: 2,
-            sku: "VAL001",
-            name: "Valorant Points 1000",
-            category: "Valorant",
-            image: "/placeholder.svg",
-            priceYuan: 45,
-            exchangeRate: 5.2,
-            priceThb: 234,
-            importCost: 15,
-            costThb: 249,
-            sellingPrice: 280,
-            status: "พรีออเดอร์",
-            shipmentDate: "2024-02-01",
-            link: "https://example.com",
-            description: "VP สำหรับเกม Valorant",
-            quantity: 2
-          }
-        ];
-        
-        setCategories(sampleCategories);
-        setProducts(sampleProducts);
-
-        try {
-          localStorage.setItem('inventory-categories', JSON.stringify(sampleCategories));
-          localStorage.setItem('inventory-products', JSON.stringify(sampleProducts));
-          localStorage.setItem('products', JSON.stringify(sampleProducts));
-        } catch (err) {
-          alert('ไม่สามารถบันทึกข้อมูล sample ไปยัง localStorage ได้: เกินขนาดพื้นที่จัดเก็บ');
-          console.warn('QuotaExceeded saving sample data to localStorage', err);
-        }
-        console.log('Created initial sample data and saved to localStorage');
-      }
-
-      if (savedOrders) setOrders(JSON.parse(savedOrders));
-    };
-    initializeData();
+    setLoadingProducts(true);
+    fetchProducts()
+      .then((prods) => {
+        setProducts(prods);
+        // unique categories from products
+        const uniqCats = [...new Set(prods.map((p) => p.category).filter(Boolean))];
+        setCategories(uniqCats);
+      })
+      .catch((err) => {
+        alert('โหลดสินค้าจาก Google Sheets ไม่สำเร็จ');
+        setProducts([]);
+        setCategories([]);
+      })
+      .finally(() => setLoadingProducts(false));
   }, []);
 
-  // เมื่อ products เปลี่ยน → ส่งไป google sheets ทันที
+  // orders ส่วนนี้ใช้ Google Sheets อยู่แล้ว
   useEffect(() => {
-    if (products.length > 0) {
-      // Backup to Google Sheets ด้วย Apps Script Web App
-      fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(products),
-      })
-        .then(res => res.text())
-        .then(txt => {
-          console.log("บันทึกข้อมูลลง Google Sheets:", txt);
-        })
-        .catch(err => {
-          alert('บันทึกข้อมูลไป Google Sheets ไม่สำเร็จ');
-          console.warn('Backup to Google Sheets failed', err);
-        });
-    }
-  }, [products]);
+    const savedOrders = localStorage.getItem('stockOrders');
+    if (savedOrders) setOrders(JSON.parse(savedOrders));
+  }, []);
 
   useEffect(() => {
     if (orders.length > 0) {
@@ -171,7 +100,21 @@ const Index = () => {
 
         {/* Content */}
         {activeTab === "stock" && (
-          <StockManagement products={products} setProducts={setProducts} />
+          loadingProducts ? (
+            <div className="text-center py-16 text-xl text-purple-400">
+              กำลังโหลดสินค้า...
+            </div>
+          ) : (
+            <StockManagement
+              products={products}
+              setProducts={setProducts}
+              categories={categories}
+              setCategories={setCategories}
+              addProductAPI={addProduct}
+              updateProductAPI={updateProduct}
+              deleteProductAPI={deleteProduct}
+            />
+          )
         )}
         {activeTab === "orders" && (
           <OrderManagement products={products} orders={orders} setOrders={setOrders} />
@@ -182,3 +125,4 @@ const Index = () => {
 };
 
 export default Index;
+

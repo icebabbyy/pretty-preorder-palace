@@ -12,25 +12,29 @@ import type { Product, ProductOption } from "@/types";
 interface StockManagementProps {
   products: Product[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
+  categories: string[];
+  setCategories: React.Dispatch<React.SetStateAction<string[]>>;
+  addProductAPI: (p: Omit<Product, "id">) => Promise<Product>;
+  updateProductAPI: (p: Product) => Promise<Product>;
+  deleteProductAPI: (id: number) => Promise<void>;
 }
 
-const StockManagement = ({ products, setProducts }: StockManagementProps) => {
+const StockManagement = ({
+  products,
+  setProducts,
+  categories,
+  setCategories,
+  addProductAPI,
+  updateProductAPI,
+  deleteProductAPI
+}: StockManagementProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [categories, setCategories] = useState([
-    "League of Legends",
-    "Valorant", 
-    "Zenless Zone Zero",
-    "Genshin Impact",
-    "Honkai Star Rail",
-    "Azur Lane",
-    "Blue Archive",
-    "ETC"
-  ]);
+  const [loadingSave, setLoadingSave] = useState(false);
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -41,23 +45,31 @@ const StockManagement = ({ products, setProducts }: StockManagementProps) => {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const deleteProduct = (productId: number) => {
+  const deleteProduct = async (productId: number) => {
     if (confirm("คุณต้องการลบสินค้านี้หรือไม่?")) {
+      setLoadingSave(true);
+      await deleteProductAPI(productId);
       setProducts(products.filter(p => p.id !== productId));
+      setLoadingSave(false);
     }
   };
 
-  const addProduct = (newProduct: Omit<Product, 'id'>) => {
-    const product: Product = {
-      ...newProduct,
-      id: Date.now()
-    };
-    setProducts([...products, product]);
+  const addProduct = async (newProduct: Omit<Product, 'id'>) => {
+    setLoadingSave(true);
+    const prod = await addProductAPI(newProduct);
+    setProducts([...products, prod]);
+    // เพิ่ม categories ใหม่ถ้าจำเป็น
+    if (prod.category && !categories.includes(prod.category)) {
+      setCategories([...categories, prod.category]);
+    }
+    setLoadingSave(false);
   };
 
-  const updateProduct = (updatedProduct: Product) => {
-    setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
-    setEditingProduct(null);
+  const updateProduct = async (updatedProduct: Product) => {
+    setLoadingSave(true);
+    const prod = await updateProductAPI(updatedProduct);
+    setProducts(products.map(p => p.id === prod.id ? prod : p));
+    setLoadingSave(false);
   };
 
   const handleEditProduct = (product: Product) => {
