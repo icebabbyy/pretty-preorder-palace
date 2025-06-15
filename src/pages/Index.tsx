@@ -1,53 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Package, ShoppingCart } from "lucide-react";
 import StockManagement from "@/components/StockManagement";
 import OrderManagement from "@/components/OrderManagement";
-
-interface Product {
-  id: number;
-  sku: string;
-  name: string;
-  category: string;
-  image: string;
-  priceYuan: number;
-  exchangeRate: number;
-  priceThb: number;
-  importCost: number;
-  costThb: number;
-  sellingPrice: number;
-  status: string;
-  shipmentDate: string;
-  link: string;
-  description: string;
-  quantity?: number;
-}
-
-interface OrderItem {
-  productId: number;
-  productName: string;
-  productImage: string;
-  sku: string;
-  quantity: number;
-  unitPrice: number;
-  unitCost: number;
-}
-
-interface Order {
-  id: number;
-  items: OrderItem[];
-  totalSellingPrice: number;
-  totalCost: number;
-  shippingCost: number;
-  deposit: number;
-  discount: number;
-  profit: number;
-  status: string;
-  orderDate: string;
-  username: string;
-  address: string;
-}
+import type { Product, Order } from "@/types";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("stock");

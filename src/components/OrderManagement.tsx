@@ -13,47 +13,15 @@ import {
   updateOrder as updateOrderInSheet,
   deleteOrder as deleteOrderFromSheet,
 } from "@/utils/googleSheets";
-
-interface Product {
-  id: number;
-  sku: string;
-  name: string;
-  sellingPrice: number;
-  costThb: number;
-  image: string;
-}
-
-interface OrderItem {
-  productId: number;
-  productName: string;
-  productImage: string;
-  sku: string;
-  quantity: number;
-  unitPrice: number;
-  unitCost: number;
-}
-
-interface Order {
-  id: number;
-  items: OrderItem[];
-  totalSellingPrice: number;
-  totalCost: number;
-  shippingCost: number;
-  deposit: number;
-  discount: number;
-  profit: number;
-  status: string;
-  orderDate: string;
-  username: string;
-  address: string;
-}
+import type { Product, Order, OrderItem } from "@/types";
 
 interface OrderManagementProps {
   products: Product[];
+  orders: Order[];
+  setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
 }
 
-const OrderManagement = ({ products }: OrderManagementProps) => {
-  const [orders, setOrders] = useState<Order[]>([]);
+const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -63,6 +31,7 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
   // LOAD DATA จาก Google Sheets
   useEffect(() => {
     fetchOrders().then(setOrders).catch(console.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredOrders = orders.filter(order => {
@@ -77,8 +46,8 @@ const OrderManagement = ({ products }: OrderManagementProps) => {
     return matchesSearch && matchesStatus;
   });
 
-  const totalRevenue = orders.reduce((sum, order) => sum + order.totalSellingPrice, 0);
-  const totalCost = orders.reduce((sum, order) => sum + order.totalCost, 0);
+  const totalRevenue = orders.reduce((sum, order) => sum + (order.totalSellingPrice ?? 0), 0);
+  const totalCost = orders.reduce((sum, order) => sum + (order.totalCost ?? 0), 0);
   const totalProfit = totalRevenue - totalCost;
 
   const statusCounts = {

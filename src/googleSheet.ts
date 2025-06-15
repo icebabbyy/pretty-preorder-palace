@@ -1,5 +1,6 @@
+
 // ใช้ fetch ไปยัง API backend ที่คุณต้องสร้าง (เช่น /api/orders)
-import { Order } from "@/types"; // ปรับให้ตรง path จริง
+import { Order } from "@/types";
 
 // ดึง orders ทั้งหมด
 export async function fetchOrders(): Promise<Order[]> {
