@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -71,15 +70,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
   const addOrder = async (newOrder: Omit<Order, 'id'>) => {
     try {
       const createdOrder = await addOrderToSupabase(newOrder);
-      // แปลงข้อมูลจาก Supabase format เป็น frontend format
-      const convertedOrder = {
-        ...createdOrder,
-        totalSellingPrice: createdOrder.total_selling_price || 0,
-        totalCost: createdOrder.total_cost || 0,
-        shippingCost: createdOrder.shipping_cost || 0,
-        orderDate: createdOrder.order_date || '',
-      };
-      setOrders([...orders, convertedOrder]);
+      setOrders([...orders, createdOrder]);
     } catch (error) {
       console.error('Error adding order:', error);
       alert('ไม่สามารถเพิ่มออเดอร์ได้');
@@ -90,16 +81,8 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
   const updateOrder = async (updatedOrder: Order) => {
     try {
       const result = await updateOrderInSupabase(updatedOrder);
-      // แปลงข้อมูลจาก Supabase format เป็น frontend format
-      const convertedOrder = {
-        ...result,
-        totalSellingPrice: result.total_selling_price || 0,
-        totalCost: result.total_cost || 0,
-        shippingCost: result.shipping_cost || 0,
-        orderDate: result.order_date || '',
-      };
       setOrders(orders.map(order =>
-        order.id === updatedOrder.id ? convertedOrder : order
+        order.id === updatedOrder.id ? result : order
       ));
     } catch (error) {
       console.error('Error updating order:', error);

@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { updateOrder as updateOrderInSheet } from "@/utils/googleSheets";
+import { updateOrder as updateOrderInSupabase } from "@/utils/supabase";
 import EditOrderItemList from "./EditOrderItemList";
 import OrderSummary from "./OrderSummary";
 import type { Order, OrderItem } from "@/types";
@@ -17,7 +16,7 @@ interface EditOrderModalProps {
   order: Order | null;
 }
 
-const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderModalProps) => {
+const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: any) => {
   const [shippingCost, setShippingCost] = useState("0");
   const [deposit, setDeposit] = useState("0");
   const [discount, setDiscount] = useState("0");
@@ -30,7 +29,7 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
   useEffect(() => {
     if (order) {
       setItems(order.items || []);
-      setShippingCost((order.shippingCost ?? 0).toString());
+      setShippingCost((order.shippingCost ?? order.shipping_cost ?? 0).toString());
       setDeposit((order.deposit ?? 0).toString());
       setDiscount((order.discount ?? 0).toString());
       setStatus(order.status ?? "รอชำระเงิน");
@@ -84,22 +83,17 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
     };
 
     try {
-      const result = await updateOrderInSheet(updatedOrder);
-      // log response type
-      if (typeof result !== "object" || result == null) {
-        console.error("Unexpected API result in updateOrder:", result);
-        alert("เกิดข้อผิดพลาด (API ไม่ตอบเป็น JSON): " + (typeof result === "string" ? result : ""));
-        return;
-      }
-      onUpdateOrder(result);
+      const result = await updateOrderInSupabase(updatedOrder as any);
+      onUpdateOrder({
+        ...result,
+        totalSellingPrice: result.totalSellingPrice ?? result.total_selling_price ?? 0,
+        totalCost: result.totalCost ?? result.total_cost ?? 0,
+        shippingCost: result.shippingCost ?? result.shipping_cost ?? 0,
+        orderDate: result.orderDate ?? result.order_date ?? '',
+      });
       onOpenChange(false);
     } catch (e: any) {
-      if (e instanceof SyntaxError) {
-        alert("เกิดข้อผิดพลาด: ไม่สามารถอ่านข้อมูลที่ได้จากเซิฟเวอร์ (คาดว่า API Backend มีปัญหา หรือไม่ได้รันอยู่)\n" +
-        "รายละเอียด: " + e.message + "\nโปรดตรวจสอบว่าคุณมี backend API ที่ URL /api/orders/:id รองรับอยู่หรือไม่");
-      } else {
-        alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่");
-      }
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่");
       console.error("Update order error:", e);
     } finally {
       setLoading(false);
@@ -238,4 +232,3 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: EditOrderM
 };
 
 export default EditOrderModal;
-

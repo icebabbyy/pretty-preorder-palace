@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { addOrder as addOrderToSheet } from "@/utils/googleSheets";
+import { addOrder as addOrderToSupabase } from "@/utils/supabase";
 import { Product, Order, OrderItem } from "@/types";
 import OrderProductPicker from "./OrderProductPicker";
 import OrderItemList from "./OrderItemList";
@@ -30,7 +30,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const [loading, setLoading] = useState(false);
 
   const addProductToOrder = () => {
-    const product = products.find(p => p.id.toString() === selectedProductId);
+    const product = products.find(p => String(p.id) === selectedProductId);
     if (!product) return;
 
     const existingItem = orderItems.find(item => item.productId === product.id);
@@ -42,7 +42,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
       ));
     } else {
       const newItem: OrderItem = {
-        productId: product.id,
+        productId: product.id!,
         productName: product.name,
         productImage: product.image,
         sku: product.sku,
@@ -85,7 +85,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     const discountAmount = parseFloat(discount) || 0;
     const finalSellingPrice = totalSellingPrice - discountAmount;
 
-    const newOrder: Omit<Order, "id"> = {
+    const newOrder = {
       items: orderItems,
       totalSellingPrice: finalSellingPrice,
       totalCost,
@@ -100,8 +100,14 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     };
 
     try {
-      const createdOrder = await addOrderToSheet(newOrder); // Google Sheets API
-      onAddOrder(createdOrder);
+      const createdOrder = await addOrderToSupabase(newOrder as any);
+      onAddOrder({
+        ...createdOrder,
+        totalSellingPrice: createdOrder.totalSellingPrice ?? createdOrder.total_selling_price ?? 0,
+        totalCost: createdOrder.totalCost ?? createdOrder.total_cost ?? 0,
+        shippingCost: createdOrder.shippingCost ?? createdOrder.shipping_cost ?? 0,
+        orderDate: createdOrder.orderDate ?? createdOrder.order_date ?? '',
+      });
       onOpenChange(false);
       setOrderItems([]);
       setSelectedProductId("");
@@ -132,7 +138,6 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
         <DialogHeader>
           <DialogTitle className="text-xl text-purple-700">+ เพิ่มออเดอร์ใหม่</DialogTitle>
         </DialogHeader>
-
         <div className="space-y-4 mt-6">
           <div>
             <Label htmlFor="username">Username *</Label>

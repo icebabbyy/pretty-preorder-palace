@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,20 +25,8 @@ const Index = () => {
     setLoadingProducts(true);
     fetchProducts()
       .then((prods) => {
-        // แปลงข้อมูลจาก Supabase format เป็น frontend format
-        const convertedProducts = prods.map(p => ({
-          ...p,
-          priceYuan: p.price_yuan || 0,
-          exchangeRate: p.exchange_rate || 5,
-          priceThb: p.price_thb || 0,
-          importCost: p.import_cost || 0,
-          costThb: p.cost_thb || 0,
-          sellingPrice: p.selling_price || 0,
-          shipmentDate: p.shipment_date || '',
-        }));
-        setProducts(convertedProducts);
-        // unique categories from products
-        const uniqCats = [...new Set(convertedProducts.map((p) => p.category).filter(Boolean))];
+        setProducts(prods);
+        const uniqCats = [...new Set(prods.map((p) => p.category).filter(Boolean))];
         setCategories(uniqCats);
       })
       .catch((err) => {
@@ -55,19 +42,10 @@ const Index = () => {
   useEffect(() => {
     fetchOrders()
       .then((orderData) => {
-        // แปลงข้อมูลจาก Supabase format เป็น frontend format
-        const convertedOrders = orderData.map(o => ({
-          ...o,
-          totalSellingPrice: o.total_selling_price || 0,
-          totalCost: o.total_cost || 0,
-          shippingCost: o.shipping_cost || 0,
-          orderDate: o.order_date || '',
-        }));
-        setOrders(convertedOrders);
+        setOrders(orderData);
       })
       .catch((err) => {
         console.error('Error loading orders:', err);
-        // ถ้าไม่สามารถโหลด orders ได้ ให้ใช้ localStorage เป็นทางเลือก
         const savedOrders = localStorage.getItem('stockOrders');
         if (savedOrders) setOrders(JSON.parse(savedOrders));
       });
