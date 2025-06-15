@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+// ---------- INTERFACE ----------
 interface ProductVariant {
   variantId: number;
   productId: number;
@@ -24,7 +25,7 @@ interface Product {
   image: string;
   costThb: number;
   sellingPrice: number;
-  variants: ProductVariant[];
+  variants?: ProductVariant[]; // make optional for safety!
 }
 
 interface OrderItem {
@@ -57,7 +58,7 @@ interface AddOrderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAddOrder: (order: Order) => void;
-  products: Product[];
+  products?: Product[]; // optional for safety
 }
 
 const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderModalProps) => {
@@ -71,16 +72,22 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const [username, setUsername] = useState("");
   const [address, setAddress] = useState("");
 
-  // หา product และ variants
+  // --------------- SAFETY: products check ---------------
+  if (!Array.isArray(products) || products.length === 0) {
+    // หาก products ยังโหลดไม่เสร็จ หรือเป็น undefined/null/[] ให้คืน null
+    return null;
+  }
+
+  // -------------------- SELECTED PRODUCT --------------------
   const selectedProduct = products.find(p => p.id.toString() === selectedProductId);
 
-  // ถ้าไม่มี variants ให้สร้าง variant หลักแทน และรองรับกรณี products.variants เป็น undefined
+  // -------------------- VARIANT OPTIONS --------------------
   let variantOptions: ProductVariant[] = [];
   if (selectedProduct) {
     if (Array.isArray(selectedProduct.variants) && selectedProduct.variants.length > 0) {
       variantOptions = selectedProduct.variants;
     } else {
-      // mock variant หลัก (ต้องแน่ใจว่า key ทุกตัวมีค่าไม่ undefined)
+      // mock variant หลัก (สินค้าไม่มีตัวเลือก)
       variantOptions = [
         {
           variantId: 0,
@@ -96,11 +103,13 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
       ];
     }
   }
+
+  // ----------------- SELECTED VARIANT -----------------
   const selectedVariant = variantOptions.find(
     v => v.variantId.toString() === selectedVariantId
   );
 
-  // เพิ่มสินค้าเข้า order (variant)
+  // ------------------ ADD PRODUCT ------------------
   const addProductToOrder = () => {
     if (!selectedProduct || !selectedVariant) return;
 
@@ -132,6 +141,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     setSelectedVariantId("");
   };
 
+  // ------------------ ITEM HANDLERS ------------------
   const updateItemQuantity = (productId: number, variantId: number, quantity: number) => {
     setOrderItems(orderItems.map(item =>
       item.productId === productId && item.variantId === variantId
@@ -152,6 +162,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     setOrderItems(orderItems.filter(item => !(item.productId === productId && item.variantId === variantId)));
   };
 
+  // ----------------- SUBMIT -----------------
   const handleSubmit = () => {
     if (!username || !address || orderItems.length === 0) {
       alert("กรุณากรอกข้อมูลให้ครบถ้วน");
@@ -194,6 +205,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     setAddress("");
   };
 
+  // ----------------- SUMMARY -----------------
   const totalSellingPrice = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
   const totalCost = orderItems.reduce((sum, item) => sum + (item.unitCost * item.quantity), 0);
   const discountAmount = parseFloat(discount || "0");
@@ -202,6 +214,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const depositAmount = parseFloat(deposit || "0");
   const profit = finalSellingPrice - totalCost - shipping;
 
+  // ----------------- RENDER -----------------
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
