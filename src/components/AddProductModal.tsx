@@ -25,7 +25,7 @@ interface Product {
   image: string;
   costThb: number;
   sellingPrice: number;
-  variants?: ProductVariant[]; // make optional for safety!
+  variants?: ProductVariant[];
 }
 
 interface OrderItem {
@@ -58,10 +58,11 @@ interface AddOrderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAddOrder: (order: Order) => void;
-  products?: Product[]; // optional for safety
+  products?: Product[];
+  onEditProduct?: (product: Product) => void; // เพิ่มสำหรับกดแก้ไข
 }
 
-const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderModalProps) => {
+const AddOrderModal = ({ open, onOpenChange, onAddOrder, products, onEditProduct }: AddOrderModalProps) => {
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -72,19 +73,16 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const [username, setUsername] = useState("");
   const [address, setAddress] = useState("");
 
-  // SAFETY: products check
   if (!Array.isArray(products) || products.length === 0) {
     return null;
   }
 
-  // SELECTED PRODUCT
   const selectedProduct = products.find(p => p.id.toString() === selectedProductId);
 
-  // VARIANT OPTIONS (Always show "หลัก" if not duplicated)
+  // ตัวเลือกหลักเสมอ และตามด้วย variants จริง (ไม่มี mock)
   let variantOptions: ProductVariant[] = [];
   if (selectedProduct) {
-    const hasVariants = Array.isArray(selectedProduct.variants) && selectedProduct.variants.length > 0;
-    const mainAsVariant: ProductVariant = {
+    const mainVariant: ProductVariant = {
       variantId: 0,
       productId: selectedProduct.id,
       sku: selectedProduct.sku ?? "",
@@ -96,25 +94,17 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
       quantity: 0,
     };
 
-    if (hasVariants) {
-      // Check if any variant is basically "อันหลัก" (by sku or name), if not, add "หลัก" as first
-      const mainDuplicate = selectedProduct.variants!.some(
-        v => v.sku === selectedProduct.sku || v.name === selectedProduct.name
-      );
-      variantOptions = mainDuplicate
-        ? selectedProduct.variants!
-        : [mainAsVariant, ...selectedProduct.variants!];
-    } else {
-      variantOptions = [mainAsVariant];
-    }
+    const variants: ProductVariant[] = Array.isArray(selectedProduct.variants)
+      ? selectedProduct.variants
+      : [];
+
+    variantOptions = [mainVariant, ...variants];
   }
 
-  // SELECTED VARIANT
   const selectedVariant = variantOptions.find(
     v => v.variantId.toString() === selectedVariantId
   );
 
-  // ADD PRODUCT TO ORDER
   const addProductToOrder = () => {
     if (!selectedProduct || !selectedVariant) return;
 
@@ -146,7 +136,6 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     setSelectedVariantId("");
   };
 
-  // ITEM HANDLERS
   const updateItemQuantity = (productId: number, variantId: number, quantity: number) => {
     setOrderItems(orderItems.map(item =>
       item.productId === productId && item.variantId === variantId
@@ -167,7 +156,6 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     setOrderItems(orderItems.filter(item => !(item.productId === productId && item.variantId === variantId)));
   };
 
-  // SUBMIT
   const handleSubmit = () => {
     if (!username || !address || orderItems.length === 0) {
       alert("กรุณากรอกข้อมูลให้ครบถ้วน");
@@ -198,7 +186,6 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     onAddOrder(newOrder);
     onOpenChange(false);
 
-    // Reset form
     setOrderItems([]);
     setSelectedProductId("");
     setSelectedVariantId("");
@@ -210,7 +197,6 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     setAddress("");
   };
 
-  // SUMMARY
   const totalSellingPrice = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
   const totalCost = orderItems.reduce((sum, item) => sum + (item.unitCost * item.quantity), 0);
   const discountAmount = parseFloat(discount || "0");
@@ -219,7 +205,6 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const depositAmount = parseFloat(deposit || "0");
   const profit = finalSellingPrice - totalCost - shipping;
 
-  // RENDER
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
@@ -253,12 +238,11 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
           <div>
             <Label htmlFor="product">เพิ่มสินค้า</Label>
             <div className="flex gap-2">
-              {/* เลือกสินค้า */}
               <Select
                 value={selectedProductId}
                 onValueChange={(val) => {
                   setSelectedProductId(val);
-                  setSelectedVariantId(""); // reset variant เมื่อเปลี่ยนสินค้า
+                  setSelectedVariantId("");
                 }}
               >
                 <SelectTrigger className="min-w-[210px] border border-purple-200 rounded-lg">
@@ -268,12 +252,22 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                   {products.map((product) => (
                     <SelectItem key={product.id} value={product.id.toString()}>
                       {product.name}
+                      <Button
+                        type="button"
+                        size="xs"
+                        className="ml-2 px-2 py-0 text-xs border border-gray-200"
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (onEditProduct) onEditProduct(product);
+                        }}
+                      >
+                        แก้ไข
+                      </Button>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
-              {/* เลือกตัวเลือกย่อย (มีหลัก/ไม่มีหลักก็เลือกได้) */}
               <Select
                 value={selectedVariantId}
                 onValueChange={setSelectedVariantId}
