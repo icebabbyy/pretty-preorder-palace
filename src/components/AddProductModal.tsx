@@ -10,7 +10,7 @@ interface ProductVariant {
   productId: number;
   sku: string;
   name: string;    // ชื่อแบบ/option เช่น "สีแดง ไซส์ S"
-  option: string;  // ข้อมูลเพิ่ม เช่น "สีแดง, ไซส์ S"
+  option: string;  // ข้อมูลเพิ่ม เช่น "ไซส์ S", "รหัส ABC"
   image: string;
   priceThb: number;
   costThb: number;
@@ -85,10 +85,9 @@ const AddProductModal = ({
   // Variants state
   const [variants, setVariants] = useState<ProductVariant[]>([]);
 
-  // For auto SKU for product and variants
+  // Auto SKU for product and variants
   useEffect(() => {
     if (!editingProduct && open) {
-      // Auto SKU for product (ถ้า SKU ว่าง)
       const prefix = (formData.category?.[0] || "X").toUpperCase();
       const autoSku = `${prefix}${Date.now().toString().slice(-5)}`;
       setFormData(prev => ({
@@ -110,6 +109,14 @@ const AddProductModal = ({
     );
     // eslint-disable-next-line
   }, [formData.sku]);
+
+  // คำนวณราคาไทยอัตโนมัติจาก หยวน * เรท
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      priceThb: parseFloat((prev.priceYuan * prev.exchangeRate).toFixed(2))
+    }));
+  }, [formData.priceYuan, formData.exchangeRate]);
 
   // Load editing product
   useEffect(() => {
@@ -204,12 +211,12 @@ const AddProductModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
         <DialogHeader>
           <DialogTitle className="text-xl text-purple-700">{editingProduct ? "แก้ไขสินค้า" : "+ เพิ่มสินค้าใหม่"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-8">
             <div>
               <Label htmlFor="sku">SKU สินค้าหลัก *</Label>
               <Input
@@ -231,7 +238,7 @@ const AddProductModal = ({
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-8">
             <div>
               <Label htmlFor="category">หมวดหมู่</Label>
               <Select value={formData.category} onValueChange={val => setFormData({ ...formData, category: val })}>
@@ -256,8 +263,8 @@ const AddProductModal = ({
               />
             </div>
           </div>
-          {/* ราคาและต้นทุนสินค้าแม่ (ใส่เพื่อ reference เฉยๆ) */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* ราคาและต้นทุนสินค้าแม่ */}
+          <div className="grid grid-cols-4 gap-6">
             <div>
               <Label>ราคา (หยวน)</Label>
               <Input
@@ -276,15 +283,13 @@ const AddProductModal = ({
                 className="border border-purple-200 rounded-lg"
               />
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>ราคา (THB)</Label>
+              <Label>ราคา (THB) (คำนวณอัตโนมัติ)</Label>
               <Input
                 type="number"
                 value={formData.priceThb}
-                onChange={(e) => setFormData({ ...formData, priceThb: parseFloat(e.target.value) || 0 })}
-                className="border border-purple-200 rounded-lg"
+                disabled
+                className="border border-purple-200 rounded-lg bg-gray-100"
               />
             </div>
             <div>
@@ -297,7 +302,7 @@ const AddProductModal = ({
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-4 gap-6">
             <div>
               <Label>ต้นทุนรวม (THB)</Label>
               <Input
@@ -316,8 +321,6 @@ const AddProductModal = ({
                 className="border border-purple-200 rounded-lg"
               />
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="status">สถานะ</Label>
               <Select value={formData.status} onValueChange={val => setFormData({ ...formData, status: val })}>
@@ -340,30 +343,42 @@ const AddProductModal = ({
               />
             </div>
           </div>
-          <div>
-            <Label>ลิงก์สินค้า/รายละเอียด</Label>
-            <Input
-              value={formData.link}
-              onChange={(e) => setFormData({ ...formData, link: e.target.value })}
-              placeholder="ลิงก์"
-              className="border border-purple-200 rounded-lg"
-            />
-          </div>
-          <div>
-            <Label>รายละเอียดเพิ่มเติม</Label>
-            <Input
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="รายละเอียดสินค้า"
-              className="border border-purple-200 rounded-lg"
-            />
+          <div className="grid grid-cols-2 gap-8">
+            <div>
+              <Label>ลิงก์สินค้า/รายละเอียด</Label>
+              <Input
+                value={formData.link}
+                onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+                placeholder="ลิงก์"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+            <div>
+              <Label>รายละเอียดเพิ่มเติม</Label>
+              <Input
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="รายละเอียดสินค้า"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
           </div>
 
           {/* Section สำหรับ variants */}
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Label>ตัวเลือกสินค้า (Variants) *</Label>
+              <Label className="text-base">ตัวเลือกสินค้า (Variants) *</Label>
               <Button type="button" size="sm" onClick={addVariant} className="bg-purple-200 text-purple-800 hover:bg-purple-300">+ เพิ่มตัวเลือก</Button>
+            </div>
+            <div className="text-xs text-gray-500 mb-1">
+              <span className="inline-block w-40">ชื่อแบบ/option:</span>
+              <span className="inline-block w-32">รายละเอียด option:</span>
+              <span className="inline-block w-40">ลิงก์รูปภาพ:</span>
+              <span className="inline-block w-28">ราคาไทย (THB):</span>
+              <span className="inline-block w-24">ต้นทุน (THB):</span>
+              <span className="inline-block w-24">ราคาขาย (THB):</span>
+              <span className="inline-block w-20">จำนวน:</span>
+              <span className="inline-block w-32">SKU (Auto):</span>
             </div>
             {variants.length === 0 && (
               <div className="text-sm text-gray-400 mb-2">ยังไม่มีตัวเลือก</div>
@@ -376,47 +391,47 @@ const AddProductModal = ({
                     value={variant.name}
                     onChange={e => updateVariant(idx, { name: e.target.value })}
                     placeholder="ชื่อแบบ/option เช่น สีแดง ไซส์ S"
-                    className="border border-purple-200 rounded-lg"
+                    className="border border-purple-200 rounded-lg w-40"
                   />
                   <Input
                     value={variant.option}
                     onChange={e => updateVariant(idx, { option: e.target.value })}
-                    placeholder="รายละเอียด option"
-                    className="border border-purple-200 rounded-lg"
+                    placeholder="รายละเอียด option เช่น ไซส์/รหัส"
+                    className="border border-purple-200 rounded-lg w-32"
                   />
                   <Input
                     value={variant.image}
                     onChange={e => updateVariant(idx, { image: e.target.value })}
-                    placeholder="ลิงก์รูป"
-                    className="border border-purple-200 rounded-lg"
+                    placeholder="ลิงก์รูปภาพ"
+                    className="border border-purple-200 rounded-lg w-40"
                   />
                   <Input
                     type="number"
                     value={variant.priceThb}
                     onChange={e => updateVariant(idx, { priceThb: parseFloat(e.target.value) || 0 })}
-                    placeholder="ราคา (THB)"
-                    className="border border-purple-200 rounded-lg w-24"
+                    placeholder="ราคาไทย (THB)"
+                    className="border border-purple-200 rounded-lg w-28"
                   />
                   <Input
                     type="number"
                     value={variant.costThb}
                     onChange={e => updateVariant(idx, { costThb: parseFloat(e.target.value) || 0 })}
-                    placeholder="ต้นทุน"
-                    className="border border-purple-200 rounded-lg w-20"
+                    placeholder="ต้นทุน (THB)"
+                    className="border border-purple-200 rounded-lg w-24"
                   />
                   <Input
                     type="number"
                     value={variant.sellingPrice}
                     onChange={e => updateVariant(idx, { sellingPrice: parseFloat(e.target.value) || 0 })}
-                    placeholder="ราคาขาย"
-                    className="border border-purple-200 rounded-lg w-20"
+                    placeholder="ราคาขาย (THB)"
+                    className="border border-purple-200 rounded-lg w-24"
                   />
                   <Input
                     type="number"
                     value={variant.quantity}
                     onChange={e => updateVariant(idx, { quantity: parseInt(e.target.value) || 0 })}
                     placeholder="จำนวน"
-                    className="border border-purple-200 rounded-lg w-16"
+                    className="border border-purple-200 rounded-lg w-20"
                   />
                   <Input
                     value={variant.sku}
