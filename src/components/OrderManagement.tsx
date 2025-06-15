@@ -18,14 +18,21 @@ interface Product {
   image: string;
 }
 
-interface Order {
-  id: number;
-  product: string;
+interface OrderItem {
+  productId: number;
+  productName: string;
   productImage: string;
   sku: string;
   quantity: number;
-  sellingPrice: number;
-  cost: number;
+  unitPrice: number;
+  unitCost: number;
+}
+
+interface Order {
+  id: number;
+  items: OrderItem[];
+  totalSellingPrice: number;
+  totalCost: number;
   shippingCost: number;
   deposit: number;
   discount: number;
@@ -48,23 +55,21 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
-  const [editingCost, setEditingCost] = useState<number | null>(null);
-  const [editCostValue, setEditCostValue] = useState("");
 
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.product.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         order.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.username.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = order.items.some(item => 
+      item.productName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      item.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || order.username.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
 
-  const totalRevenue = orders.reduce((sum, order) => sum + order.sellingPrice, 0);
-  const totalCost = orders.reduce((sum, order) => sum + order.cost, 0);
+  const totalRevenue = orders.reduce((sum, order) => sum + order.totalSellingPrice, 0);
+  const totalCost = orders.reduce((sum, order) => sum + order.totalCost, 0);
   const totalProfit = totalRevenue - totalCost;
 
-  // Status counts
   const statusCounts = {
     "รอชำระเงิน": orders.filter(o => o.status === "รอชำระเงิน").length,
     "รอโรงงานจัดส่ง": orders.filter(o => o.status === "รอโรงงานจัดส่ง").length,
@@ -93,29 +98,6 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
   const handleEdit = (order: Order) => {
     setEditingOrder(order);
     setShowEditModal(true);
-  };
-
-  const handleCostEdit = (orderId: number, currentCost: number) => {
-    setEditingCost(orderId);
-    setEditCostValue(currentCost.toString());
-  };
-
-  const saveCostEdit = (orderId: number) => {
-    const newCost = parseFloat(editCostValue) || 0;
-    setOrders(orders.map(order => {
-      if (order.id === orderId) {
-        const newProfit = order.sellingPrice - newCost - (order.shippingCost || 0);
-        return { ...order, cost: newCost, profit: newProfit };
-      }
-      return order;
-    }));
-    setEditingCost(null);
-    setEditCostValue("");
-  };
-
-  const cancelCostEdit = () => {
-    setEditingCost(null);
-    setEditCostValue("");
   };
 
   const getStatusIcon = (status: string) => {
@@ -258,10 +240,8 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
             <Table>
               <TableHeader>
                 <TableRow className="bg-purple-50 border-b border-purple-100">
-                  <TableHead className="text-purple-800 font-bold">รูปสินค้า</TableHead>
                   <TableHead className="text-purple-800 font-bold">สินค้า</TableHead>
                   <TableHead className="text-purple-800 font-bold">ลูกค้า</TableHead>
-                  <TableHead className="text-purple-800 font-bold">จำนวน</TableHead>
                   <TableHead className="text-purple-800 font-bold">ราคาขาย</TableHead>
                   <TableHead className="text-purple-800 font-bold">ส่วนลด</TableHead>
                   <TableHead className="text-purple-800 font-bold">ต้นทุน</TableHead>
@@ -274,7 +254,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
               <TableBody>
                 {filteredOrders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                       ไม่มีออเดอร์ในระบบ กรุณาเพิ่มออเดอร์ใหม่
                     </TableCell>
                   </TableRow>
@@ -282,16 +262,20 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                   filteredOrders.map((order) => (
                     <TableRow key={order.id} className="hover:bg-purple-25 border-b border-purple-50">
                       <TableCell>
-                        <img 
-                          src={order.productImage} 
-                          alt={order.product}
-                          className="w-12 h-12 rounded-lg object-cover border border-purple-200"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{order.product}</p>
-                          <p className="text-sm text-purple-500">{order.sku}</p>
+                        <div className="space-y-2">
+                          {order.items.map((item, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                              <img 
+                                src={item.productImage} 
+                                alt={item.productName}
+                                className="w-8 h-8 rounded object-cover border border-purple-200"
+                              />
+                              <div>
+                                <p className="text-sm font-medium">{item.productName}</p>
+                                <p className="text-xs text-purple-500">{item.sku} x{item.quantity}</p>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -302,51 +286,14 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">{order.quantity}</TableCell>
                       <TableCell className="font-semibold text-green-600">
-                        ฿{order.sellingPrice.toLocaleString()}
+                        ฿{order.totalSellingPrice.toLocaleString()}
                       </TableCell>
                       <TableCell className="font-semibold text-red-600">
                         {order.discount > 0 ? `-฿${order.discount.toLocaleString()}` : '-'}
                       </TableCell>
-                      <TableCell>
-                        {editingCost === order.id ? (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              value={editCostValue}
-                              onChange={(e) => setEditCostValue(e.target.value)}
-                              className="w-20 h-8 text-sm border border-purple-200"
-                              onKeyPress={(e) => {
-                                if (e.key === 'Enter') saveCostEdit(order.id);
-                                if (e.key === 'Escape') cancelCostEdit();
-                              }}
-                              autoFocus
-                            />
-                            <Button
-                              size="sm"
-                              onClick={() => saveCostEdit(order.id)}
-                              className="h-6 px-2 text-xs bg-green-600 hover:bg-green-700"
-                            >
-                              ✓
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={cancelCostEdit}
-                              className="h-6 px-2 text-xs border border-purple-200"
-                            >
-                              ✕
-                            </Button>
-                          </div>
-                        ) : (
-                          <span 
-                            className="font-semibold text-red-600 cursor-pointer hover:bg-purple-50 px-2 py-1 rounded"
-                            onClick={() => handleCostEdit(order.id, order.cost)}
-                          >
-                            ฿{order.cost.toLocaleString()}
-                          </span>
-                        )}
+                      <TableCell className="font-semibold text-red-600">
+                        ฿{order.totalCost.toLocaleString()}
                       </TableCell>
                       <TableCell className={`font-semibold ${order.profit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
                         ฿{order.profit.toLocaleString()}
@@ -387,7 +334,6 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
         </CardContent>
       </Card>
 
-      {/* Add Order Modal */}
       <AddOrderModal 
         open={showAddModal} 
         onOpenChange={setShowAddModal}
@@ -395,7 +341,6 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
         products={products}
       />
 
-      {/* Edit Order Modal */}
       <EditOrderModal 
         open={showEditModal} 
         onOpenChange={setShowEditModal}

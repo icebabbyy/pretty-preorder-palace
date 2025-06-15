@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,14 +24,21 @@ interface Product {
   quantity?: number;
 }
 
-interface Order {
-  id: number;
-  product: string;
+interface OrderItem {
+  productId: number;
+  productName: string;
   productImage: string;
   sku: string;
   quantity: number;
-  sellingPrice: number;
-  cost: number;
+  unitPrice: number;
+  unitCost: number;
+}
+
+interface Order {
+  id: number;
+  items: OrderItem[];
+  totalSellingPrice: number;
+  totalCost: number;
   shippingCost: number;
   deposit: number;
   discount: number;

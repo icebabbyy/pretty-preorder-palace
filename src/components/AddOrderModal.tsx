@@ -15,13 +15,20 @@ interface Product {
   image: string;
 }
 
-interface Order {
-  product: string;
+interface OrderItem {
+  productId: number;
+  productName: string;
   productImage: string;
   sku: string;
   quantity: number;
-  sellingPrice: number;
-  cost: number;
+  unitPrice: number;
+  unitCost: number;
+}
+
+interface Order {
+  items: OrderItem[];
+  totalSellingPrice: number;
+  totalCost: number;
   shippingCost: number;
   deposit: number;
   discount: number;
@@ -41,8 +48,7 @@ interface AddOrderModalProps {
 
 const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderModalProps) => {
   const [selectedProductId, setSelectedProductId] = useState("");
-  const [quantity, setQuantity] = useState("1");
-  const [customCost, setCustomCost] = useState("");
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [shippingCost, setShippingCost] = useState("0");
   const [deposit, setDeposit] = useState("0");
   const [discount, setDiscount] = useState("0");
@@ -50,29 +56,67 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const [username, setUsername] = useState("");
   const [address, setAddress] = useState("");
 
-  const selectedProduct = products.find(p => p.id.toString() === selectedProductId);
+  const addProductToOrder = () => {
+    const product = products.find(p => p.id.toString() === selectedProductId);
+    if (!product) return;
+
+    const existingItem = orderItems.find(item => item.productId === product.id);
+    
+    if (existingItem) {
+      setOrderItems(orderItems.map(item => 
+        item.productId === product.id 
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ));
+    } else {
+      const newItem: OrderItem = {
+        productId: product.id,
+        productName: product.name,
+        productImage: product.image,
+        sku: product.sku,
+        quantity: 1,
+        unitPrice: product.sellingPrice,
+        unitCost: product.costThb
+      };
+      setOrderItems([...orderItems, newItem]);
+    }
+    
+    setSelectedProductId("");
+  };
+
+  const updateItemQuantity = (productId: number, quantity: number) => {
+    setOrderItems(orderItems.map(item => 
+      item.productId === productId ? { ...item, quantity } : item
+    ));
+  };
+
+  const updateItemCost = (productId: number, unitCost: number) => {
+    setOrderItems(orderItems.map(item => 
+      item.productId === productId ? { ...item, unitCost } : item
+    ));
+  };
+
+  const removeItem = (productId: number) => {
+    setOrderItems(orderItems.filter(item => item.productId !== productId));
+  };
 
   const handleSubmit = () => {
-    if (!selectedProduct || !quantity || !username || !address) {
+    if (!username || !address || orderItems.length === 0) {
       alert("กรุณากรอกข้อมูลให้ครบถ้วน");
       return;
     }
 
-    const cost = customCost ? parseFloat(customCost) : selectedProduct.costThb;
+    const totalSellingPrice = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+    const totalCost = orderItems.reduce((sum, item) => sum + (item.unitCost * item.quantity), 0);
     const shipping = parseFloat(shippingCost) || 0;
     const depositAmount = parseFloat(deposit) || 0;
     const discountAmount = parseFloat(discount) || 0;
-    const totalSellingPrice = selectedProduct.sellingPrice * parseInt(quantity);
     const finalSellingPrice = totalSellingPrice - discountAmount;
-    const totalCost = cost * parseInt(quantity);
 
     const newOrder: Order = {
-      product: selectedProduct.name,
-      productImage: selectedProduct.image,
-      sku: selectedProduct.sku,
-      quantity: parseInt(quantity),
-      sellingPrice: finalSellingPrice,
-      cost: totalCost,
+      items: orderItems,
+      totalSellingPrice: finalSellingPrice,
+      totalCost,
       shippingCost: shipping,
       deposit: depositAmount,
       discount: discountAmount,
@@ -87,9 +131,8 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     onOpenChange(false);
 
     // Reset form
+    setOrderItems([]);
     setSelectedProductId("");
-    setQuantity("1");
-    setCustomCost("");
     setShippingCost("0");
     setDeposit("0");
     setDiscount("0");
@@ -98,9 +141,17 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     setAddress("");
   };
 
+  const totalSellingPrice = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+  const totalCost = orderItems.reduce((sum, item) => sum + (item.unitCost * item.quantity), 0);
+  const discountAmount = parseFloat(discount || "0");
+  const finalSellingPrice = totalSellingPrice - discountAmount;
+  const shipping = parseFloat(shippingCost || "0");
+  const depositAmount = parseFloat(deposit || "0");
+  const profit = finalSellingPrice - totalCost - shipping;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
         <DialogHeader>
           <DialogTitle className="text-xl text-purple-700">+ เพิ่มออเดอร์ใหม่</DialogTitle>
         </DialogHeader>
@@ -129,177 +180,191 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
           </div>
 
           <div>
-            <Label htmlFor="product">เลือกสินค้า</Label>
-            <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-              <SelectTrigger className="border border-purple-200 rounded-lg">
-                <SelectValue placeholder="เลือกสินค้าจากสต็อค" />
-              </SelectTrigger>
-              <SelectContent>
-                {products.map((product) => (
-                  <SelectItem key={product.id} value={product.id.toString()}>
-                    {product.name} - ฿{product.sellingPrice.toLocaleString()}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="product">เพิ่มสินค้า</Label>
+            <div className="flex gap-2">
+              <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                <SelectTrigger className="flex-1 border border-purple-200 rounded-lg">
+                  <SelectValue placeholder="เลือกสินค้าจากสต็อค" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id.toString()}>
+                      {product.name} - ฿{product.sellingPrice.toLocaleString()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button 
+                onClick={addProductToOrder}
+                disabled={!selectedProductId}
+                className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
+              >
+                เพิ่ม
+              </Button>
+            </div>
           </div>
 
-          {selectedProduct && (
-            <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-              <div className="flex items-center gap-3">
-                <img 
-                  src={selectedProduct.image} 
-                  alt={selectedProduct.name}
-                  className="w-12 h-12 rounded object-cover border border-purple-200"
-                />
-                <div>
-                  <p className="font-medium">{selectedProduct.name}</p>
-                  <p className="text-sm text-purple-600">{selectedProduct.sku}</p>
-                  <p className="text-sm font-medium text-green-600">฿{selectedProduct.sellingPrice.toLocaleString()}</p>
-                </div>
+          {orderItems.length > 0 && (
+            <div>
+              <Label>รายการสินค้า</Label>
+              <div className="space-y-3">
+                {orderItems.map((item) => (
+                  <div key={item.productId} className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                    <div className="flex items-center gap-3 mb-3">
+                      <img 
+                        src={item.productImage} 
+                        alt={item.productName}
+                        className="w-12 h-12 rounded object-cover border border-purple-200"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium">{item.productName}</p>
+                        <p className="text-sm text-purple-600">{item.sku}</p>
+                        <p className="text-sm font-medium text-green-600">฿{item.unitPrice.toLocaleString()}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeItem(item.productId)}
+                        className="text-red-600 hover:bg-red-50"
+                      >
+                        ลบ
+                      </Button>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>จำนวน</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => updateItemQuantity(item.productId, parseInt(e.target.value) || 1)}
+                          className="border border-purple-200 rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <Label>ต้นทุนต่อชิ้น (฿)</Label>
+                        <Input
+                          type="number"
+                          value={item.unitCost}
+                          onChange={(e) => updateItemCost(item.productId, parseFloat(e.target.value) || 0)}
+                          className="border border-purple-200 rounded-lg"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          <div>
-            <Label htmlFor="quantity">จำนวน</Label>
-            <Input 
-              id="quantity"
-              type="number"
-              min="1"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="1"
-              className="border border-purple-200 rounded-lg"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="shippingCost">ค่าจัดส่ง (฿)</Label>
+              <Input 
+                id="shippingCost"
+                type="number"
+                value={shippingCost}
+                onChange={(e) => setShippingCost(e.target.value)}
+                placeholder="0"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="discount">ส่วนลด (฿)</Label>
+              <Input 
+                id="discount"
+                type="number"
+                value={discount}
+                onChange={(e) => setDiscount(e.target.value)}
+                placeholder="0"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
           </div>
 
-          <div>
-            <Label htmlFor="cost">ต้นทุนต่อชิ้น (฿)</Label>
-            <Input 
-              id="cost"
-              type="number"
-              value={customCost}
-              onChange={(e) => setCustomCost(e.target.value)}
-              placeholder={selectedProduct ? selectedProduct.costThb.toString() : "0"}
-              className="border border-purple-200 rounded-lg"
-            />
-            {selectedProduct && (
-              <p className="text-xs text-gray-500 mt-1">
-                ต้นทุนเริ่มต้น: ฿{selectedProduct.costThb.toLocaleString()}
-              </p>
-            )}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="deposit">มัดจำ (฿)</Label>
+              <Input 
+                id="deposit"
+                type="number"
+                value={deposit}
+                onChange={(e) => setDeposit(e.target.value)}
+                placeholder="0"
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="status">สถานะ</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger className="border border-purple-200 rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="รอชำระเงิน">รอชำระเงิน</SelectItem>
+                  <SelectItem value="รอโรงงานจัดส่ง">รอโรงงานจัดส่ง</SelectItem>
+                  <SelectItem value="กำลังมาไทย">กำลังมาไทย</SelectItem>
+                  <SelectItem value="จัดส่งแล้ว">จัดส่งแล้ว</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <div>
-            <Label htmlFor="shippingCost">ค่าจัดส่ง (฿)</Label>
-            <Input 
-              id="shippingCost"
-              type="number"
-              value={shippingCost}
-              onChange={(e) => setShippingCost(e.target.value)}
-              placeholder="0"
-              className="border border-purple-200 rounded-lg"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="discount">ส่วนลด (฿)</Label>
-            <Input 
-              id="discount"
-              type="number"
-              value={discount}
-              onChange={(e) => setDiscount(e.target.value)}
-              placeholder="0"
-              className="border border-purple-200 rounded-lg"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="deposit">มัดจำ (฿)</Label>
-            <Input 
-              id="deposit"
-              type="number"
-              value={deposit}
-              onChange={(e) => setDeposit(e.target.value)}
-              placeholder="0"
-              className="border border-purple-200 rounded-lg"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="status">สถานะ</Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="border border-purple-200 rounded-lg">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="รอชำระเงิน">รอชำระเงิน</SelectItem>
-                <SelectItem value="รอโรงงานจัดส่ง">รอโรงงานจัดส่ง</SelectItem>
-                <SelectItem value="กำลังมาไทย">กำลังมาไทย</SelectItem>
-                <SelectItem value="จัดส่งแล้ว">จัดส่งแล้ว</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {selectedProduct && quantity && (
+          {orderItems.length > 0 && (
             <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
               <h4 className="font-medium text-purple-700 mb-2">สรุปออเดอร์</h4>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span>ราคาขายรวม:</span>
                   <span className="font-medium text-green-600">
-                    ฿{(selectedProduct.sellingPrice * parseInt(quantity)).toLocaleString()}
+                    ฿{totalSellingPrice.toLocaleString()}
                   </span>
                 </div>
-                {parseFloat(discount || "0") > 0 && (
+                {discountAmount > 0 && (
                   <div className="flex justify-between">
                     <span>ส่วนลด:</span>
                     <span className="font-medium text-red-600">
-                      -฿{parseFloat(discount || "0").toLocaleString()}
+                      -฿{discountAmount.toLocaleString()}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <span>ราคาขายสุทธิ:</span>
                   <span className="font-medium text-green-600">
-                    ฿{((selectedProduct.sellingPrice * parseInt(quantity)) - parseFloat(discount || "0")).toLocaleString()}
+                    ฿{finalSellingPrice.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>ต้นทุนรวม:</span>
                   <span className="font-medium text-red-600">
-                    ฿{((customCost ? parseFloat(customCost) : selectedProduct.costThb) * parseInt(quantity)).toLocaleString()}
+                    ฿{totalCost.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>ค่าจัดส่ง:</span>
                   <span className="font-medium text-orange-600">
-                    ฿{parseFloat(shippingCost || "0").toLocaleString()}
+                    ฿{shipping.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>มัดจำ:</span>
                   <span className="font-medium text-blue-600">
-                    ฿{parseFloat(deposit || "0").toLocaleString()}
+                    ฿{depositAmount.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between border-t pt-1">
                   <span className="font-medium">กำไรรวม:</span>
-                  <span className="font-bold text-blue-600">
-                    ฿{(
-                      ((selectedProduct.sellingPrice * parseInt(quantity)) - parseFloat(discount || "0")) - 
-                      ((customCost ? parseFloat(customCost) : selectedProduct.costThb) * parseInt(quantity)) -
-                      parseFloat(shippingCost || "0")
-                    ).toLocaleString()}
+                  <span className={`font-bold ${profit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                    ฿{profit.toLocaleString()}
                   </span>
                 </div>
-                {parseFloat(deposit || "0") > 0 && (
+                {depositAmount > 0 && (
                   <div className="bg-yellow-50 p-2 rounded mt-2 border border-yellow-200">
                     <p className="text-xs text-yellow-700">
-                      💡 ยอดที่เหลือ: ฿{(
-                        ((selectedProduct.sellingPrice * parseInt(quantity)) - parseFloat(discount || "0")) - parseFloat(deposit || "0")
-                      ).toLocaleString()}
+                      💡 ยอดที่เหลือ: ฿{(finalSellingPrice - depositAmount).toLocaleString()}
                     </p>
                   </div>
                 )}
@@ -319,7 +384,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
           <Button 
             onClick={handleSubmit} 
             className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
-            disabled={!selectedProduct || !username || !address}
+            disabled={!username || !address || orderItems.length === 0}
           >
             บันทึก
           </Button>
