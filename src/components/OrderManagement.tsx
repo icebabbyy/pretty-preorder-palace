@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, Plus, Edit, Trash2, Package, Clock, Truck, CheckCircle, AlertCircle } from "lucide-react";
 import AddOrderModal from "./AddOrderModal";
 import EditOrderModal from "./EditOrderModal";
+import {
+  fetchOrders,
+  addOrder as addOrderToSheet,
+  updateOrder as updateOrderInSheet,
+  deleteOrder as deleteOrderFromSheet,
+} from "@/utils/googleSheets"; // <-- เพิ่มบรรทัดนี้
 
 interface Product {
   id: number;
@@ -44,16 +50,20 @@ interface Order {
 
 interface OrderManagementProps {
   products: Product[];
-  orders: Order[];
-  setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
 }
 
-const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) => {
+const OrderManagement = ({ products }: OrderManagementProps) => {
+  const [orders, setOrders] = useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+
+  // โหลดข้อมูลจาก Google Sheets ตอน mount
+  useEffect(() => {
+    fetchOrders().then(setOrders).catch(console.error);
+  }, []);
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch =
@@ -78,21 +88,23 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
     "จัดส่งแล้ว": orders.filter(o => o.status === "จัดส่งแล้ว").length,
   };
 
-  const deleteOrder = (orderId: number) => {
+  // ลบ order ใน Google Sheets
+  const deleteOrder = async (orderId: number) => {
+    await deleteOrderFromSheet(orderId);
     setOrders(orders.filter(o => o.id !== orderId));
   };
 
-  const addOrder = (newOrder: Omit<Order, 'id'>) => {
-    const order: Order = {
-      ...newOrder,
-      id: Date.now()
-    };
-    setOrders([...orders, order]);
+  // เพิ่ม order ใหม่ใน Google Sheets
+  const addOrder = async (newOrder: Omit<Order, 'id'>) => {
+    const createdOrder = await addOrderToSheet(newOrder);
+    setOrders([...orders, createdOrder]);
   };
 
-  const updateOrder = (updatedOrder: Order) => {
+  // อัปเดต order ใน Google Sheets
+  const updateOrder = async (updatedOrder: Order) => {
+    const result = await updateOrderInSheet(updatedOrder);
     setOrders(orders.map(order => 
-      order.id === updatedOrder.id ? updatedOrder : order
+      order.id === updatedOrder.id ? result : order
     ));
   };
 
