@@ -73,9 +73,10 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const [username, setUsername] = useState("");
   const [address, setAddress] = useState("");
 
-  // หา product และ variants
-  const selectedProduct = products.find(p => p.id.toString() === selectedProductId);
-  const variantOptions = selectedProduct?.variants ?? [];
+  // หา product และ variants ป้องกัน undefined
+  const selectedProduct = products?.find(p => p.id.toString() === selectedProductId);
+  // ถ้า selectedProduct ไม่มี variants ก็ fallback []
+  const variantOptions = (selectedProduct && Array.isArray(selectedProduct.variants)) ? selectedProduct.variants : [];
   const selectedVariant = variantOptions.find(v => v.variantId.toString() === selectedVariantId);
 
   // เพิ่มสินค้าเข้า order (variant)
