@@ -1,35 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-interface OrderItem {
-  productId: number;
-  productName: string;
-  productImage: string;
-  sku: string;
-  quantity: number;
-  unitPrice: number;
-  unitCost: number;
-}
-
-interface Order {
-  id: number;
-  items: OrderItem[];
-  totalSellingPrice: number;
-  totalCost: number;
-  shippingCost: number;
-  deposit: number;
-  discount: number;
-  profit: number;
-  status: string;
-  orderDate: string;
-  username: string;
-  address: string;
-}
+import { Order, OrderItem } from "@/types/inventory";
 
 interface EditOrderModalProps {
   open: boolean;

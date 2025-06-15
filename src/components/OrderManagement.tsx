@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,40 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, Plus, Edit, Trash2, Package, Clock, Truck, CheckCircle, AlertCircle } from "lucide-react";
 import AddOrderModal from "./AddOrderModal";
 import EditOrderModal from "./EditOrderModal";
-
-interface Product {
-  id: number;
-  sku: string;
-  name: string;
-  sellingPrice: number;
-  costThb: number;
-  image: string;
-}
-
-interface OrderItem {
-  productId: number;
-  productName: string;
-  productImage: string;
-  sku: string;
-  quantity: number;
-  unitPrice: number;
-  unitCost: number;
-}
-
-interface Order {
-  id: number;
-  items: OrderItem[];
-  totalSellingPrice: number;
-  totalCost: number;
-  shippingCost: number;
-  deposit: number;
-  discount: number;
-  profit: number;
-  status: string;
-  orderDate: string;
-  username: string;
-  address: string;
-}
+import { Product, Order } from "@/types/inventory";
 
 interface OrderManagementProps {
   products: Product[];

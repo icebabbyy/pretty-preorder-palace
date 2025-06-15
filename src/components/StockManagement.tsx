@@ -7,40 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, Plus, ExternalLink, Edit, Trash2, Settings } from "lucide-react";
 import AddProductModal from "./AddProductModal";
 import CategoryManagementModal from "./CategoryManagementModal";
-
-// ---- ปรับ Product ให้รองรับ variants ----
-interface ProductVariant {
-  variantId: number;
-  productId: number;
-  sku: string;
-  name: string;    // ชื่อแบบ/option เช่น "สีแดง ไซส์ S"
-  option: string;  // ข้อมูลเพิ่ม เช่น "สีแดง, ไซส์ S"
-  image: string;
-  priceThb: number;
-  costThb: number;
-  sellingPrice: number;
-  quantity: number;
-}
-
-interface Product {
-  id: number;
-  sku: string;
-  name: string;
-  category: string;
-  image: string;
-  priceYuan: number;
-  exchangeRate: number;
-  priceThb: number;
-  importCost: number;
-  costThb: number;
-  sellingPrice: number;
-  status: string;
-  shipmentDate: string;
-  link: string;
-  description: string;
-  quantity?: number;
-  variants: ProductVariant[];
-}
+import { Product, ProductVariant } from "@/types/inventory";
 
 interface StockManagementProps {
   products: Product[];

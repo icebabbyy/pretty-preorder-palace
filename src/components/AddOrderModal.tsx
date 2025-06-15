@@ -4,55 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-// เพิ่ม: ProductVariant interface
-interface ProductVariant {
-  variantId: number;
-  productId: number;
-  sku: string;
-  name: string;    // ชื่อแบบ/option เช่น "สีแดง ไซส์ S"
-  option: string;  // ข้อมูลเพิ่ม เช่น "สีแดง, ไซส์ S"
-  image: string;
-  priceThb: number;
-  costThb: number;
-  sellingPrice: number;
-  quantity: number;
-}
-
-// Product มี variants
-interface Product {
-  id: number;
-  sku: string;
-  name: string;
-  image: string;
-  variants: ProductVariant[];
-}
-
-interface OrderItem {
-  productId: number;
-  variantId: number;
-  productName: string;
-  variantName: string;
-  productImage: string;
-  sku: string;
-  quantity: number;
-  unitPrice: number;
-  unitCost: number;
-}
-
-interface Order {
-  items: OrderItem[];
-  totalSellingPrice: number;
-  totalCost: number;
-  shippingCost: number;
-  deposit: number;
-  discount: number;
-  profit: number;
-  status: string;
-  orderDate: string;
-  username: string;
-  address: string;
-}
+import { Product, ProductVariant, Order, OrderItem } from "@/types/inventory";
 
 interface AddOrderModalProps {
   open: boolean;
