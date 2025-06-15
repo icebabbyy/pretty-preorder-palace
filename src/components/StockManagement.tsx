@@ -9,6 +9,16 @@ import AddProductModal from "./AddProductModal";
 import CategoryManagementModal from "./CategoryManagementModal";
 import type { Product, ProductOption } from "@/types";
 
+// -- products, categories APIs now come from new locations --
+import {
+  addProduct as addProductAPI,
+  updateProduct as updateProductAPI,
+  deleteProduct as deleteProductAPI,
+} from "@/utils/products";
+import {
+  fetchCategories,
+} from "@/utils/categories";
+
 interface StockManagementProps {
   products: Product[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;

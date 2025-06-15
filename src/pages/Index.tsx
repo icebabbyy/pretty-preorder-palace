@@ -10,9 +10,13 @@ import {
   addProduct,
   updateProduct,
   deleteProduct,
+} from "@/utils/products";
+import {
   fetchOrders,
+} from "@/utils/orders";
+import {
   fetchCategories,
-} from "@/utils/supabase";
+} from "@/utils/categories";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("stock");

@@ -16,7 +16,7 @@ import {
   addOrder as addOrderToSupabase,
   updateOrder as updateOrderInSupabase,
   deleteOrder as deleteOrderFromSupabase,
-} from "@/utils/supabase";
+} from "@/utils/orders";
 import type { Product, Order, OrderItem } from "@/types";
 
 interface OrderManagementProps {
