@@ -86,10 +86,10 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: any) => {
       const result = await updateOrderInSupabase(updatedOrder as any);
       onUpdateOrder({
         ...result,
-        totalSellingPrice: result.totalSellingPrice ?? result.total_selling_price ?? 0,
-        totalCost: result.totalCost ?? result.total_cost ?? 0,
-        shippingCost: result.shippingCost ?? result.shipping_cost ?? 0,
-        orderDate: result.orderDate ?? result.order_date ?? '',
+        totalSellingPrice: result.totalSellingPrice ?? 0,
+        totalCost: result.totalCost ?? 0,
+        shippingCost: result.shippingCost ?? 0,
+        orderDate: result.orderDate ?? '',
       });
       onOpenChange(false);
     } catch (e: any) {

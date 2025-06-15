@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Product, Order, OrderItem } from "@/types";
 
@@ -43,7 +42,7 @@ function productToSupabaseInsert(product: Omit<Product, "id">) {
     link: product.link,
     description: product.description,
     quantity: product.quantity,
-    options: product.options
+    options: product.options ? (product.options as any) : undefined
   };
 }
 
@@ -67,7 +66,7 @@ export async function addProduct(product: Omit<Product, "id">): Promise<Product>
   const obj = productToSupabaseInsert(product);
   const { data, error } = await supabase
     .from('products')
-    .insert([obj])
+    .insert([obj as any])
     .select()
     .maybeSingle();
   if (error) {
@@ -81,7 +80,7 @@ export async function updateProduct(product: Product): Promise<Product> {
   const obj = productToSupabaseInsert(product);
   const { data, error } = await supabase
     .from('products')
-    .update({ ...obj, updated_at: new Date().toISOString() })
+    .update({ ...obj, updated_at: new Date().toISOString() } as any)
     .eq('id', product.id)
     .select()
     .maybeSingle();
@@ -138,7 +137,7 @@ export async function fetchOrders(): Promise<Order[]> {
 export async function addOrder(order: Omit<Order, "id">): Promise<Order> {
   // Map camelCase to snake_case for Supabase
   const supa = {
-    items: order.items,
+    items: order.items ? (order.items as any) : undefined,
     total_selling_price: order.totalSellingPrice,
     total_cost: order.totalCost,
     shipping_cost: order.shippingCost,
@@ -148,11 +147,11 @@ export async function addOrder(order: Omit<Order, "id">): Promise<Order> {
     status: order.status,
     order_date: order.orderDate,
     username: order.username,
-    address: order.address
+    address: order.address,
   };
   const { data, error } = await supabase
     .from('orders')
-    .insert([supa])
+    .insert([supa as any])
     .select()
     .maybeSingle();
   if (error) {
@@ -164,7 +163,7 @@ export async function addOrder(order: Omit<Order, "id">): Promise<Order> {
 
 export async function updateOrder(order: Order): Promise<Order> {
   const supa = {
-    items: order.items,
+    items: order.items ? (order.items as any) : undefined,
     total_selling_price: order.totalSellingPrice,
     total_cost: order.totalCost,
     shipping_cost: order.shippingCost,
@@ -179,7 +178,7 @@ export async function updateOrder(order: Order): Promise<Order> {
   };
   const { data, error } = await supabase
     .from('orders')
-    .update(supa)
+    .update(supa as any)
     .eq('id', order.id)
     .select()
     .maybeSingle();

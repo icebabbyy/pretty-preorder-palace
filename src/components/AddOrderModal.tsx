@@ -86,7 +86,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     const finalSellingPrice = totalSellingPrice - discountAmount;
 
     const newOrder = {
-      items: orderItems,
+      items: orderItems, // passed as array, will be handled in supabase.ts
       totalSellingPrice: finalSellingPrice,
       totalCost,
       shippingCost: shipping,
@@ -103,10 +103,10 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
       const createdOrder = await addOrderToSupabase(newOrder as any);
       onAddOrder({
         ...createdOrder,
-        totalSellingPrice: createdOrder.totalSellingPrice ?? createdOrder.total_selling_price ?? 0,
-        totalCost: createdOrder.totalCost ?? createdOrder.total_cost ?? 0,
-        shippingCost: createdOrder.shippingCost ?? createdOrder.shipping_cost ?? 0,
-        orderDate: createdOrder.orderDate ?? createdOrder.order_date ?? '',
+        totalSellingPrice: createdOrder.totalSellingPrice ?? 0,
+        totalCost: createdOrder.totalCost ?? 0,
+        shippingCost: createdOrder.shippingCost ?? 0,
+        orderDate: createdOrder.orderDate ?? '',
       });
       onOpenChange(false);
       setOrderItems([]);
