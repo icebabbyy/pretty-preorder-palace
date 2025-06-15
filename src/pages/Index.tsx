@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,9 +76,15 @@ const Index = () => {
         
         setCategories(sampleCategories);
         setProducts(sampleProducts);
-        localStorage.setItem('inventory-categories', JSON.stringify(sampleCategories));
-        localStorage.setItem('inventory-products', JSON.stringify(sampleProducts));
-        localStorage.setItem('products', JSON.stringify(sampleProducts));
+
+        try {
+          localStorage.setItem('inventory-categories', JSON.stringify(sampleCategories));
+          localStorage.setItem('inventory-products', JSON.stringify(sampleProducts));
+          localStorage.setItem('products', JSON.stringify(sampleProducts));
+        } catch (err) {
+          alert('ไม่สามารถบันทึกข้อมูล sample ไปยัง localStorage ได้: เกินขนาดพื้นที่จัดเก็บ');
+          console.warn('QuotaExceeded saving sample data to localStorage', err);
+        }
         console.log('Created initial sample data and saved to localStorage');
       }
       
@@ -92,16 +97,26 @@ const Index = () => {
 
   useEffect(() => {
     if (products.length > 0) {
-      localStorage.setItem('inventory-products', JSON.stringify(products));
-      localStorage.setItem('products', JSON.stringify(products));
-      localStorage.setItem('stockProducts', JSON.stringify(products));
-      console.log('Saved products to localStorage:', products.length);
+      try {
+        localStorage.setItem('inventory-products', JSON.stringify(products));
+        localStorage.setItem('products', JSON.stringify(products));
+        localStorage.setItem('stockProducts', JSON.stringify(products));
+        console.log('Saved products to localStorage:', products.length);
+      } catch (err: any) {
+        alert('ข้อผิดพลาด: ข้อมูลสินค้าเก็บใน localStorage เต็ม ไม่สามารถบันทึกได้ กรุณาลบสินค้าหรือเลือกรูปภาพขนาดเล็กลง');
+        console.warn('QuotaExceeded saving products to localStorage', err);
+      }
     }
   }, [products]);
 
   useEffect(() => {
     if (orders.length > 0) {
-      localStorage.setItem('stockOrders', JSON.stringify(orders));
+      try {
+        localStorage.setItem('stockOrders', JSON.stringify(orders));
+      } catch (err: any) {
+        alert('ข้อผิดพลาด: ออเดอร์เก็บใน localStorage เต็ม ไม่สามารถบันทึกได้ กรุณาลบออเดอร์บางส่วน');
+        console.warn('QuotaExceeded saving orders to localStorage', err);
+      }
     }
   }, [orders]);
 
