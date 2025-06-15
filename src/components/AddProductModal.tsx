@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// --- INTERFACE ---
 interface ProductVariant {
   variantId: number;
   productId: number;
@@ -13,7 +12,6 @@ interface ProductVariant {
   name: string;
   option: string;
   image: string;
-  priceThb?: number;
   costThb: number;
   sellingPrice: number;
   quantity: number;
@@ -24,10 +22,9 @@ interface Product {
   sku: string;
   name: string;
   image: string;
-  variants?: ProductVariant[];
-  priceThb?: number;
   costThb: number;
   sellingPrice: number;
+  variants?: ProductVariant[];
 }
 
 interface OrderItem {
@@ -74,7 +71,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const [username, setUsername] = useState("");
   const [address, setAddress] = useState("");
 
-  // --- SAFETY: ป้องกัน products ว่าง ---
+  // --- SAFETY: products check ---
   if (!Array.isArray(products) || products.length === 0) {
     return null;
   }
@@ -82,37 +79,30 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   // --- SELECTED PRODUCT ---
   const selectedProduct = products.find(p => p.id.toString() === selectedProductId);
 
-  // --- VARIANT OPTIONS: "ตัวเลือกหลัก" + ตัวเลือกย่อย (ถ้ามี) ---
+  // --- VARIANT OPTIONS: Always include ตัวเลือกหลัก as first ---
   let variantOptions: ProductVariant[] = [];
   if (selectedProduct) {
     const mainVariant: ProductVariant = {
       variantId: 0,
       productId: selectedProduct.id,
       sku: selectedProduct.sku ?? "",
-      name: selectedProduct.name ?? "(หลัก)",
-      option: "",
+      name: selectedProduct.name, // ชื่อสินค้า
+      option: "", // ตัวหลักไม่มี option
       image: selectedProduct.image ?? "",
-      priceThb: selectedProduct.priceThb ?? 0,
-      costThb: selectedProduct.costThb ?? 0,
-      sellingPrice: selectedProduct.sellingPrice ?? 0,
+      costThb: typeof selectedProduct.costThb === "number" ? selectedProduct.costThb : 0,
+      sellingPrice: typeof selectedProduct.sellingPrice === "number" ? selectedProduct.sellingPrice : 0,
       quantity: 0,
     };
 
-    const realVariants: ProductVariant[] = Array.isArray(selectedProduct.variants)
-      ? selectedProduct.variants.map(v => ({
-          ...v,
-          priceThb: v.priceThb ?? 0,
-          costThb: v.costThb ?? 0,
-          sellingPrice: v.sellingPrice ?? 0,
-        }))
+    const variants: ProductVariant[] = Array.isArray(selectedProduct.variants)
+      ? selectedProduct.variants
       : [];
 
-    variantOptions = [mainVariant, ...realVariants];
+    variantOptions = [mainVariant, ...variants];
   }
 
   const selectedVariant = variantOptions.find(v => v.variantId.toString() === selectedVariantId);
 
-  // --- ADD PRODUCT ---
   const addProductToOrder = () => {
     if (!selectedProduct || !selectedVariant) return;
 
@@ -131,12 +121,14 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
         productId: selectedProduct.id,
         variantId: selectedVariant.variantId,
         productName: selectedProduct.name,
-        variantName: selectedVariant.name + (selectedVariant.option ? ` (${selectedVariant.option})` : ""),
+        variantName: selectedVariant.variantId === 0
+          ? "ตัวหลัก"
+          : selectedVariant.name + (selectedVariant.option ? ` (${selectedVariant.option})` : ""),
         productImage: selectedVariant.image || selectedProduct.image,
         sku: selectedVariant.sku,
         quantity: 1,
-        unitPrice: selectedVariant.sellingPrice ?? 0,
-        unitCost: selectedVariant.costThb ?? 0
+        unitPrice: selectedVariant.sellingPrice,
+        unitCost: selectedVariant.costThb
       };
       setOrderItems([...orderItems, newItem]);
     }
@@ -271,9 +263,12 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                 <SelectContent>
                   {variantOptions.map(variant => (
                     <SelectItem key={variant.variantId} value={variant.variantId.toString()}>
-                      {variant.name}
-                      {variant.option ? ` (${variant.option})` : ""}
-                      {variant.sellingPrice ? ` - ฿${variant.sellingPrice}` : ""}
+                      {variant.variantId === 0
+                        ? "ตัวเลือกหลัก"
+                        : variant.name + (variant.option ? ` (${variant.option})` : "")
+                      }
+                      {" - ฿"}
+                      {variant.sellingPrice}
                     </SelectItem>
                   ))}
                 </SelectContent>
