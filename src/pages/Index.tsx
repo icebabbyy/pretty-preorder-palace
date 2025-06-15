@@ -21,6 +21,7 @@ interface Product {
   shipmentDate: string;
   link: string;
   description: string;
+  quantity?: number;
 }
 
 interface Order {
@@ -36,28 +37,82 @@ interface Order {
   orderDate: string;
 }
 
-// ...import เหมือนเดิม
-
 const Index = () => {
-  // ...state เหมือนเดิม
+  const [activeTab, setActiveTab] = useState("stock");
+  const [categories, setCategories] = useState<string[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
     const initializeData = () => {
       const savedCategories = localStorage.getItem('inventory-categories');
-      // ใช้ products จาก inventory-products ถ้าไม่มีให้ลอง key products
       const savedProducts = localStorage.getItem('inventory-products') || localStorage.getItem('products');
+      const savedOrders = localStorage.getItem('stockOrders');
+      
       if (savedCategories && savedProducts) {
         setCategories(JSON.parse(savedCategories));
         setProducts(JSON.parse(savedProducts));
         console.log('Loaded data from localStorage');
       } else {
-        // ...sample data เหมือนเดิม
+        // Sample data
+        const sampleCategories = [
+          "League of Legends",
+          "Valorant", 
+          "Zenless Zone Zero",
+          "Genshin Impact",
+          "Honkai Star Rail",
+          "Azur Lane",
+          "Blue Archive",
+          "ETC"
+        ];
+        
+        const sampleProducts: Product[] = [
+          {
+            id: 1,
+            sku: "LOL001",
+            name: "League of Legends RP Card 1000",
+            category: "League of Legends",
+            image: "/placeholder.svg",
+            priceYuan: 50,
+            exchangeRate: 5.2,
+            priceThb: 260,
+            costThb: 250,
+            sellingPrice: 300,
+            status: "พร้อมส่ง",
+            shipmentDate: "2024-01-15",
+            link: "https://example.com",
+            description: "RP Card สำหรับเกม League of Legends",
+            quantity: 5
+          },
+          {
+            id: 2,
+            sku: "VAL001",
+            name: "Valorant Points 1000",
+            category: "Valorant",
+            image: "/placeholder.svg",
+            priceYuan: 45,
+            exchangeRate: 5.2,
+            priceThb: 234,
+            costThb: 230,
+            sellingPrice: 280,
+            status: "พรีออเดอร์",
+            shipmentDate: "2024-02-01",
+            link: "https://example.com",
+            description: "VP สำหรับเกม Valorant",
+            quantity: 2
+          }
+        ];
+        
         setCategories(sampleCategories);
         setProducts(sampleProducts);
         localStorage.setItem('inventory-categories', JSON.stringify(sampleCategories));
         localStorage.setItem('inventory-products', JSON.stringify(sampleProducts));
-        localStorage.setItem('products', JSON.stringify(sampleProducts)); // เพิ่มตรงนี้
+        localStorage.setItem('products', JSON.stringify(sampleProducts));
         console.log('Created initial sample data and saved to localStorage');
+      }
+      
+      if (savedOrders) {
+        setOrders(JSON.parse(savedOrders));
       }
     };
     initializeData();
@@ -66,21 +121,16 @@ const Index = () => {
   useEffect(() => {
     if (products.length > 0) {
       localStorage.setItem('inventory-products', JSON.stringify(products));
-      localStorage.setItem('products', JSON.stringify(products)); // เพิ่มตรงนี้
+      localStorage.setItem('products', JSON.stringify(products));
+      localStorage.setItem('stockProducts', JSON.stringify(products));
       console.log('Saved products to localStorage:', products.length);
     }
   }, [products]);
 
-}
-
-  // Save products to localStorage whenever products change
   useEffect(() => {
-    localStorage.setItem('stockProducts', JSON.stringify(products));
-  }, [products]);
-
-  // Save orders to localStorage whenever orders change
-  useEffect(() => {
-    localStorage.setItem('stockOrders', JSON.stringify(orders));
+    if (orders.length > 0) {
+      localStorage.setItem('stockOrders', JSON.stringify(orders));
+    }
   }, [orders]);
 
   return (
