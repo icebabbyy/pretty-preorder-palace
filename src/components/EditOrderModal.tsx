@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { updateOrder as updateOrderInSupabase } from "@/utils/supabase";
+import { updateOrder } from "@/utils/orders";
 import EditOrderItemList from "./EditOrderItemList";
 import OrderSummary from "./OrderSummary";
 import type { Order, OrderItem } from "@/types";
@@ -83,7 +83,7 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: any) => {
     };
 
     try {
-      const result = await updateOrderInSupabase(updatedOrder as any);
+      const result = await updateOrder(updatedOrder);
       onUpdateOrder({
         ...result,
         totalSellingPrice: result.totalSellingPrice ?? 0,

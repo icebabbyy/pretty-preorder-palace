@@ -1,11 +1,10 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { addOrder as addOrderToSupabase } from "@/utils/supabase";
+import { addOrder } from "@/utils/orders";
 import { Product, Order, OrderItem } from "@/types";
 import OrderProductPicker from "./OrderProductPicker";
 import OrderItemList from "./OrderItemList";
@@ -86,7 +85,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     const finalSellingPrice = totalSellingPrice - discountAmount;
 
     const newOrder = {
-      items: orderItems, // passed as array, will be handled in supabase.ts
+      items: orderItems,
       totalSellingPrice: finalSellingPrice,
       totalCost,
       shippingCost: shipping,
@@ -100,7 +99,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     };
 
     try {
-      const createdOrder = await addOrderToSupabase(newOrder as any);
+      const createdOrder = await addOrder(newOrder as any);
       onAddOrder({
         ...createdOrder,
         totalSellingPrice: createdOrder.totalSellingPrice ?? 0,
@@ -119,6 +118,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
       setAddress("");
     } catch (e) {
       alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่");
+      console.error("Add order error:", e);
     } finally {
       setLoading(false);
     }
