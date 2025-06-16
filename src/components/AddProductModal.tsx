@@ -339,6 +339,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
               <Input 
                 id="priceYuan"
                 type="number"
+                step="0.01"
                 value={formData.priceYuan}
                 onChange={(e) => setFormData({ ...formData, priceYuan: parseFloat(e.target.value) || 0 })}
                 placeholder="0"
@@ -350,7 +351,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
               <Input 
                 id="exchangeRate"
                 type="number"
-                step="0.01"
+                step="0.0001"
                 value={formData.exchangeRate}
                 onChange={(e) => setFormData({ ...formData, exchangeRate: parseFloat(e.target.value) || 1 })}
                 placeholder="1"
@@ -362,6 +363,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
               <Input 
                 id="priceThb"
                 type="number"
+                step="0.01"
                 value={formData.priceThb}
                 readOnly
                 className="border border-purple-200 rounded-lg bg-gray-50"
@@ -375,6 +377,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
               <Input 
                 id="importCost"
                 type="number"
+                step="0.01"
                 value={formData.importCost}
                 onChange={(e) => setFormData({ ...formData, importCost: parseFloat(e.target.value) || 0 })}
                 placeholder="0"
@@ -386,6 +389,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
               <Input 
                 id="costThb"
                 type="number"
+                step="0.01"
                 value={formData.costThb}
                 readOnly
                 className="border border-purple-200 rounded-lg bg-gray-50"
@@ -396,6 +400,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
               <Input 
                 id="sellingPrice"
                 type="number"
+                step="0.01"
                 value={formData.sellingPrice}
                 onChange={(e) => setFormData({ ...formData, sellingPrice: parseFloat(e.target.value) || 0 })}
                 placeholder="0"
@@ -498,6 +503,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
                       <Label>ต้นทุนรวม (บาท)</Label>
                       <Input
                         type="number"
+                        step="0.01"
                         value={option.costThb}
                         onChange={e => updateOption(idx, { costThb: parseFloat(e.target.value) || 0 })}
                         className="border border-purple-200 rounded-lg"
@@ -507,6 +513,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
                       <Label>ราคาขาย (บาท)</Label>
                       <Input
                         type="number"
+                        step="0.01"
                         value={option.sellingPrice}
                         onChange={e => updateOption(idx, { sellingPrice: parseFloat(e.target.value) || 0 })}
                         className="border border-purple-200 rounded-lg"

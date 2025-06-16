@@ -77,60 +77,60 @@ export type Database = {
       }
       products: {
         Row: {
-          category: string | null
-          cost_thb: number | null
+          category: string
+          cost_thb: number
           created_at: string | null
           description: string | null
-          exchange_rate: number | null
+          exchange_rate: number
           id: number
-          image: string | null
-          import_cost: number | null
+          image: string
+          import_cost: number
           link: string | null
           name: string
           options: Json | null
           price_yuan: number
           quantity: number
-          selling_price: number | null
+          selling_price: number
           shipment_date: string | null
           sku: string
           "status TEXT DEFAULT": string | null
           updated_at: string | null
         }
         Insert: {
-          category?: string | null
-          cost_thb?: number | null
+          category: string
+          cost_thb?: number
           created_at?: string | null
           description?: string | null
-          exchange_rate?: number | null
+          exchange_rate?: number
           id?: number
-          image?: string | null
-          import_cost?: number | null
+          image: string
+          import_cost?: number
           link?: string | null
           name: string
           options?: Json | null
           price_yuan?: number
           quantity?: number
-          selling_price?: number | null
+          selling_price?: number
           shipment_date?: string | null
           sku: string
           "status TEXT DEFAULT"?: string | null
           updated_at?: string | null
         }
         Update: {
-          category?: string | null
-          cost_thb?: number | null
+          category?: string
+          cost_thb?: number
           created_at?: string | null
           description?: string | null
-          exchange_rate?: number | null
+          exchange_rate?: number
           id?: number
-          image?: string | null
-          import_cost?: number | null
+          image?: string
+          import_cost?: number
           link?: string | null
           name?: string
           options?: Json | null
           price_yuan?: number
           quantity?: number
-          selling_price?: number | null
+          selling_price?: number
           shipment_date?: string | null
           sku?: string
           "status TEXT DEFAULT"?: string | null
