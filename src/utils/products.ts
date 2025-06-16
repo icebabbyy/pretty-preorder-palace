@@ -27,6 +27,11 @@ function supabaseProductToProduct(p: any): Product {
 
 // Helper: camelCase to snake_case for insert
 function productToSupabaseInsert(product: Omit<Product, "id"> | Product) {
+  // Ensure quantity is always a valid number, never null or undefined
+  const quantity = typeof product.quantity === "number" && !isNaN(product.quantity) 
+    ? product.quantity 
+    : 0;
+
   return {
     sku: product.sku,
     name: product.name,
@@ -38,15 +43,13 @@ function productToSupabaseInsert(product: Omit<Product, "id"> | Product) {
     cost_thb: product.costThb,
     selling_price: product.sellingPrice,
     ["status TEXT DEFAULT"]: product.status,
-    // ==== PATCH ====
     shipment_date:
       product.shipmentDate && product.shipmentDate !== ""
         ? product.shipmentDate
         : null,
-    // ==============
     link: product.link,
     description: product.description,
-    quantity: product.quantity,
+    quantity: quantity, // Always ensure this is a number
     options: product.options ? (product.options as any) : undefined,
   };
 }
