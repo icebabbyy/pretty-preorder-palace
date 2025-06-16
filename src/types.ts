@@ -1,4 +1,5 @@
 
+
 export interface ProductOption {
   id: string;
   name: string;
@@ -50,6 +51,9 @@ export interface Order {
   profit: number;
   status: string;
   orderDate: string;
+  paymentDate?: string | null;
+  paymentSlip?: string | null;
   username: string;
   address: string;
 }
+

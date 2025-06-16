@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, Plus, ExternalLink, Edit, Trash2, Settings, Package } from "lucide-react";
 import AddProductModal from "./AddProductModal";
 import CategoryManagementModal from "./CategoryManagementModal";
+import StockBanner from "./StockBanner";
 import type { Product, ProductOption } from "@/types";
 
 // -- products, categories APIs now come from new locations --
@@ -122,6 +124,9 @@ const StockManagement = ({
 
   return (
     <div>
+      {/* Stock Banner */}
+      <StockBanner products={products} />
+
       {/* Search and Filters */}
       <Card className="mb-6 bg-white border border-purple-200 rounded-xl shadow-sm">
         <CardContent className="p-6">

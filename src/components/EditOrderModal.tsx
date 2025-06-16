@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: any) => {
   const [status, setStatus] = useState("รอชำระเงิน");
   const [username, setUsername] = useState("");
   const [address, setAddress] = useState("");
+  const [paymentDate, setPaymentDate] = useState("");
+  const [paymentSlip, setPaymentSlip] = useState("");
   const [items, setItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -35,6 +38,8 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: any) => {
       setStatus(order.status ?? "รอชำระเงิน");
       setUsername(order.username ?? "");
       setAddress(order.address ?? "");
+      setPaymentDate(order.paymentDate ?? "");
+      setPaymentSlip(order.paymentSlip ?? "");
     }
   }, [order]);
 
@@ -78,6 +83,8 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: any) => {
       discount: discountAmount,
       profit: finalSellingPrice - totalCost - shipping,
       status,
+      paymentDate: paymentDate || null,
+      paymentSlip: paymentSlip || null,
       username,
       address
     };
@@ -136,6 +143,29 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: any) => {
               placeholder="ที่อยู่จัดส่ง"
               className="border border-purple-200 rounded-lg"
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="paymentDate">วันที่ชำระเงิน</Label>
+              <Input
+                id="paymentDate"
+                type="date"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+            <div>
+              <Label htmlFor="paymentSlip">URL สลิปโอนเงิน</Label>
+              <Input
+                id="paymentSlip"
+                value={paymentSlip}
+                onChange={(e) => setPaymentSlip(e.target.value)}
+                placeholder="https://..."
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
           </div>
 
           {/* Edit items */}

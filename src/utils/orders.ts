@@ -1,4 +1,5 @@
 
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Order } from "@/types";
 
@@ -15,6 +16,8 @@ function supabaseOrderToOrder(o: any): Order {
     profit: o.profit ?? 0,
     status: o.status ?? "",
     orderDate: o.order_date ? o.order_date.toString() : "",
+    paymentDate: o.payment_date ? o.payment_date.toString() : null,
+    paymentSlip: o.payment_slip ?? null,
     username: o.username ?? "",
     address: o.address ?? "",
   };
@@ -45,6 +48,8 @@ export async function addOrder(order: Omit<Order, "id">): Promise<Order> {
     profit: order.profit,
     status: order.status,
     order_date: order.orderDate,
+    payment_date: order.paymentDate,
+    payment_slip: order.paymentSlip,
     username: order.username,
     address: order.address,
   };
@@ -71,6 +76,8 @@ export async function updateOrder(order: Order): Promise<Order> {
     profit: order.profit,
     status: order.status,
     order_date: order.orderDate,
+    payment_date: order.paymentDate,
+    payment_slip: order.paymentSlip,
     username: order.username,
     address: order.address,
     updated_at: new Date().toISOString(),
@@ -98,3 +105,4 @@ export async function deleteOrder(orderId: number): Promise<void> {
     throw new Error('Failed to delete order');
   }
 }
+

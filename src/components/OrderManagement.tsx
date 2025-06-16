@@ -10,6 +10,7 @@ import EditOrderModal from "./EditOrderModal";
 import OrderStats from "./OrderStats";
 import OrderStatusBanner from "./OrderStatusBanner";
 import OrderFilterBar from "./OrderFilterBar";
+import DateFilterBar from "./DateFilterBar";
 import OrdersTable from "./OrdersTable";
 import {
   fetchOrders,
@@ -28,6 +29,8 @@ interface OrderManagementProps {
 const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedMonth, setSelectedMonth] = useState("all");
+  const [selectedYear, setSelectedYear] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
@@ -40,8 +43,27 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
         item.sku.toLowerCase().includes(searchTerm.toLowerCase())
       ) ||
       order.username.toLowerCase().includes(searchTerm.toLowerCase());
+    
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    
+    // กรองตามเดือนและปีจาก paymentDate
+    let matchesDate = true;
+    if (order.paymentDate && (selectedMonth !== "all" || selectedYear !== "all")) {
+      const paymentDate = new Date(order.paymentDate);
+      if (selectedMonth !== "all") {
+        const orderMonth = (paymentDate.getMonth() + 1).toString().padStart(2, '0');
+        matchesDate = matchesDate && orderMonth === selectedMonth;
+      }
+      if (selectedYear !== "all") {
+        const orderYear = paymentDate.getFullYear().toString();
+        matchesDate = matchesDate && orderYear === selectedYear;
+      }
+    } else if (selectedMonth !== "all" || selectedYear !== "all") {
+      // ถ้าไม่มีวันที่ชำระเงินแต่มีการเลือกกรอง ให้ไม่แสดงออเดอร์นั้น
+      matchesDate = false;
+    }
+    
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const totalRevenue = orders.reduce((sum, order) => sum + (order.totalSellingPrice ?? 0), 0);
@@ -114,7 +136,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
 
       {/* Search and Filters */}
       <div className="mb-6 bg-white border border-purple-200 rounded-xl shadow-sm">
-        <div className="p-6">
+        <div className="p-6 space-y-4">
           <OrderFilterBar
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
@@ -122,6 +144,15 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
             setStatusFilter={setStatusFilter}
             onAddOrderClick={() => setShowAddModal(true)}
           />
+          
+          <div className="border-t border-purple-100 pt-4">
+            <DateFilterBar
+              selectedMonth={selectedMonth}
+              setSelectedMonth={setSelectedMonth}
+              selectedYear={selectedYear}
+              setSelectedYear={setSelectedYear}
+            />
+          </div>
         </div>
       </div>
 
