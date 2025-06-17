@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -10,14 +9,13 @@ interface OrderProductPickerProps {
   products: Product[];
   selectedProductId: string;
   setSelectedProductId: (id: string) => void;
-  addProductToOrder: () => void;
+  // NOTE: do not pass addProductToOrder here, handle add in AddOrderModal
 }
 
 const OrderProductPicker: React.FC<OrderProductPickerProps> = ({
   products,
   selectedProductId,
   setSelectedProductId,
-  addProductToOrder
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -58,13 +56,6 @@ const OrderProductPicker: React.FC<OrderProductPickerProps> = ({
               )}
             </SelectContent>
           </Select>
-          <Button
-            onClick={addProductToOrder}
-            disabled={!selectedProductId || selectedProductId === "no-results"}
-            className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
-          >
-            เพิ่ม
-          </Button>
         </div>
       </div>
     </div>
