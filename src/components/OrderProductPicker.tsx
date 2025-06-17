@@ -17,47 +17,37 @@ const OrderProductPicker: React.FC<OrderProductPickerProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
 
-  // flattened list: show both parent (ถ้ามีราคา) และ options
-  const productOptions = products.flatMap(product => {
-    const parentSelectable = (product.sellingPrice ?? 0) > 0;
-    const parent = parentSelectable
-      ? [{
-        id: `${product.id}`,
-        label: `${product.name} - ฿${product.sellingPrice?.toLocaleString() || 0} (${product.sku})`
-      }]
-      : [];
-    const options = (product.options || []).map(opt => ({
-      id: `${product.id}__${opt.id}`, // composite key
-      label: `${product.name} (${opt.name}) - ฿${opt.sellingPrice?.toLocaleString() || 0} (${opt.id})`
-    }));
-    return [...parent, ...options];
+  // Filter only parent products (ไม่รวม options)
+  const filteredProducts = products.filter(product => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (product.name || "").toLowerCase().includes(searchLower) ||
+      (product.sku || "").toLowerCase().includes(searchLower)
+    );
   });
-
-  const filtered = productOptions.filter(opt =>
-    opt.label.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div>
       <Label htmlFor="product">เพิ่มสินค้า</Label>
       <div className="space-y-2">
         <Input
-          placeholder="ค้นหาสินค้า (ชื่อหรือ SKU หรือ option)..."
+          placeholder="ค้นหาสินค้า (ชื่อหรือ SKU)..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="border border-purple-200 rounded-lg"
         />
         <Select value={selectedProductId} onValueChange={setSelectedProductId}>
           <SelectTrigger className="flex-1 border border-purple-200 rounded-lg">
-            <SelectValue placeholder="เลือกสินค้าจากสต็อค" />
+            <SelectValue placeholder="เลือกสินค้าหลักจากสต็อค" />
           </SelectTrigger>
           <SelectContent>
-            {filtered.map(opt => (
-              <SelectItem key={opt.id} value={opt.id}>
-                {opt.label}
+            {filteredProducts.map(product => (
+              <SelectItem key={product.id} value={product.id?.toString() || ""}>
+                {product.name} - ฿{product.sellingPrice?.toLocaleString() || 0} ({product.sku})
               </SelectItem>
             ))}
-            {filtered.length === 0 && (
+            {filteredProducts.length === 0 && (
               <SelectItem value="no-results" disabled>
                 ไม่พบสินค้าที่ค้นหา
               </SelectItem>
@@ -68,4 +58,5 @@ const OrderProductPicker: React.FC<OrderProductPickerProps> = ({
     </div>
   );
 };
+
 export default OrderProductPicker;
