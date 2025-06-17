@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Order } from "@/types";
 
-// Helper
+// Helper function to convert supabase order to Order type
 function supabaseOrderToOrder(o: any): Order {
   return {
     id: o.id,
@@ -37,7 +37,7 @@ export async function fetchOrders(): Promise<Order[]> {
 }
 
 export async function addOrder(order: Omit<Order, "id">): Promise<Order> {
-  const supa = {
+  const supabaseData = {
     items: order.items ? (order.items as any) : undefined,
     total_selling_price: order.totalSellingPrice,
     total_cost: order.totalCost,
@@ -53,23 +53,28 @@ export async function addOrder(order: Omit<Order, "id">): Promise<Order> {
     address: order.address,
   };
   
-  console.log('Adding order with data:', supa);
+  console.log('Adding order with supabase data:', supabaseData);
   
   const { data, error } = await supabase
     .from('orders')
-    .insert([supa as any])
+    .insert([supabaseData as any])
     .select()
     .maybeSingle();
     
   if (error) {
     console.error('Error adding order:', error);
-    throw new Error('Failed to add order');
+    throw new Error('Failed to add order: ' + error.message);
   }
+  
+  if (!data) {
+    throw new Error('No data returned from order insert');
+  }
+  
   return supabaseOrderToOrder(data);
 }
 
 export async function updateOrder(order: Order): Promise<Order> {
-  const supa = {
+  const supabaseData = {
     items: order.items ? (order.items as any) : undefined,
     total_selling_price: order.totalSellingPrice,
     total_cost: order.totalCost,
@@ -86,19 +91,24 @@ export async function updateOrder(order: Order): Promise<Order> {
     updated_at: new Date().toISOString(),
   };
   
-  console.log('Updating order with data:', supa);
+  console.log('Updating order with data:', supabaseData);
   
   const { data, error } = await supabase
     .from('orders')
-    .update(supa as any)
+    .update(supabaseData as any)
     .eq('id', order.id)
     .select()
     .maybeSingle();
     
   if (error) {
     console.error('Error updating order:', error);
-    throw new Error('Failed to update order');
+    throw new Error('Failed to update order: ' + error.message);
   }
+  
+  if (!data) {
+    throw new Error('No data returned from order update');
+  }
+  
   return supabaseOrderToOrder(data);
 }
 

@@ -37,7 +37,7 @@ export type Database = {
           items: Json
           order_date: string | null
           payment_date: string | null
-          paymentSlip: string | null
+          payment_slip: string | null
           profit: number | null
           shipping_cost: number | null
           status: string | null
@@ -55,7 +55,7 @@ export type Database = {
           items: Json
           order_date?: string | null
           payment_date?: string | null
-          paymentSlip?: string | null
+          payment_slip?: string | null
           profit?: number | null
           shipping_cost?: number | null
           status?: string | null
@@ -73,7 +73,7 @@ export type Database = {
           items?: Json
           order_date?: string | null
           payment_date?: string | null
-          paymentSlip?: string | null
+          payment_slip?: string | null
           profit?: number | null
           shipping_cost?: number | null
           status?: string | null

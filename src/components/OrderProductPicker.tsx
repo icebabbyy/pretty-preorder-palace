@@ -21,10 +21,14 @@ const OrderProductPicker: React.FC<OrderProductPickerProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.sku.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products.filter(product => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (product.name || "").toLowerCase().includes(searchLower) ||
+      (product.sku || "").toLowerCase().includes(searchLower)
+    );
+  });
 
   return (
     <div>
@@ -43,8 +47,8 @@ const OrderProductPicker: React.FC<OrderProductPickerProps> = ({
             </SelectTrigger>
             <SelectContent>
               {filteredProducts.map((product) => (
-                <SelectItem key={product.id} value={product.id.toString()}>
-                  {product.name} - ฿{product.sellingPrice.toLocaleString()} ({product.sku})
+                <SelectItem key={product.id} value={product.id?.toString() || ""}>
+                  {product.name} - ฿{product.sellingPrice?.toLocaleString() || 0} ({product.sku})
                 </SelectItem>
               ))}
               {filteredProducts.length === 0 && searchTerm && (
