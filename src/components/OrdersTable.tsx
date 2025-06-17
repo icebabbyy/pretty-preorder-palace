@@ -117,7 +117,11 @@ const OrdersTable: React.FC<OrdersTableProps> = ({
                   </SelectContent>
                 </Select>
               </TableCell>
-              <TableCell className="text-sm">{order.orderDate}</TableCell>
+              <TableCell className="text-sm">
+  {order.paymentDate
+    ? new Date(order.paymentDate).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
+    : '-'}
+</TableCell>
               <TableCell>
                 <div className="flex gap-1">
                   <Button
