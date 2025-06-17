@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, Image } from "lucide-react";
 import { nanoid } from "nanoid";
 import { Product, ProductOption } from "@/types";
 import { generateSKU } from "@/utils/sku";
@@ -119,74 +118,12 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     }));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setFormData({ ...formData, image: e.target?.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData.items;
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (item.type.indexOf('image') !== -1) {
-        const file = item.getAsFile();
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            setFormData({ ...formData, image: e.target?.result as string });
-          };
-          reader.readAsDataURL(file);
-        }
-        break;
-      }
-    }
-  };
-
-  const handleOptionImageUpload = (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setOptions(opts => opts.map((op, i) =>
-          i === idx ? { ...op, image: ev.target?.result as string } : op
-        ));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleOptionPaste = (idx: number, e: React.ClipboardEvent) => {
-    const items = e.clipboardData.items;
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (item.type.indexOf('image') !== -1) {
-        const file = item.getAsFile();
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            setOptions(opts => opts.map((op, ii) =>
-              ii === idx ? { ...op, image: ev.target?.result as string } : op
-            ));
-          };
-          reader.readAsDataURL(file);
-        }
-        break;
-      }
-    }
-  };
-
   // เมื่อลูกค้ากด "เพิ่มตัวเลือกสินค้า" จะ auto gen รหัสให้ตัวเลือกด้วย
   const addOption = () => {
     setOptions(opts => [
       ...opts,
       {
-        id: generateSKU(formData.category) + "-" + (opts.length + 1).toString().padStart(3,"0"),  // ให้ sku ชัดเจนเหมือน product
+        id: generateSKU(formData.category) + "-" + (opts.length + 1).toString().padStart(3,"0"),
         name: "",
         image: "",
         costThb: 0,
@@ -307,30 +244,30 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
             </Select>
           </div>
 
+          {/* รูปภาพสินค้า: เปลี่ยนเป็นลิงก์ URL */}
           <div>
-            <Label>รูปภาพสินค้า</Label>
-            <div 
-              className="border-2 border-dashed border-purple-300 rounded-lg p-6 text-center hover:border-purple-400 transition-colors cursor-pointer relative"
-              onPaste={handlePaste}
-            >
-              {formData.image ? (
-                <div className="space-y-2">
-                  <img src={formData.image} alt="Preview" className="w-32 h-32 object-cover rounded mx-auto" />
-                  <p className="text-sm text-gray-600">คลิกเพื่อเปลี่ยนรูป หรือ Ctrl+V เพื่อวาง</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Image className="w-12 h-12 mx-auto text-purple-400" />
-                  <p className="text-purple-600">คลิกเพื่อเลือกรูป หรือ Ctrl+V เพื่อวาง</p>
-                </div>
-              )}
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handleImageUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-            </div>
+            <Label htmlFor="image">รูปภาพสินค้า (URL)</Label>
+            <Input
+              id="image"
+              type="text"
+              value={formData.image}
+              onChange={e => setFormData({ ...formData, image: e.target.value })}
+              placeholder="https://... (ลิงก์รูปภาพเท่านั้น)"
+              className="border border-purple-200 rounded-lg"
+            />
+            {formData.image && (
+              <div className="mt-2 flex justify-center">
+                <img
+                  src={formData.image}
+                  alt="Preview"
+                  className="w-32 h-32 object-cover rounded border"
+                  onError={e => {
+                    (e.target as HTMLImageElement).src =
+                      "https://ui-avatars.com/api/?name=No+Image";
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-4">
@@ -457,6 +394,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
             />
           </div>
 
+          {/* ตัวเลือกสินค้า */}
           <div>
             <Label className="font-semibold">ตัวเลือกสินค้า (ถ้ามี)</Label>
             <div className="space-y-2">
@@ -480,24 +418,29 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
                         className="border border-purple-200 rounded-lg bg-gray-50"
                       />
                     </div>
+                    {/* เปลี่ยน field รูปภาพใน option ให้เป็น URL ด้วย */}
                     <div className="col-span-2">
-                      <Label>รูปภาพ</Label>
-                      <div
-                        className="border-2 border-dashed border-purple-300 rounded cursor-pointer relative text-center w-20 h-20 mx-auto bg-white"
-                        onPaste={e => handleOptionPaste(idx, e)}
-                      >
-                        {option.image ? (
-                          <img src={option.image} alt="Preview" className="w-20 h-20 object-cover rounded" />
-                        ) : (
-                          <span className="flex items-center justify-center h-full text-gray-400">+</span>
-                        )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={e => handleOptionImageUpload(idx, e)}
-                          className="absolute inset-0 w-full h-full opacity-0"
-                        />
-                      </div>
+                      <Label>รูปภาพ (URL)</Label>
+                      <Input
+                        type="text"
+                        value={option.image}
+                        onChange={e => updateOption(idx, { image: e.target.value })}
+                        placeholder="https://... (ลิงก์รูปภาพ)"
+                        className="border border-purple-200 rounded-lg"
+                      />
+                      {option.image && (
+                        <div className="mt-1 flex justify-center">
+                          <img
+                            src={option.image}
+                            alt="Preview"
+                            className="w-12 h-12 object-cover rounded border"
+                            onError={e => {
+                              (e.target as HTMLImageElement).src =
+                                "https://ui-avatars.com/api/?name=No+Image";
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                     <div className="col-span-2">
                       <Label>ต้นทุนรวม (บาท)</Label>
