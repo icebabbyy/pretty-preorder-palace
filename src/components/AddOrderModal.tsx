@@ -19,6 +19,7 @@ interface AddOrderModalProps {
 
 const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderModalProps) => {
   const [selectedProductId, setSelectedProductId] = useState("");
+  const [selectedOptionId, setSelectedOptionId] = useState("");
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [shippingCost, setShippingCost] = useState("0");
   const [deposit, setDeposit] = useState("0");
@@ -30,18 +31,13 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
   const [paymentSlip, setPaymentSlip] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // เพิ่มสินค้าหรือ option ลง orderItems
+  const selectedProduct = products.find(p => String(p.id) === selectedProductId);
+  const options = selectedProduct?.options || [];
+
   const addProductToOrder = () => {
     if (!selectedProductId || selectedProductId === "no-results") return;
 
-    // เช็ค composite key: ถ้าเป็น id เฉยๆ = product, ถ้าเป็น productId__optionId = option
-    let productId = selectedProductId;
-    let optionId: string | undefined = undefined;
-    if (selectedProductId.includes("__")) {
-      [productId, optionId] = selectedProductId.split("__");
-    }
-
-    const product = products.find(p => String(p.id) === productId);
+    const product = selectedProduct;
     if (!product) return;
 
     let displayName = product.name;
@@ -50,8 +46,10 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     let unitPrice = product.sellingPrice;
     let unitCost = product.costThb;
 
-    if (optionId) {
-      const opt = product.options?.find(o => o.id === optionId);
+    // ถ้ามี option ให้เลือก option ก่อน
+    if (options.length > 0) {
+      if (!selectedOptionId) return;
+      const opt = options.find(o => o.id === selectedOptionId);
       if (!opt) return;
       displayName = `${product.name} (${opt.name})`;
       productImage = opt.image || product.image;
@@ -60,7 +58,6 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
       unitCost = opt.costThb;
     }
 
-    // เช็คว่ามี item นี้อยู่แล้วหรือยัง (productId+sku)
     const existingItem = orderItems.find(
       item => item.productId === product.id && item.sku === sku
     );
@@ -83,6 +80,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
       setOrderItems([...orderItems, newItem]);
     }
     setSelectedProductId("");
+    setSelectedOptionId("");
   };
 
   const updateItemQuantity = (productId: number, quantity: number, sku?: string) => {
@@ -149,6 +147,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
       onOpenChange(false);
       setOrderItems([]);
       setSelectedProductId("");
+      setSelectedOptionId("");
       setShippingCost("0");
       setDeposit("0");
       setDiscount("0");
@@ -237,13 +236,33 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
             <OrderProductPicker
               products={products}
               selectedProductId={selectedProductId}
-              setSelectedProductId={setSelectedProductId}
+              setSelectedProductId={id => {
+                setSelectedProductId(id);
+                setSelectedOptionId("");
+              }}
             />
+            {options.length > 0 && (
+              <div className="mt-2">
+                <Label>เลือกตัวเลือกสินค้า</Label>
+                <Select value={selectedOptionId} onValueChange={setSelectedOptionId}>
+                  <SelectTrigger className="border border-purple-200 rounded-lg w-64">
+                    <SelectValue placeholder="เลือกตัวเลือก" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.map(opt => (
+                      <SelectItem key={opt.id} value={opt.id}>
+                        {opt.name} - ฿{opt.sellingPrice?.toLocaleString() || 0} ({opt.id})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <Button
               type="button"
               className="mt-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
               onClick={addProductToOrder}
-              disabled={!selectedProductId || selectedProductId === "no-results"}
+              disabled={!selectedProductId || (options.length > 0 && !selectedOptionId)}
             >
               เพิ่มลงออเดอร์
             </Button>
