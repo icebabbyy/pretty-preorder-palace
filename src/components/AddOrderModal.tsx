@@ -33,43 +33,39 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
 
   const selectedProduct = products.find(p => String(p.id) === selectedProductId);
   const options = selectedProduct?.options || [];
+  const canAddParent = selectedProduct && (selectedProduct.sellingPrice ?? 0) > 0;
 
-  const addProductToOrder = () => {
-    if (!selectedProductId || selectedProductId === "no-results") return;
+  const addProductToOrder = (type: "parent" | "option") => {
+    if (!selectedProduct) return;
 
-    const product = selectedProduct;
-    if (!product) return;
+    let displayName = selectedProduct.name;
+    let productImage = selectedProduct.image;
+    let sku = selectedProduct.sku;
+    let unitPrice = selectedProduct.sellingPrice;
+    let unitCost = selectedProduct.costThb;
 
-    let displayName = product.name;
-    let productImage = product.image;
-    let sku = product.sku;
-    let unitPrice = product.sellingPrice;
-    let unitCost = product.costThb;
-
-    // ถ้ามี option ให้เลือก option ก่อน
-    if (options.length > 0) {
-      if (!selectedOptionId) return;
+    if (type === "option" && selectedOptionId) {
       const opt = options.find(o => o.id === selectedOptionId);
       if (!opt) return;
-      displayName = `${product.name} (${opt.name})`;
-      productImage = opt.image || product.image;
+      displayName = `${selectedProduct.name} (${opt.name})`;
+      productImage = opt.image || selectedProduct.image;
       sku = opt.id;
       unitPrice = opt.sellingPrice;
       unitCost = opt.costThb;
     }
 
     const existingItem = orderItems.find(
-      item => item.productId === product.id && item.sku === sku
+      item => item.productId === selectedProduct.id && item.sku === sku
     );
     if (existingItem) {
       setOrderItems(orderItems.map(item =>
-        item.productId === product.id && item.sku === sku
+        item.productId === selectedProduct.id && item.sku === sku
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
     } else {
       const newItem: OrderItem = {
-        productId: product.id!,
+        productId: selectedProduct.id!,
         productName: displayName,
         productImage,
         sku,
@@ -79,8 +75,8 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
       };
       setOrderItems([...orderItems, newItem]);
     }
-    setSelectedProductId("");
     setSelectedOptionId("");
+    if (type === "parent") setSelectedProductId("");
   };
 
   const updateItemQuantity = (productId: number, quantity: number, sku?: string) => {
@@ -241,31 +237,44 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                 setSelectedOptionId("");
               }}
             />
-            {options.length > 0 && (
-              <div className="mt-2">
-                <Label>เลือกตัวเลือกสินค้า</Label>
-                <Select value={selectedOptionId} onValueChange={setSelectedOptionId}>
-                  <SelectTrigger className="border border-purple-200 rounded-lg w-64">
-                    <SelectValue placeholder="เลือกตัวเลือก" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {options.map(opt => (
-                      <SelectItem key={opt.id} value={opt.id}>
-                        {opt.name} - ฿{opt.sellingPrice?.toLocaleString() || 0} ({opt.id})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {selectedProduct && (
+              <div className="mt-2 space-y-2">
+                {/* ถ้ามี option ให้เลือก option ได้ + ปุ่มเพิ่มตัวเลือก */}
+                {options.length > 0 && (
+                  <div>
+                    <Label>เลือกตัวเลือกสินค้า</Label>
+                    <Select value={selectedOptionId} onValueChange={setSelectedOptionId}>
+                      <SelectTrigger className="border border-purple-200 rounded-lg w-64">
+                        <SelectValue placeholder="เลือกตัวเลือก" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {options.map(opt => (
+                          <SelectItem key={opt.id} value={opt.id}>
+                            {opt.name} - ฿{opt.sellingPrice?.toLocaleString() || 0} ({opt.id})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      className="mt-2"
+                      onClick={() => addProductToOrder("option")}
+                      disabled={!selectedOptionId}
+                    >
+                      เพิ่มตัวเลือกนี้
+                    </Button>
+                  </div>
+                )}
+                {/* ถ้าสินค้าแม่ขายได้เอง เพิ่มปุ่มได้ */}
+                {canAddParent && (
+                  <Button
+                    className="mt-2"
+                    onClick={() => addProductToOrder("parent")}
+                  >
+                    เพิ่มสินค้าหลัก
+                  </Button>
+                )}
               </div>
             )}
-            <Button
-              type="button"
-              className="mt-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
-              onClick={addProductToOrder}
-              disabled={!selectedProductId || (options.length > 0 && !selectedOptionId)}
-            >
-              เพิ่มลงออเดอร์
-            </Button>
           </div>
           {orderItems.length > 0 && (
             <OrderItemList
