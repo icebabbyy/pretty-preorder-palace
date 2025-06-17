@@ -8,15 +8,18 @@ import { updateOrder } from "@/utils/orders";
 import EditOrderItemList from "./EditOrderItemList";
 import OrderSummary from "./OrderSummary";
 import type { Order, OrderItem } from "@/types";
+import { Product } from "@/types";
 
+// Optional: Pass products prop if you want to support option editing
 interface EditOrderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdateOrder: (order: Order) => void;
   order: Order | null;
+  products?: Product[];
 }
 
-const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: any) => {
+const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [] }: EditOrderModalProps) => {
   const [shippingCost, setShippingCost] = useState("0");
   const [deposit, setDeposit] = useState("0");
   const [discount, setDiscount] = useState("0");
@@ -27,6 +30,10 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: any) => {
   const [paymentSlip, setPaymentSlip] = useState("");
   const [items, setItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // สำหรับแก้ไข option ของสินค้า (ถ้าต้องการ)
+  const [selectedEditIdx, setSelectedEditIdx] = useState<number | null>(null);
+  const [selectedEditOptionId, setSelectedEditOptionId] = useState<string>("");
 
   useEffect(() => {
     if (order) {
@@ -41,6 +48,33 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: any) => {
       setPaymentSlip(order.paymentSlip ?? "");
     }
   }, [order]);
+
+  // หากต้องการรองรับ option ตอน edit ให้เพิ่ม dropdown เมื่อเลือก Edit ที่แต่ละ item
+  const handleEditOption = (itemIdx: number) => {
+    setSelectedEditIdx(itemIdx);
+    setSelectedEditOptionId("");
+  };
+
+  const confirmEditOption = () => {
+    if (selectedEditIdx == null || !selectedEditOptionId) return;
+    const item = items[selectedEditIdx];
+    const product = products.find(p => p.id === item.productId);
+    const option = product?.options?.find(o => o.id === selectedEditOptionId);
+    if (option) {
+      // เปลี่ยนชื่อ, รูป, sku, unitPrice, unitCost ตาม option
+      const updatedItem = {
+        ...item,
+        productName: `${product?.name} (${option.name})`,
+        productImage: option.image || product?.image,
+        sku: option.id,
+        unitPrice: option.sellingPrice,
+        unitCost: option.costThb,
+      };
+      setItems(items.map((it, idx) => idx === selectedEditIdx ? updatedItem : it));
+    }
+    setSelectedEditIdx(null);
+    setSelectedEditOptionId("");
+  };
 
   const updateItemQuantity = (index: number, quantity: number) => {
     setItems(items.map((item, i) =>
@@ -85,7 +119,7 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: any) => {
       paymentDate: paymentDate || null,
       paymentSlip: paymentSlip || null,
       username,
-      address
+      address,
     };
 
     try {
@@ -185,7 +219,37 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: any) => {
             updateItemQuantity={updateItemQuantity}
             updateItemCost={updateItemCost}
             removeItem={removeItem}
+            // เพิ่มฟังก์ชัน edit option
+            onEditOption={handleEditOption}
           />
+
+          {/* หากกำลังแก้ไข option ของสินค้า */}
+          {selectedEditIdx !== null && products.length > 0 && (() => {
+            const item = items[selectedEditIdx];
+            const product = products.find(p => p.id === item.productId);
+            const opts = product?.options || [];
+            return opts.length > 0 ? (
+              <div className="my-2">
+                <Label>เลือกตัวเลือกสินค้าใหม่</Label>
+                <Select value={selectedEditOptionId} onValueChange={setSelectedEditOptionId}>
+                  <SelectTrigger className="border border-purple-200 rounded-lg w-64 mt-1">
+                    <SelectValue placeholder="เลือกตัวเลือกสินค้า" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {opts.map(opt => (
+                      <SelectItem key={opt.id} value={opt.id}>
+                        {`${product.name} (${opt.name}) ฿${opt.sellingPrice}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2 mt-2">
+                  <Button onClick={confirmEditOption} className="bg-green-500 text-white">เปลี่ยนตัวเลือก</Button>
+                  <Button onClick={() => setSelectedEditIdx(null)} variant="outline">ยกเลิก</Button>
+                </div>
+              </div>
+            ) : null;
+          })()}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
