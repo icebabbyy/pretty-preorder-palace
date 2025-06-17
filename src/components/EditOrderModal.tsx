@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -165,6 +164,18 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order }: any) => {
                 placeholder="https://..."
                 className="border border-purple-200 rounded-lg"
               />
+              {/* แสดงรูป preview ถ้าเป็นลิงก์รูป */}
+              {paymentSlip && (paymentSlip.startsWith("http://") || paymentSlip.startsWith("https://")) && (
+                <div className="mt-2">
+                  <a href={paymentSlip} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={paymentSlip}
+                      alt="สลิปโอนเงิน"
+                      className="w-32 h-32 object-cover border rounded"
+                    />
+                  </a>
+                </div>
+              )}
             </div>
           </div>
 
