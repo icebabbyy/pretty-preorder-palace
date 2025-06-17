@@ -14,7 +14,7 @@ interface EditOrderModalProps {
   onOpenChange: (open: boolean) => void;
   onUpdateOrder: (order: Order) => void;
   order: Order | null;
-  products?: Product[]; // ส่ง products ถ้าต้องการให้แก้ไขตัวเลือกสินค้า
+  products?: Product[];
 }
 
 const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [] }: EditOrderModalProps) => {
@@ -211,7 +211,6 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
             updateItemQuantity={updateItemQuantity}
             updateItemCost={updateItemCost}
             removeItem={removeItem}
-            // เพิ่มฟังก์ชัน edit option
             onEditOption={handleEditOption}
           />
           {/* หากกำลังแก้ไข option ของสินค้า */}
