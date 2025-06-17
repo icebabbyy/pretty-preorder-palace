@@ -7,16 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { updateOrder } from "@/utils/orders";
 import EditOrderItemList from "./EditOrderItemList";
 import OrderSummary from "./OrderSummary";
-import type { Order, OrderItem } from "@/types";
-import { Product } from "@/types";
+import type { Order, OrderItem, Product } from "@/types";
 
-// Optional: Pass products prop if you want to support option editing
 interface EditOrderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdateOrder: (order: Order) => void;
   order: Order | null;
-  products?: Product[];
+  products?: Product[]; // ส่ง products ถ้าต้องการให้แก้ไขตัวเลือกสินค้า
 }
 
 const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [] }: EditOrderModalProps) => {
@@ -49,7 +47,6 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
     }
   }, [order]);
 
-  // หากต้องการรองรับ option ตอน edit ให้เพิ่ม dropdown เมื่อเลือก Edit ที่แต่ละ item
   const handleEditOption = (itemIdx: number) => {
     setSelectedEditIdx(itemIdx);
     setSelectedEditOptionId("");
@@ -61,7 +58,6 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
     const product = products.find(p => p.id === item.productId);
     const option = product?.options?.find(o => o.id === selectedEditOptionId);
     if (option) {
-      // เปลี่ยนชื่อ, รูป, sku, unitPrice, unitCost ตาม option
       const updatedItem = {
         ...item,
         productName: `${product?.name} (${option.name})`,
@@ -177,7 +173,6 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
               className="border border-purple-200 rounded-lg"
             />
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="paymentDate">วันที่ชำระเงิน</Label>
@@ -198,7 +193,6 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
                 placeholder="https://..."
                 className="border border-purple-200 rounded-lg"
               />
-              {/* แสดงรูป preview ถ้าเป็นลิงก์รูป */}
               {paymentSlip && (paymentSlip.startsWith("http://") || paymentSlip.startsWith("https://")) && (
                 <div className="mt-2">
                   <a href={paymentSlip} target="_blank" rel="noopener noreferrer">
@@ -212,8 +206,6 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
               )}
             </div>
           </div>
-
-          {/* Edit items */}
           <EditOrderItemList
             items={items}
             updateItemQuantity={updateItemQuantity}
@@ -222,7 +214,6 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
             // เพิ่มฟังก์ชัน edit option
             onEditOption={handleEditOption}
           />
-
           {/* หากกำลังแก้ไข option ของสินค้า */}
           {selectedEditIdx !== null && products.length > 0 && (() => {
             const item = items[selectedEditIdx];
@@ -250,7 +241,6 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
               </div>
             ) : null;
           })()}
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="shippingCost">ค่าจัดส่ง (฿)</Label>
@@ -302,7 +292,6 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
               </Select>
             </div>
           </div>
-
           <OrderSummary
             totalSellingPrice={totalSellingPrice}
             discountAmount={discountAmount}
@@ -312,7 +301,6 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
             depositAmount={depositAmount}
             profit={profit}
           />
-
         </div>
         <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-purple-200">
           <Button
