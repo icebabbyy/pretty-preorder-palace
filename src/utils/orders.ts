@@ -1,5 +1,4 @@
 
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Order } from "@/types";
 
@@ -53,11 +52,15 @@ export async function addOrder(order: Omit<Order, "id">): Promise<Order> {
     username: order.username,
     address: order.address,
   };
+  
+  console.log('Adding order with data:', supa);
+  
   const { data, error } = await supabase
     .from('orders')
     .insert([supa as any])
     .select()
     .maybeSingle();
+    
   if (error) {
     console.error('Error adding order:', error);
     throw new Error('Failed to add order');
@@ -82,12 +85,16 @@ export async function updateOrder(order: Order): Promise<Order> {
     address: order.address,
     updated_at: new Date().toISOString(),
   };
+  
+  console.log('Updating order with data:', supa);
+  
   const { data, error } = await supabase
     .from('orders')
     .update(supa as any)
     .eq('id', order.id)
     .select()
     .maybeSingle();
+    
   if (error) {
     console.error('Error updating order:', error);
     throw new Error('Failed to update order');
@@ -105,4 +112,3 @@ export async function deleteOrder(orderId: number): Promise<void> {
     throw new Error('Failed to delete order');
   }
 }
-
