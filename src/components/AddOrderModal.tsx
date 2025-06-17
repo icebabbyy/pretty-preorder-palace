@@ -17,14 +17,8 @@ interface AddOrderModalProps {
   products: Product[];
 }
 
-const AddOrderModal = ({
-  open,
-  onOpenChange,
-  onAddOrder,
-  products,
-}: AddOrderModalProps) => {
+const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderModalProps) => {
   const [selectedProductId, setSelectedProductId] = useState("");
-  const [selectedOptionId, setSelectedOptionId] = useState("");
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [shippingCost, setShippingCost] = useState("0");
   const [deposit, setDeposit] = useState("0");
@@ -36,20 +30,19 @@ const AddOrderModal = ({
   const [paymentSlip, setPaymentSlip] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Find selected product and options
-  const selectedProduct = products.find((p) => String(p.id) === selectedProductId);
-  const options = selectedProduct?.options || [];
-
-  // Add product to order, handle both no-options and with-options
+  // เพิ่มสินค้าหรือ option ลง orderItems
   const addProductToOrder = () => {
     if (!selectedProductId || selectedProductId === "no-results") return;
-    const product = selectedProduct;
-    if (!product) return;
 
-    if (options.length > 0 && !selectedOptionId) {
-      alert("กรุณาเลือกตัวเลือกสินค้า");
-      return;
+    // เช็ค composite key: ถ้าเป็น id เฉยๆ = product, ถ้าเป็น productId__optionId = option
+    let productId = selectedProductId;
+    let optionId: string | undefined = undefined;
+    if (selectedProductId.includes("__")) {
+      [productId, optionId] = selectedProductId.split("__");
     }
+
+    const product = products.find(p => String(p.id) === productId);
+    if (!product) return;
 
     let displayName = product.name;
     let productImage = product.image;
@@ -57,30 +50,26 @@ const AddOrderModal = ({
     let unitPrice = product.sellingPrice;
     let unitCost = product.costThb;
 
-    // ถ้ามี options และเลือกแล้ว
-    if (options.length > 0) {
-      const opt = options.find((o) => o.id === selectedOptionId);
-      if (opt) {
-        displayName = `${product.name} (${opt.name})`;
-        productImage = opt.image || product.image;
-        sku = opt.id || product.sku;
-        unitPrice = opt.sellingPrice;
-        unitCost = opt.costThb;
-      }
+    if (optionId) {
+      const opt = product.options?.find(o => o.id === optionId);
+      if (!opt) return;
+      displayName = `${product.name} (${opt.name})`;
+      productImage = opt.image || product.image;
+      sku = opt.id;
+      unitPrice = opt.sellingPrice;
+      unitCost = opt.costThb;
     }
 
-    // ไม่ซ้ำ sku + productId ในตะกร้า
+    // เช็คว่ามี item นี้อยู่แล้วหรือยัง (productId+sku)
     const existingItem = orderItems.find(
-      (item) => item.productId === product.id && item.sku === sku
+      item => item.productId === product.id && item.sku === sku
     );
     if (existingItem) {
-      setOrderItems(
-        orderItems.map((item) =>
-          item.productId === product.id && item.sku === sku
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        )
-      );
+      setOrderItems(orderItems.map(item =>
+        item.productId === product.id && item.sku === sku
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ));
     } else {
       const newItem: OrderItem = {
         productId: product.id!,
@@ -94,34 +83,28 @@ const AddOrderModal = ({
       setOrderItems([...orderItems, newItem]);
     }
     setSelectedProductId("");
-    setSelectedOptionId("");
   };
 
-  // Update/Remove item (support sku for option)
   const updateItemQuantity = (productId: number, quantity: number, sku?: string) => {
-    setOrderItems(
-      orderItems.map((item) =>
-        item.productId === productId && (!sku || item.sku === sku)
-          ? { ...item, quantity }
-          : item
-      )
-    );
+    setOrderItems(orderItems.map(item =>
+      item.productId === productId && (!sku || item.sku === sku)
+        ? { ...item, quantity }
+        : item
+    ));
   };
+
   const updateItemCost = (productId: number, unitCost: number, sku?: string) => {
-    setOrderItems(
-      orderItems.map((item) =>
-        item.productId === productId && (!sku || item.sku === sku)
-          ? { ...item, unitCost }
-          : item
-      )
-    );
+    setOrderItems(orderItems.map(item =>
+      item.productId === productId && (!sku || item.sku === sku)
+        ? { ...item, unitCost }
+        : item
+    ));
   };
+
   const removeItem = (productId: number, sku?: string) => {
-    setOrderItems(
-      orderItems.filter(
-        (item) => !(item.productId === productId && (!sku || item.sku === sku))
-      )
-    );
+    setOrderItems(orderItems.filter(item =>
+      !(item.productId === productId && (!sku || item.sku === sku))
+    ));
   };
 
   const handleSubmit = async () => {
@@ -131,14 +114,8 @@ const AddOrderModal = ({
     }
     setLoading(true);
 
-    const totalSellingPrice = orderItems.reduce(
-      (sum, item) => sum + item.unitPrice * item.quantity,
-      0
-    );
-    const totalCost = orderItems.reduce(
-      (sum, item) => sum + item.unitCost * item.quantity,
-      0
-    );
+    const totalSellingPrice = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+    const totalCost = orderItems.reduce((sum, item) => sum + (item.unitCost * item.quantity), 0);
     const shipping = parseFloat(shippingCost) || 0;
     const depositAmount = parseFloat(deposit) || 0;
     const discountAmount = parseFloat(discount) || 0;
@@ -167,13 +144,11 @@ const AddOrderModal = ({
         totalSellingPrice: createdOrder.totalSellingPrice ?? 0,
         totalCost: createdOrder.totalCost ?? 0,
         shippingCost: createdOrder.shippingCost ?? 0,
-        orderDate: createdOrder.orderDate ?? "",
+        orderDate: createdOrder.orderDate ?? '',
       });
       onOpenChange(false);
-      // Reset form
       setOrderItems([]);
       setSelectedProductId("");
-      setSelectedOptionId("");
       setShippingCost("0");
       setDeposit("0");
       setDiscount("0");
@@ -183,23 +158,15 @@ const AddOrderModal = ({
       setPaymentDate("");
       setPaymentSlip("");
     } catch (e) {
-      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่");
-      // eslint-disable-next-line no-console
       console.error("Add order error:", e);
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่");
     } finally {
       setLoading(false);
     }
   };
 
-  // Summary
-  const totalSellingPrice = orderItems.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0
-  );
-  const totalCost = orderItems.reduce(
-    (sum, item) => sum + item.unitCost * item.quantity,
-    0
-  );
+  const totalSellingPrice = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+  const totalCost = orderItems.reduce((sum, item) => sum + (item.unitCost * item.quantity), 0);
   const discountAmount = parseFloat(discount || "0");
   const finalSellingPrice = totalSellingPrice - discountAmount;
   const shipping = parseFloat(shippingCost || "0");
@@ -253,58 +220,30 @@ const AddOrderModal = ({
                 placeholder="https://..."
                 className="border border-purple-200 rounded-lg"
               />
-              {/* Preview slip */}
-              {paymentSlip &&
-                (paymentSlip.startsWith("http://") ||
-                  paymentSlip.startsWith("https://")) && (
-                  <div className="mt-2">
-                    <a href={paymentSlip} target="_blank" rel="noopener noreferrer">
-                      <img
-                        src={paymentSlip}
-                        alt="สลิปโอนเงิน"
-                        className="w-32 h-32 object-cover border rounded"
-                      />
-                    </a>
-                  </div>
-                )}
+              {paymentSlip && (paymentSlip.startsWith("http://") || paymentSlip.startsWith("https://")) && (
+                <div className="mt-2">
+                  <a href={paymentSlip} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={paymentSlip}
+                      alt="สลิปโอนเงิน"
+                      className="w-32 h-32 object-cover border rounded"
+                    />
+                  </a>
+                </div>
+              )}
             </div>
           </div>
-          {/* เลือกสินค้าและ option */}
           <div>
             <OrderProductPicker
               products={products}
               selectedProductId={selectedProductId}
               setSelectedProductId={setSelectedProductId}
-              addProductToOrder={() => {}}
             />
-            {options.length > 0 && (
-              <div className="mt-2">
-                <Label htmlFor="optionSelect">ตัวเลือกสินค้า *</Label>
-                <Select
-                  id="optionSelect"
-                  value={selectedOptionId}
-                  onValueChange={setSelectedOptionId}
-                >
-                  <SelectTrigger className="border border-purple-200 rounded-lg w-64">
-                    <SelectValue placeholder="เลือกตัวเลือกสินค้า" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {options.map((opt) => (
-                      <SelectItem key={opt.id} value={opt.id}>
-                        {`${selectedProduct?.name || ""} (${opt.name}) ฿${opt.sellingPrice}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
             <Button
               type="button"
               className="mt-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
               onClick={addProductToOrder}
-              disabled={
-                !selectedProductId || (options.length > 0 && !selectedOptionId)
-              }
+              disabled={!selectedProductId || selectedProductId === "no-results"}
             >
               เพิ่มลงออเดอร์
             </Button>
