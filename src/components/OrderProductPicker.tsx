@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,31 +18,53 @@ const OrderProductPicker: React.FC<OrderProductPickerProps> = ({
   selectedProductId,
   setSelectedProductId,
   addProductToOrder
-}) => (
-  <div>
-    <Label htmlFor="product">เพิ่มสินค้า</Label>
-    <div className="flex gap-2">
-      <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-        <SelectTrigger className="flex-1 border border-purple-200 rounded-lg">
-          <SelectValue placeholder="เลือกสินค้าจากสต็อค" />
-        </SelectTrigger>
-        <SelectContent>
-          {products.map((product) => (
-            <SelectItem key={product.id} value={product.id.toString()}>
-              {product.name} - ฿{product.sellingPrice.toLocaleString()}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button
-        onClick={addProductToOrder}
-        disabled={!selectedProductId}
-        className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
-      >
-        เพิ่ม
-      </Button>
+}) => {
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.sku.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div>
+      <Label htmlFor="product">เพิ่มสินค้า</Label>
+      <div className="space-y-2">
+        <Input
+          placeholder="ค้นหาสินค้า (ชื่อหรือ SKU)..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="border border-purple-200 rounded-lg"
+        />
+        <div className="flex gap-2">
+          <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+            <SelectTrigger className="flex-1 border border-purple-200 rounded-lg">
+              <SelectValue placeholder="เลือกสินค้าจากสต็อค" />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredProducts.map((product) => (
+                <SelectItem key={product.id} value={product.id.toString()}>
+                  {product.name} - ฿{product.sellingPrice.toLocaleString()} ({product.sku})
+                </SelectItem>
+              ))}
+              {filteredProducts.length === 0 && searchTerm && (
+                <SelectItem value="no-results" disabled>
+                  ไม่พบสินค้าที่ค้นหา
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={addProductToOrder}
+            disabled={!selectedProductId || selectedProductId === "no-results"}
+            className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
+          >
+            เพิ่ม
+          </Button>
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default OrderProductPicker;
