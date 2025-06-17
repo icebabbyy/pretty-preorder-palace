@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,7 +47,6 @@ const StockManagement = ({
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [loadingSave, setLoadingSave] = useState(false);
 
-  // เพิ่ม log เพื่อตรวจสอบ products ทุกครั้งที่ products เปลี่ยน
   useEffect(() => {
     console.log("Current products state:", products);
   }, [products]);
@@ -58,7 +56,6 @@ const StockManagement = ({
                          product.sku.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
     const matchesStatus = statusFilter === "all" || product.status === statusFilter;
-    
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
@@ -80,7 +77,6 @@ const StockManagement = ({
       const updatedProducts = [...products, prod];
       setProducts(updatedProducts);
       console.log("After add, products state:", updatedProducts);
-      // เพิ่ม categories ใหม่ถ้าจำเป็น
       if (prod.category && !categories.includes(prod.category)) {
         setCategories([...categories, prod.category]);
       }
@@ -229,79 +225,59 @@ const StockManagement = ({
                   </TableRow>
                 ) : (
                   filteredProducts.map((product) => {
-                    // ถ้ามี options ให้โชว์เป็นรายการ
-                    if (product.options && product.options.length > 0) {
-                      return product.options.map((opt, idx) => (
-                        <TableRow key={product.id + "_opt_" + opt.id}>
-                          <TableCell>
-                            <img 
-                              src={opt.image || "/placeholder.svg"}
-                              alt={opt.name || product.name}
-                              className="w-12 h-12 rounded-lg object-cover border border-purple-200"
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium text-purple-600">{product.sku}</TableCell>
-                          <TableCell className="font-medium">{product.name} <span className="text-xs text-gray-400">({opt.name})</span></TableCell>
-                          <TableCell className="text-sm text-purple-600">{product.category}</TableCell>
-                          <TableCell className="font-semibold text-red-600">฿{opt.costThb.toLocaleString()}</TableCell>
-                          <TableCell className="font-semibold text-green-600">฿{opt.sellingPrice.toLocaleString()}</TableCell>
-                          <TableCell className="font-medium">{opt.quantity}</TableCell>
-                          <TableCell>
-                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(opt.quantity, product.status)}`}>
-                              {getStockStatus(opt.quantity, product.status)}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm" asChild className="text-purple-600">
-                              <a href={product.link} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="w-4 h-4" />
-                              </a>
-                            </Button>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-purple-600 hover:bg-purple-50"
-                                onClick={() => handleEditProduct(product)}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-red-600 hover:bg-red-50"
-                                onClick={() => deleteProduct(product.id)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ));
-                    }
-                    // ไม่มี options ให้โชว์ปกติ
-                    const quantity = product.quantity || 2;
+                    const quantity = product.options && product.options.length > 0
+                      ? product.options.reduce((acc, opt) => acc + (opt.quantity || 0), 0)
+                      : product.quantity || 0;
+
                     return (
                       <TableRow key={product.id}>
                         <TableCell>
-                          <img 
-                            src={product.image || "/placeholder.svg"} 
+                          <img
+                            src={
+                              product.image ||
+                              (product.options && product.options[0]?.image) ||
+                              "/placeholder.svg"
+                            }
                             alt={product.name}
                             className="w-12 h-12 rounded-lg object-cover border border-purple-200"
                           />
                         </TableCell>
                         <TableCell className="font-medium text-purple-600">{product.sku}</TableCell>
-                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell className="font-medium">
+                          {product.name}
+                          {product.options && product.options.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1 text-xs text-gray-500">
+                              {product.options.map(opt =>
+                                <span
+                                  key={opt.id}
+                                  className="inline-block bg-gray-100 rounded px-2 py-0.5"
+                                >({opt.name})</span>
+                              )}
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell className="text-sm text-purple-600">{product.category}</TableCell>
                         <TableCell className="font-semibold text-red-600">
-                          ฿{(product.costThb ?? 0).toLocaleString()}
+                          ฿{
+                            product.options && product.options.length > 0
+                              ? product.options[0].costThb.toLocaleString()
+                              : (product.costThb ?? 0).toLocaleString()
+                          }
                         </TableCell>
                         <TableCell className="font-semibold text-green-600">
-                          ฿{(product.sellingPrice ?? 0).toLocaleString()}
+                          ฿{
+                            product.options && product.options.length > 0
+                              ? product.options[0].sellingPrice.toLocaleString()
+                              : (product.sellingPrice ?? 0).toLocaleString()
+                          }
                         </TableCell>
-                        <TableCell className="font-medium">{quantity}</TableCell>
+                        <TableCell className="font-medium">
+                          {
+                            product.options && product.options.length > 0
+                              ? product.options.reduce((acc, opt) => acc + (opt.quantity || 0), 0)
+                              : product.quantity || 0
+                          }
+                        </TableCell>
                         <TableCell>
                           <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(quantity, product.status)}`}>
                             {getStockStatus(quantity, product.status)}
