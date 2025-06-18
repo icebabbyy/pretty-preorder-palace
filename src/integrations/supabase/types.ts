@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      banners: {
+        Row: {
+          active: boolean
+          created_at: string
+          "id BIGSERIAL": string
+          image_url: string
+          position: number
+          updated_at: string | null
+        }
+        Insert: {
+          active: boolean
+          created_at?: string
+          "id BIGSERIAL"?: string
+          image_url: string
+          position: number
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          "id BIGSERIAL"?: string
+          image_url?: string
+          position?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string | null
@@ -147,9 +174,128 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          address: string | null
+          birth_date: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          is_admin: boolean | null
+          phone: string | null
+          role: string
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          address?: string | null
+          birth_date?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          is_admin?: boolean | null
+          phone?: string | null
+          role: string
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          address?: string | null
+          birth_date?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          is_admin?: boolean | null
+          phone?: string | null
+          role?: string
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      public_products: {
+        Row: {
+          category: string | null
+          description: string | null
+          id: number | null
+          image: string | null
+          name: string | null
+          options: Json | null
+          selling_price: number | null
+          shipment_date: string | null
+          sku: string | null
+          "status TEXT DEFAULT": string | null
+        }
+        Insert: {
+          category?: string | null
+          description?: string | null
+          id?: number | null
+          image?: string | null
+          name?: string | null
+          options?: Json | null
+          selling_price?: number | null
+          shipment_date?: string | null
+          sku?: string | null
+          "status TEXT DEFAULT"?: string | null
+        }
+        Update: {
+          category?: string | null
+          description?: string | null
+          id?: number | null
+          image?: string | null
+          name?: string | null
+          options?: Json | null
+          selling_price?: number | null
+          shipment_date?: string | null
+          sku?: string | null
+          "status TEXT DEFAULT"?: string | null
+        }
+        Relationships: []
+      }
+      publine_orders: {
+        Row: {
+          balance: number | null
+          deposit: number | null
+          id: number | null
+          item: string | null
+          item_json: string | null
+          photo: string | null
+          price: string | null
+          qty: string | null
+          sku: string | null
+          status: string | null
+          username: string | null
+        }
+        Insert: {
+          balance?: number | null
+          deposit?: number | null
+          id?: number | null
+          item?: never
+          item_json?: never
+          photo?: never
+          price?: never
+          qty?: never
+          sku?: never
+          status?: string | null
+          username?: string | null
+        }
+        Update: {
+          balance?: number | null
+          deposit?: number | null
+          id?: number | null
+          item?: never
+          item_json?: never
+          photo?: never
+          price?: never
+          qty?: never
+          sku?: never
+          status?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

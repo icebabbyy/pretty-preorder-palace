@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -116,6 +117,29 @@ const StockManagement = ({
       return "bg-red-100 text-red-800";
     }
     return status === 'พรีออเดอร์' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800';
+  };
+
+  // ฟังก์ชันแสดงตัวเลือกสินค้าอย่างมีประสิทธิภาพ
+  const renderProductOptions = (options: ProductOption[] | undefined) => {
+    if (!options || options.length === 0) {
+      return <span className="text-xs text-gray-400">ไม่มีตัวเลือก</span>;
+    }
+
+    return (
+      <div className="flex flex-wrap gap-1 mt-1">
+        {options.map((option, index) => (
+          <span
+            key={option.id || index}
+            className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-700 border border-purple-200"
+          >
+            {option.name}
+            <span className="ml-1 text-purple-500">
+              (฿{option.sellingPrice?.toLocaleString() || 0})
+            </span>
+          </span>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -244,17 +268,10 @@ const StockManagement = ({
                         </TableCell>
                         <TableCell className="font-medium text-purple-600">{product.sku}</TableCell>
                         <TableCell className="font-medium">
-                          {product.name}
-                          {product.options && product.options.length > 0 && (
-                            <div className="mt-1 flex flex-wrap gap-1 text-xs text-gray-500">
-                              {product.options.map(opt =>
-                                <span
-                                  key={opt.id}
-                                  className="inline-block bg-gray-100 rounded px-2 py-0.5"
-                                >({opt.name})</span>
-                              )}
-                            </div>
-                          )}
+                          <div>
+                            <div className="font-medium text-gray-900">{product.name}</div>
+                            {renderProductOptions(product.options)}
+                          </div>
                         </TableCell>
                         <TableCell className="text-sm text-purple-600">{product.category}</TableCell>
                         <TableCell className="font-semibold text-red-600">
