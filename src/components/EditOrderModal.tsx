@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
   useEffect(() => {
     if (order) {
       setItems(order.items || []);
-      setShippingCost((order.shippingCost ?? order.shipping_cost ?? 0).toString());
+      setShippingCost((order.shippingCost ?? 0).toString());
       setDeposit((order.deposit ?? 0).toString());
       setDiscount((order.discount ?? 0).toString());
       setStatus(order.status ?? "รอชำระเงิน");
@@ -211,7 +212,6 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
             updateItemQuantity={updateItemQuantity}
             updateItemCost={updateItemCost}
             removeItem={removeItem}
-            onEditOption={handleEditOption}
           />
           {/* หากกำลังแก้ไข option ของสินค้า */}
           {selectedEditIdx !== null && products.length > 0 && (() => {
