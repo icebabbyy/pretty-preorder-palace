@@ -61,89 +61,95 @@ const OrdersTable: React.FC<OrdersTableProps> = ({
             </TableCell>
           </TableRow>
         ) : (
-          orders.map((order) => (
-            <TableRow key={order.id} className="hover:bg-purple-25 border-b border-purple-50">
-              <TableCell>
-                <div className="space-y-2">
-                  {(Array.isArray(order.items) ? order.items : []).map((item, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <img
-                        src={item.productImage}
-                        alt={item.productName}
-                        className="w-8 h-8 rounded object-cover border border-purple-200"
-                      />
-                      <div>
-                        <p className="text-sm font-medium">{item.productName}</p>
-                        <p className="text-xs text-purple-500">{item.sku} x{item.quantity}</p>
+          orders.map((order) => {
+            // Ensure order status is never empty
+            const currentStatus = (order.status && order.status.trim() !== '') ? order.status : "รอชำระเงิน";
+            console.log('Order status for Select:', currentStatus, 'for order:', order.id);
+            
+            return (
+              <TableRow key={order.id} className="hover:bg-purple-25 border-b border-purple-50">
+                <TableCell>
+                  <div className="space-y-2">
+                    {(Array.isArray(order.items) ? order.items : []).map((item, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <img
+                          src={item.productImage}
+                          alt={item.productName}
+                          className="w-8 h-8 rounded object-cover border border-purple-200"
+                        />
+                        <div>
+                          <p className="text-sm font-medium">{item.productName}</p>
+                          <p className="text-xs text-purple-500">{item.sku} x{item.quantity}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </TableCell>
-              <TableCell>
-                <div>
-                  <p className="font-medium text-purple-700">{order.username}</p>
-                  {(order.deposit ?? 0) > 0 && (
-                    <p className="text-xs text-green-600">มัดจำ: ฿{(order.deposit ?? 0).toLocaleString()}</p>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell className="font-semibold text-green-600">
-                ฿{(order.totalSellingPrice ?? 0).toLocaleString()}
-              </TableCell>
-              <TableCell className="font-semibold text-red-600">
-                {(order.discount ?? 0) > 0 ? `-฿${(order.discount ?? 0).toLocaleString()}` : '-'}
-              </TableCell>
-              <TableCell className="font-semibold text-red-600">
-                ฿{(order.totalCost ?? 0).toLocaleString()}
-              </TableCell>
-              <TableCell className={`font-semibold ${(order.profit ?? 0) >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                ฿{(order.profit ?? 0).toLocaleString()}
-              </TableCell>
-              <TableCell>
-                <Select
-                  value={order.status || "รอชำระเงิน"}
-                  onValueChange={(newStatus) => updateOrderStatus(order, newStatus)}
-                >
-                  <SelectTrigger className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                    {getStatusIcon(order.status)}
-                    <SelectValue placeholder={order.status || "รอชำระเงิน"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="รอชำระเงิน">รอชำระเงิน</SelectItem>
-                    <SelectItem value="รอโรงงานจัดส่ง">รอโรงงานจัดส่ง</SelectItem>
-                    <SelectItem value="กำลังมาไทย">กำลังมาไทย</SelectItem>
-                    <SelectItem value="จัดส่งแล้ว">จัดส่งแล้ว</SelectItem>
-                  </SelectContent>
-                </Select>
-              </TableCell>
-              <TableCell className="text-sm">
-                {order.paymentDate
-                  ? new Date(order.paymentDate).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
-                  : '-'}
-              </TableCell>
-              <TableCell>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-purple-600 hover:bg-purple-50"
-                    onClick={() => onEdit(order)}
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div>
+                    <p className="font-medium text-purple-700">{order.username}</p>
+                    {(order.deposit ?? 0) > 0 && (
+                      <p className="text-xs text-green-600">มัดจำ: ฿{(order.deposit ?? 0).toLocaleString()}</p>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="font-semibold text-green-600">
+                  ฿{(order.totalSellingPrice ?? 0).toLocaleString()}
+                </TableCell>
+                <TableCell className="font-semibold text-red-600">
+                  {(order.discount ?? 0) > 0 ? `-฿${(order.discount ?? 0).toLocaleString()}` : '-'}
+                </TableCell>
+                <TableCell className="font-semibold text-red-600">
+                  ฿{(order.totalCost ?? 0).toLocaleString()}
+                </TableCell>
+                <TableCell className={`font-semibold ${(order.profit ?? 0) >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                  ฿{(order.profit ?? 0).toLocaleString()}
+                </TableCell>
+                <TableCell>
+                  <Select
+                    value={currentStatus}
+                    onValueChange={(newStatus) => updateOrderStatus(order, newStatus)}
                   >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-600 hover:bg-red-50"
-                    onClick={() => onDelete(order.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))
+                    <SelectTrigger className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(currentStatus)}`}>
+                      {getStatusIcon(currentStatus)}
+                      <SelectValue placeholder={currentStatus} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="รอชำระเงิน">รอชำระเงิน</SelectItem>
+                      <SelectItem value="รอโรงงานจัดส่ง">รอโรงงานจัดส่ง</SelectItem>
+                      <SelectItem value="กำลังมาไทย">กำลังมาไทย</SelectItem>
+                      <SelectItem value="จัดส่งแล้ว">จัดส่งแล้ว</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell className="text-sm">
+                  {order.paymentDate
+                    ? new Date(order.paymentDate).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
+                    : '-'}
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-purple-600 hover:bg-purple-50"
+                      onClick={() => onEdit(order)}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:bg-red-50"
+                      onClick={() => onDelete(order.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })
         )}
       </TableBody>
     </Table>
