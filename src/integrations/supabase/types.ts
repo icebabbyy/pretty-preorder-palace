@@ -180,24 +180,6 @@ export type Database = {
           },
         ]
       }
-      product_type: {
-        Row: {
-          created_at: string
-          "id BIGSERIAL": number
-          name: string
-        }
-        Insert: {
-          created_at?: string
-          "id BIGSERIAL"?: number
-          name: string
-        }
-        Update: {
-          created_at?: string
-          "id BIGSERIAL"?: number
-          name?: string
-        }
-        Relationships: []
-      }
       product_types: {
         Row: {
           created_at: string | null

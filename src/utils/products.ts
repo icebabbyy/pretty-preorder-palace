@@ -9,8 +9,8 @@ function supabaseProductToProduct(p: any): Product {
     sku: p.sku,
     name: p.name,
     category: p.category || "",
-    categories: p.categories || (p.category ? [p.category] : []), // ใช้ categories หรือสร้างจาก category เดี่ยว
-    productType: p.product_type || "", // เพิ่มประเภทสินค้า
+    categories: p.category ? [p.category] : [], // Create categories array from single category
+    productType: p.product_type || "",
     image: p.image || "",
     priceYuan: p.price_yuan ?? 0,
     exchangeRate: p.exchange_rate ?? 5,
@@ -34,12 +34,16 @@ function productToSupabaseInsert(product: Omit<Product, "id"> | Product) {
     ? product.quantity 
     : 0;
 
+  // Use the first category from categories array, or fall back to category field
+  const category = product.categories && product.categories.length > 0 
+    ? product.categories[0] 
+    : product.category || "";
+
   return {
     sku: product.sku,
     name: product.name,
-    category: product.category,
-    categories: product.categories || [product.category].filter(Boolean), // เก็บ categories ใน database
-    product_type: product.productType || null, // เพิ่มประเภทสินค้า
+    category: category, // Only use single category field that exists in DB
+    product_type: product.productType || null,
     image: product.image,
     price_yuan: product.priceYuan,
     exchange_rate: product.exchangeRate,
@@ -53,7 +57,7 @@ function productToSupabaseInsert(product: Omit<Product, "id"> | Product) {
         : null,
     link: product.link,
     description: product.description,
-    quantity: quantity, // Always ensure this is a number
+    quantity: quantity,
     options: product.options ? (product.options as any) : undefined,
   };
 }
@@ -89,7 +93,6 @@ export async function addProduct(product: Omit<Product, "id">): Promise<Product>
     .maybeSingle();
   if (error) {
     console.error('Error adding product:', error);
-    // เพิ่มการแสดงข้อความจาก Supabase API (error.message, error.details)
     alert(
       'Failed to add product: ' +
       (error.message || '') +
