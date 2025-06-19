@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,8 +53,12 @@ const StockManagement = ({
   }, [products]);
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    // Add null checks for product name and sku
+    const productName = product.name || "";
+    const productSku = product.sku || "";
+    
+    const matchesSearch = productName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         productSku.toLowerCase().includes(searchTerm.toLowerCase());
     
     // ตรวจสอบหมวดหมู่ - ดูทั้งหมวดหมู่เดี่ยวและหมวดหมู่หลายอัน
     const matchesCategory = categoryFilter === "all" || 
@@ -289,14 +292,14 @@ const StockManagement = ({
                               (product.options && product.options[0]?.image) ||
                               "/placeholder.svg"
                             }
-                            alt={product.name}
+                            alt={product.name || "Product"}
                             className="w-12 h-12 rounded-lg object-cover border border-purple-200"
                           />
                         </TableCell>
-                        <TableCell className="font-medium text-purple-600">{product.sku}</TableCell>
+                        <TableCell className="font-medium text-purple-600">{product.sku || ""}</TableCell>
                         <TableCell className="font-medium">
                           <div>
-                            <div className="font-medium text-gray-900">{product.name}</div>
+                            <div className="font-medium text-gray-900">{product.name || ""}</div>
                             {renderProductOptions(product.options)}
                           </div>
                         </TableCell>
