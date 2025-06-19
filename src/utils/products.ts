@@ -28,7 +28,7 @@ function supabaseProductToProduct(p: any): Product {
 }
 
 // Helper: camelCase to snake_case for insert
-function productToSupabaseInsert(product: Omit<Product, "id") | Product) {
+function productToSupabaseInsert(product: Omit<Product, "id"> | Product) {
   // Ensure quantity is always a valid number, never null or undefined
   const quantity = typeof product.quantity === "number" && !isNaN(product.quantity) 
     ? product.quantity 
