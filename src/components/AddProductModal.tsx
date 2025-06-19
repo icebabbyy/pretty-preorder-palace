@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 import { nanoid } from "nanoid";
 import { Product, ProductOption } from "@/types";
 import { generateSKU } from "@/utils/sku";
@@ -22,6 +25,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     sku: "",
     name: "",
     category: "",
+    categories: [],
     image: "",
     priceYuan: 0,
     exchangeRate: 1,
@@ -36,6 +40,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   });
 
   const [options, setOptions] = useState<ProductOption[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   // --- Auto-calculate ราคาบาท (THB) ---
   useEffect(() => {
@@ -65,6 +70,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   useEffect(() => {
     if (editingProduct) {
       setFormData(editingProduct);
+      setSelectedCategories(editingProduct.categories || [editingProduct.category].filter(Boolean));
       if (editingProduct.options) {
         setOptions(editingProduct.options.map(opt => ({
           ...opt,
@@ -78,6 +84,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
         sku: "",
         name: "",
         category: "",
+        categories: [],
         image: "",
         priceYuan: 0,
         exchangeRate: 1,
@@ -90,6 +97,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
         link: "",
         description: ""
       });
+      setSelectedCategories([]);
       setOptions([]);
     }
   }, [editingProduct, open]);
@@ -97,25 +105,38 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   // ถ้าเปิด modal ใหม่ หรือเลือกหมวดหมู่ใหม่และยังไม่มี sku -- auto-gen
   useEffect(() => {
     if (!editingProduct && (!formData.sku || formData.sku === "")) {
-      // wait until category is chosen, or if already has value
-      if (formData.category && formData.category.length >= 1) {
+      if (selectedCategories.length > 0) {
         setFormData(prev => ({
           ...prev,
-          sku: generateSKU(formData.category)
+          sku: generateSKU(selectedCategories[0])
         }));
       }
     }
-    // eslint-disable-next-line
-  }, [formData.category, open]);
+  }, [selectedCategories, open]);
 
-  // ถ้ากำลังสร้างสินค้าใหม่, แล้วเปลี่ยนชื่อ category,
-  // ให้ sku อัพเดต ถ้ายังไม่ได้ set ค่าเอง
-  const handleCategoryChange = (value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      category: value,
-      sku: !editingProduct ? generateSKU(value) : prev.sku,
-    }));
+  const toggleCategory = (category: string) => {
+    setSelectedCategories(prev => {
+      const newCategories = prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category];
+      
+      // อัปเดต category หลักเป็นหมวดหมู่แรก
+      if (newCategories.length > 0) {
+        setFormData(prevForm => ({
+          ...prevForm,
+          category: newCategories[0],
+          categories: newCategories
+        }));
+      } else {
+        setFormData(prevForm => ({
+          ...prevForm,
+          category: "",
+          categories: []
+        }));
+      }
+      
+      return newCategories;
+    });
   };
 
   // เมื่อลูกค้ากด "เพิ่มตัวเลือกสินค้า" จะ auto gen รหัสให้ตัวเลือกด้วย
@@ -160,20 +181,24 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   }, [options.length]);
 
   const handleSubmit = () => {
-    if (!formData.name || !formData.category) {
-      alert("กรุณากรอกชื่อสินค้าและเลือกหมวดหมู่");
+    if (!formData.name || selectedCategories.length === 0) {
+      alert("กรุณากรอกชื่อสินค้าและเลือกหมวดหมู่อย่างน้อย 1 หมวดหมู่");
       return;
     }
-    // ถ้ามี options ให้อัปเดต quantity หลัก = จำนวนรวมทุก option 
+    
     let quantity = formData.quantity;
     if (options.length > 0) {
       quantity = options.reduce((sum, o) => sum + (o.quantity || 0), 0);
     }
+    
     const dataToSave = {
       ...formData,
+      categories: selectedCategories,
+      category: selectedCategories[0], // หมวดหมู่หลัก
       quantity,
       options: options.length > 0 ? options : undefined
     };
+    
     onAddProduct(dataToSave);
     onOpenChange(false);
 
@@ -182,6 +207,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
         sku: "",
         name: "",
         category: "",
+        categories: [],
         image: "",
         priceYuan: 0,
         exchangeRate: 1,
@@ -194,6 +220,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
         link: "",
         description: ""
       });
+      setSelectedCategories([]);
       setOptions([]);
     }
   };
@@ -231,17 +258,46 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
           </div>
 
           <div>
-            <Label htmlFor="category">หมวดหมู่ *</Label>
-            <Select value={formData.category} onValueChange={handleCategoryChange}>
-              <SelectTrigger className="border border-purple-200 rounded-lg">
-                <SelectValue placeholder="เลือกหมวดหมู่" />
-              </SelectTrigger>
-              <SelectContent>
+            <Label>หมวดหมู่ * (เลือกได้หลายหมวดหมู่)</Label>
+            <div className="mt-2 space-y-2">
+              {/* แสดงหมวดหมู่ที่เลือกแล้ว */}
+              {selectedCategories.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {selectedCategories.map((cat) => (
+                    <Badge key={cat} variant="secondary" className="bg-purple-100 text-purple-800 px-3 py-1">
+                      {cat}
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory(cat)}
+                        className="ml-2 text-purple-600 hover:text-purple-800"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              
+              {/* รายการหมวดหมู่ทั้งหมด */}
+              <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto border border-purple-200 rounded-lg p-3">
                 {categories.map(category => (
-                  <SelectItem key={category} value={category}>{category}</SelectItem>
+                  <div key={category} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`category-${category}`}
+                      checked={selectedCategories.includes(category)}
+                      onCheckedChange={() => toggleCategory(category)}
+                      className="border-purple-300"
+                    />
+                    <Label 
+                      htmlFor={`category-${category}`} 
+                      className="text-sm cursor-pointer"
+                    >
+                      {category}
+                    </Label>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+            </div>
           </div>
 
           {/* รูปภาพสินค้า: เปลี่ยนเป็นลิงก์ URL */}
@@ -515,7 +571,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
           <Button 
             onClick={handleSubmit} 
             className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
-            disabled={!formData.name || !formData.category}
+            disabled={!formData.name || selectedCategories.length === 0}
           >
             {editingProduct ? "บันทึกการแก้ไข" : "บันทึก"}
           </Button>

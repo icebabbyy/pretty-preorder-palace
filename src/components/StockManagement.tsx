@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Search, Plus, ExternalLink, Edit, Trash2, Settings, Package } from "lucide-react";
 import AddProductModal from "./AddProductModal";
 import CategoryManagementModal from "./CategoryManagementModal";
@@ -55,7 +56,12 @@ const StockManagement = ({
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          product.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
+    
+    // ตรวจสอบหมวดหมู่ - ดูทั้งหมวดหมู่เดี่ยวและหมวดหมู่หลายอัน
+    const matchesCategory = categoryFilter === "all" || 
+                           product.category === categoryFilter ||
+                           (product.categories && product.categories.includes(categoryFilter));
+                           
     const matchesStatus = statusFilter === "all" || product.status === statusFilter;
     return matchesSearch && matchesCategory && matchesStatus;
   });
@@ -137,6 +143,27 @@ const StockManagement = ({
               (฿{option.sellingPrice?.toLocaleString() || 0})
             </span>
           </span>
+        ))}
+      </div>
+    );
+  };
+
+  // ฟังก์ชันแสดงหมวดหมู่หลายอัน
+  const renderCategories = (product: Product) => {
+    const displayCategories = product.categories && product.categories.length > 0 
+      ? product.categories 
+      : [product.category].filter(Boolean);
+
+    if (displayCategories.length === 0) {
+      return <span className="text-gray-400">ไม่มีหมวดหมู่</span>;
+    }
+
+    return (
+      <div className="flex flex-wrap gap-1">
+        {displayCategories.map((cat, index) => (
+          <Badge key={index} variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+            {cat}
+          </Badge>
         ))}
       </div>
     );
@@ -273,7 +300,9 @@ const StockManagement = ({
                             {renderProductOptions(product.options)}
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm text-purple-600">{product.category}</TableCell>
+                        <TableCell>
+                          {renderCategories(product)}
+                        </TableCell>
                         <TableCell className="font-semibold text-red-600">
                           ฿{
                             product.options && product.options.length > 0

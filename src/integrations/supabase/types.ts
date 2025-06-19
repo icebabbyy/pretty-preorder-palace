@@ -13,7 +13,7 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
-          "id BIGSERIAL": string
+          id: string
           image_url: string
           position: number
           updated_at: string | null
@@ -21,7 +21,7 @@ export type Database = {
         Insert: {
           active: boolean
           created_at?: string
-          "id BIGSERIAL"?: string
+          id?: string
           image_url: string
           position: number
           updated_at?: string | null
@@ -29,7 +29,7 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
-          "id BIGSERIAL"?: string
+          id?: string
           image_url?: string
           position?: number
           updated_at?: string | null
@@ -39,17 +39,26 @@ export type Database = {
       categories: {
         Row: {
           created_at: string | null
+          display_on_homepage: boolean | null
+          homepage_order: number | null
           id: number
+          image: string | null
           name: string
         }
         Insert: {
           created_at?: string | null
+          display_on_homepage?: boolean | null
+          homepage_order?: number | null
           id?: number
+          image?: string | null
           name: string
         }
         Update: {
           created_at?: string | null
+          display_on_homepage?: boolean | null
+          homepage_order?: number | null
           id?: number
+          image?: string | null
           name?: string
         }
         Relationships: []
@@ -57,59 +66,119 @@ export type Database = {
       orders: {
         Row: {
           address: string | null
+          admin_notes: string | null
+          admin_read: boolean | null
           created_at: string | null
           deposit: number | null
           discount: number | null
           id: number
           items: Json
+          notification_sent: boolean | null
           order_date: string | null
+          payment_confirmed_at: string | null
           payment_date: string | null
           payment_slip: string | null
+          payment_slip_url: string | null
           profit: number | null
+          qr_code_generated: boolean | null
           shipping_cost: number | null
           status: string | null
           total_cost: number | null
           total_selling_price: number | null
+          tracking_number: string | null
           updated_at: string | null
           username: string | null
         }
         Insert: {
           address?: string | null
+          admin_notes?: string | null
+          admin_read?: boolean | null
           created_at?: string | null
           deposit?: number | null
           discount?: number | null
           id?: number
           items: Json
+          notification_sent?: boolean | null
           order_date?: string | null
+          payment_confirmed_at?: string | null
           payment_date?: string | null
           payment_slip?: string | null
+          payment_slip_url?: string | null
           profit?: number | null
+          qr_code_generated?: boolean | null
           shipping_cost?: number | null
           status?: string | null
           total_cost?: number | null
           total_selling_price?: number | null
+          tracking_number?: string | null
           updated_at?: string | null
           username?: string | null
         }
         Update: {
           address?: string | null
+          admin_notes?: string | null
+          admin_read?: boolean | null
           created_at?: string | null
           deposit?: number | null
           discount?: number | null
           id?: number
           items?: Json
+          notification_sent?: boolean | null
           order_date?: string | null
+          payment_confirmed_at?: string | null
           payment_date?: string | null
           payment_slip?: string | null
+          payment_slip_url?: string | null
           profit?: number | null
+          qr_code_generated?: boolean | null
           shipping_cost?: number | null
           status?: string | null
           total_cost?: number | null
           total_selling_price?: number | null
+          tracking_number?: string | null
           updated_at?: string | null
           username?: string | null
         }
         Relationships: []
+      }
+      product_images: {
+        Row: {
+          created_at: string
+          id: number
+          image_url: string | null
+          order: number | null
+          product_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          image_url?: string | null
+          order?: number | null
+          product_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          image_url?: string | null
+          order?: number | null
+          product_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_images_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_images_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "public_products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
@@ -128,8 +197,9 @@ export type Database = {
           quantity: number
           selling_price: number
           shipment_date: string | null
+          shipping_fee: string | null
           sku: string
-          "status TEXT DEFAULT": string | null
+          status: string | null
           updated_at: string | null
         }
         Insert: {
@@ -148,8 +218,9 @@ export type Database = {
           quantity?: number
           selling_price?: number
           shipment_date?: string | null
+          shipping_fee?: string | null
           sku: string
-          "status TEXT DEFAULT"?: string | null
+          status?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -168,8 +239,9 @@ export type Database = {
           quantity?: number
           selling_price?: number
           shipment_date?: string | null
+          shipping_fee?: string | null
           sku?: string
-          "status TEXT DEFAULT"?: string | null
+          status?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -179,37 +251,40 @@ export type Database = {
           address: string | null
           birth_date: string | null
           created_at: string | null
+          email: string | null
           full_name: string | null
           id: string
-          is_admin: boolean | null
           phone: string | null
           role: string
           updated_at: string | null
           username: string | null
+          wishlist: string | null
         }
         Insert: {
           address?: string | null
           birth_date?: string | null
           created_at?: string | null
+          email?: string | null
           full_name?: string | null
           id: string
-          is_admin?: boolean | null
           phone?: string | null
-          role: string
+          role?: string
           updated_at?: string | null
           username?: string | null
+          wishlist?: string | null
         }
         Update: {
           address?: string | null
           birth_date?: string | null
           created_at?: string | null
+          email?: string | null
           full_name?: string | null
           id?: string
-          is_admin?: boolean | null
           phone?: string | null
           role?: string
           updated_at?: string | null
           username?: string | null
+          wishlist?: string | null
         }
         Relationships: []
       }
@@ -251,6 +326,57 @@ export type Database = {
           shipment_date?: string | null
           sku?: string | null
           "status TEXT DEFAULT"?: string | null
+        }
+        Relationships: []
+      }
+      publice_orders: {
+        Row: {
+          admin_notes: string | null
+          deposit: number | null
+          id: number | null
+          item: string | null
+          item_json: string | null
+          order_date: string | null
+          payment_date: string | null
+          photo: string | null
+          price: string | null
+          qty: string | null
+          sku: string | null
+          status: string | null
+          tracking_number: string | null
+          username: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          deposit?: number | null
+          id?: number | null
+          item?: never
+          item_json?: never
+          order_date?: string | null
+          payment_date?: string | null
+          photo?: never
+          price?: never
+          qty?: never
+          sku?: never
+          status?: string | null
+          tracking_number?: string | null
+          username?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          deposit?: number | null
+          id?: number | null
+          item?: never
+          item_json?: never
+          order_date?: string | null
+          payment_date?: string | null
+          photo?: never
+          price?: never
+          qty?: never
+          sku?: never
+          status?: string | null
+          tracking_number?: string | null
+          username?: string | null
         }
         Relationships: []
       }

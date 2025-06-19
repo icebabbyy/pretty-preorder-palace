@@ -9,6 +9,7 @@ function supabaseProductToProduct(p: any): Product {
     sku: p.sku,
     name: p.name,
     category: p.category || "",
+    categories: p.categories || (p.category ? [p.category] : []), // ใช้ categories หรือสร้างจาก category เดี่ยว
     image: p.image || "",
     priceYuan: p.price_yuan ?? 0,
     exchangeRate: p.exchange_rate ?? 5,
@@ -16,7 +17,7 @@ function supabaseProductToProduct(p: any): Product {
     importCost: p.import_cost ?? 0,
     costThb: p.cost_thb ?? 0,
     sellingPrice: p.selling_price ?? 0,
-    status: p["status TEXT DEFAULT"] || "",
+    status: p.status || "",
     shipmentDate: p.shipment_date ? p.shipment_date.toString() : "",
     link: p.link || "",
     description: p.description || "",
@@ -36,13 +37,14 @@ function productToSupabaseInsert(product: Omit<Product, "id"> | Product) {
     sku: product.sku,
     name: product.name,
     category: product.category,
+    categories: product.categories || [product.category].filter(Boolean), // เก็บ categories ใน database
     image: product.image,
     price_yuan: product.priceYuan,
     exchange_rate: product.exchangeRate,
     import_cost: product.importCost,
     cost_thb: product.costThb,
     selling_price: product.sellingPrice,
-    ["status TEXT DEFAULT"]: product.status,
+    status: product.status,
     shipment_date:
       product.shipmentDate && product.shipmentDate !== ""
         ? product.shipmentDate
