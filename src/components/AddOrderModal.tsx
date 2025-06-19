@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -34,7 +33,20 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
 
   const selectedProduct = products.find(p => String(p.id) === selectedProductId);
   const options = selectedProduct?.options || [];
+  
+  // Only show valid options that have proper id and are not empty
+  const validOptions = options.filter(opt => 
+    opt && 
+    opt.id && 
+    typeof opt.id === 'string' && 
+    opt.id.trim() !== '' &&
+    opt.name &&
+    typeof opt.name === 'string' &&
+    opt.name.trim() !== ''
+  );
+  
   const canAddParent = selectedProduct && (selectedProduct.sellingPrice ?? 0) > 0;
+  const hasValidOptions = validOptions.length > 0;
 
   const addProductToOrder = (type: "parent" | "option") => {
     if (!selectedProduct) return;
@@ -46,7 +58,7 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
     let unitCost = selectedProduct.costThb;
 
     if (type === "option" && selectedOptionId) {
-      const opt = options.find(o => o.id === selectedOptionId);
+      const opt = validOptions.find(o => o.id === selectedOptionId);
       if (!opt) return;
       displayName = `${selectedProduct.name} (${opt.name})`;
       productImage = opt.image || selectedProduct.image;
@@ -240,8 +252,8 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
             />
             {selectedProduct && (
               <div className="mt-2 space-y-2">
-                {/* ถ้ามี option ให้เลือก option ได้ + ปุ่มเพิ่มตัวเลือก */}
-                {options.length > 0 && (
+                {/* Only render Select if there are valid options */}
+                {hasValidOptions && (
                   <div>
                     <Label>เลือกตัวเลือกสินค้า</Label>
                     <Select value={selectedOptionId} onValueChange={setSelectedOptionId}>
@@ -249,35 +261,14 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                         <SelectValue placeholder="เลือกตัวเลือก" />
                       </SelectTrigger>
                       <SelectContent>
-                        {options.map((opt, index) => {
-                          // Ensure we have a non-empty value - triple validation
-                          let optionValue = "";
-                          
-                          if (opt.id && typeof opt.id === 'string' && opt.id.trim() !== '') {
-                            optionValue = opt.id.trim();
-                          } else if (opt.name && typeof opt.name === 'string' && opt.name.trim() !== '') {
-                            optionValue = `option-name-${opt.name.trim()}-${index}`;
-                          } else {
-                            optionValue = `fallback-option-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                          }
-                          
-                          console.log('Add Modal - Option value generated:', optionValue, 'for option:', opt);
-                          
-                          // Additional safety check before rendering
-                          if (!optionValue || optionValue.trim() === '') {
-                            console.error('Empty option value detected, skipping option:', opt);
-                            return null;
-                          }
-                          
-                          return (
-                            <SelectItem 
-                              key={`add-option-${index}-${optionValue}`} 
-                              value={optionValue}
-                            >
-                              {opt.name} - ฿{opt.sellingPrice?.toLocaleString() || 0} ({optionValue})
-                            </SelectItem>
-                          );
-                        }).filter(Boolean)}
+                        {validOptions.map((opt, index) => (
+                          <SelectItem 
+                            key={`valid-option-${index}-${opt.id}`} 
+                            value={opt.id}
+                          >
+                            {opt.name} - ฿{opt.sellingPrice?.toLocaleString() || 0} ({opt.id})
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <Button

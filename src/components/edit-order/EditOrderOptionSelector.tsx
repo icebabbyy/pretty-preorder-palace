@@ -29,7 +29,19 @@ const EditOrderOptionSelector: React.FC<EditOrderOptionSelectorProps> = ({
   const product = products.find(p => p.id === item.productId);
   const opts = product?.options || [];
   
-  if (opts.length === 0) return null;
+  // Only show valid options that have proper id and name
+  const validOpts = opts.filter(opt => 
+    opt && 
+    opt.id && 
+    typeof opt.id === 'string' && 
+    opt.id.trim() !== '' &&
+    opt.name &&
+    typeof opt.name === 'string' &&
+    opt.name.trim() !== ''
+  );
+  
+  // If no valid options, don't render the selector
+  if (validOpts.length === 0) return null;
 
   return (
     <div className="my-2">
@@ -39,35 +51,14 @@ const EditOrderOptionSelector: React.FC<EditOrderOptionSelectorProps> = ({
           <SelectValue placeholder="เลือกตัวเลือกสินค้า" />
         </SelectTrigger>
         <SelectContent>
-          {opts.map((opt, index) => {
-            // Ensure we have a non-empty value - triple validation
-            let optionValue = "";
-            
-            if (opt.id && typeof opt.id === 'string' && opt.id.trim() !== '') {
-              optionValue = opt.id.trim();
-            } else if (opt.name && typeof opt.name === 'string' && opt.name.trim() !== '') {
-              optionValue = `edit-option-name-${opt.name.trim()}-${index}`;
-            } else {
-              optionValue = `fallback-edit-option-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            }
-            
-            console.log('Edit Option Selector - Option value generated:', optionValue, 'for option:', opt);
-            
-            // Additional safety check before rendering
-            if (!optionValue || optionValue.trim() === '') {
-              console.error('Empty edit option value detected, skipping option:', opt);
-              return null;
-            }
-            
-            return (
-              <SelectItem 
-                key={`edit-option-selector-${index}-${optionValue}`} 
-                value={optionValue}
-              >
-                {`${product?.name} (${opt.name || 'ไม่มีชื่อ'}) ฿${opt.sellingPrice || 0}`}
-              </SelectItem>
-            );
-          }).filter(Boolean)}
+          {validOpts.map((opt, index) => (
+            <SelectItem 
+              key={`valid-edit-option-${index}-${opt.id}`} 
+              value={opt.id}
+            >
+              {`${product?.name} (${opt.name}) ฿${opt.sellingPrice || 0}`}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
       <div className="flex gap-2 mt-2">
