@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/types";
-import { fetchProductImages, addProductImage, type ProductImage } from "./productImages";
+import { fetchProductImages, addProductImage, deleteProductImage, type ProductImage } from "./productImages";
 
 // Helper: snake_case to camelCase
 async function supabaseProductToProduct(p: any): Promise<Product> {
@@ -163,12 +163,34 @@ export async function updateProduct(product: Product & { images?: ProductImage[]
 }
 
 export async function deleteProduct(productId: number): Promise<void> {
-  const { error } = await supabase
-    .from('products')
-    .delete()
-    .eq('id', productId);
-  if (error) {
-    console.error('Error deleting product:', error);
-    throw new Error('Failed to delete product');
+  console.log('Deleting product ID:', productId);
+  
+  try {
+    // First, delete all related product images
+    const { error: imagesError } = await supabase
+      .from('product_images')
+      .delete()
+      .eq('product_id', productId);
+    
+    if (imagesError) {
+      console.error('Error deleting product images:', imagesError);
+      throw new Error('Failed to delete product images: ' + imagesError.message);
+    }
+    
+    // Then delete the product
+    const { error: productError } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', productId);
+      
+    if (productError) {
+      console.error('Error deleting product:', productError);
+      throw new Error('Failed to delete product: ' + productError.message);
+    }
+    
+    console.log('Product deleted successfully');
+  } catch (error) {
+    console.error('Delete product error:', error);
+    throw error;
   }
 }

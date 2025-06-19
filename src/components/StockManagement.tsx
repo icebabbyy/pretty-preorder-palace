@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ const StockManagement = ({
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [loadingSave, setLoadingSave] = useState(false);
+  const [deletingProductId, setDeletingProductId] = useState<number | null>(null);
 
   useEffect(() => {
     console.log("Current products state:", products);
@@ -70,13 +72,26 @@ const StockManagement = ({
   });
 
   const deleteProduct = async (productId: number) => {
-    if (confirm("คุณต้องการลบสินค้านี้หรือไม่?")) {
-      setLoadingSave(true);
+    if (!confirm("คุณต้องการลบสินค้านี้หรือไม่?")) {
+      return;
+    }
+    
+    try {
+      setDeletingProductId(productId);
+      console.log('Starting delete for product:', productId);
+      
       await deleteProductAPI(productId);
+      
+      // Update local state immediately
       const updatedProducts = products.filter(p => p.id !== productId);
       setProducts(updatedProducts);
-      console.log("After delete, products state:", updatedProducts);
-      setLoadingSave(false);
+      console.log("Product deleted successfully, updated products:", updatedProducts);
+      
+    } catch (error) {
+      console.error('Delete product failed:', error);
+      alert('เกิดข้อผิดพลาดในการลบสินค้า: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setDeletingProductId(null);
     }
   };
 
@@ -283,17 +298,21 @@ const StockManagement = ({
                       ? product.options.reduce((acc, opt) => acc + (opt.quantity || 0), 0)
                       : product.quantity || 0;
 
+                    // ใช้รูปแรกจาก images array หรือ fallback ไปยัง product.image
+                    const displayImage = (product.images && product.images.length > 0) 
+                      ? product.images[0].image_url 
+                      : product.image;
+
                     return (
                       <TableRow key={product.id}>
                         <TableCell>
                           <img
-                            src={
-                              product.image ||
-                              (product.options && product.options[0]?.image) ||
-                              "/placeholder.svg"
-                            }
+                            src={displayImage || "/placeholder.svg"}
                             alt={product.name || "Product"}
                             className="w-12 h-12 rounded-lg object-cover border border-purple-200"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "/placeholder.svg";
+                            }}
                           />
                         </TableCell>
                         <TableCell className="font-medium text-purple-600">{product.sku || ""}</TableCell>
@@ -354,8 +373,13 @@ const StockManagement = ({
                               size="sm" 
                               className="text-red-600 hover:bg-red-50"
                               onClick={() => deleteProduct(product.id)}
+                              disabled={deletingProductId === product.id}
                             >
-                              <Trash2 className="w-4 h-4" />
+                              {deletingProductId === product.id ? (
+                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
                             </Button>
                           </div>
                         </TableCell>
