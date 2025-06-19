@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -227,7 +226,7 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
                   </SelectTrigger>
                   <SelectContent>
                     {opts.map(opt => (
-                      <SelectItem key={opt.id} value={opt.id}>
+                      <SelectItem key={opt.id} value={opt.id || `option-${Math.random()}`}>
                         {`${product.name} (${opt.name}) ฿${opt.sellingPrice}`}
                       </SelectItem>
                     ))}

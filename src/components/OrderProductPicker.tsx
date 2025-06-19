@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -42,13 +43,14 @@ const OrderProductPicker: React.FC<OrderProductPickerProps> = ({
             <SelectValue placeholder="เลือกสินค้าหลักจากสต็อค" />
           </SelectTrigger>
           <SelectContent>
-            {filteredProducts.map(product => (
-              <SelectItem key={product.id} value={product.id?.toString() || ""}>
-                {product.name} - ฿{product.sellingPrice?.toLocaleString() || 0} ({product.sku})
-              </SelectItem>
-            ))}
-            {filteredProducts.length === 0 && (
-              <SelectItem value="no-results" disabled>
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map(product => (
+                <SelectItem key={product.id} value={product.id?.toString() || `product-${product.id}`}>
+                  {product.name} - ฿{product.sellingPrice?.toLocaleString() || 0} ({product.sku})
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="no-results-found" disabled>
                 ไม่พบสินค้าที่ค้นหา
               </SelectItem>
             )}
