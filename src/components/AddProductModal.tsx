@@ -7,10 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, Settings } from "lucide-react";
 import { nanoid } from "nanoid";
 import { Product, ProductOption } from "@/types";
 import { generateSKU } from "@/utils/sku";
+import { fetchProductTypes } from "@/utils/productTypes";
+import ProductTypeManagementModal from "./ProductTypeManagementModal";
 
 interface AddProductModalProps {
   open: boolean;
@@ -26,6 +28,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     name: "",
     category: "",
     categories: [],
+    productType: "",
     image: "",
     priceYuan: 0,
     exchangeRate: 1,
@@ -41,6 +44,15 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
 
   const [options, setOptions] = useState<ProductOption[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [productTypes, setProductTypes] = useState<string[]>([]);
+  const [showProductTypeModal, setShowProductTypeModal] = useState(false);
+
+  // Load product types when modal opens
+  useEffect(() => {
+    if (open) {
+      fetchProductTypes().then(setProductTypes).catch(console.error);
+    }
+  }, [open]);
 
   // --- Auto-calculate ราคาบาท (THB) ---
   useEffect(() => {
@@ -85,6 +97,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
         name: "",
         category: "",
         categories: [],
+        productType: "",
         image: "",
         priceYuan: 0,
         exchangeRate: 1,
@@ -208,6 +221,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
         name: "",
         category: "",
         categories: [],
+        productType: "",
         image: "",
         priceYuan: 0,
         exchangeRate: 1,
@@ -226,358 +240,397 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl text-purple-800">
-            {editingProduct ? "แก้ไขสินค้า" : "+ เพิ่มสินค้าใหม่"}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 mt-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="sku">SKU</Label>
-              <Input 
-                id="sku"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                placeholder="รหัสสินค้า (Auto generate ถ้าเว้นว่าง)"
-                className="border border-purple-200 rounded-lg"
-              />
-            </div>
-            <div>
-              <Label htmlFor="name">ชื่อสินค้า *</Label>
-              <Input 
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="ชื่อสินค้า"
-                className="border border-purple-200 rounded-lg"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label>หมวดหมู่ * (เลือกได้หลายหมวดหมู่)</Label>
-            <div className="mt-2 space-y-2">
-              {/* แสดงหมวดหมู่ที่เลือกแล้ว */}
-              {selectedCategories.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {selectedCategories.map((cat) => (
-                    <Badge key={cat} variant="secondary" className="bg-purple-100 text-purple-800 px-3 py-1">
-                      {cat}
-                      <button
-                        type="button"
-                        onClick={() => toggleCategory(cat)}
-                        className="ml-2 text-purple-600 hover:text-purple-800"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-              
-              {/* รายการหมวดหมู่ทั้งหมด */}
-              <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto border border-purple-200 rounded-lg p-3">
-                {categories.map(category => (
-                  <div key={category} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`category-${category}`}
-                      checked={selectedCategories.includes(category)}
-                      onCheckedChange={() => toggleCategory(category)}
-                      className="border-purple-300"
-                    />
-                    <Label 
-                      htmlFor={`category-${category}`} 
-                      className="text-sm cursor-pointer"
-                    >
-                      {category}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* รูปภาพสินค้า: เปลี่ยนเป็นลิงก์ URL */}
-          <div>
-            <Label htmlFor="image">รูปภาพสินค้า (URL)</Label>
-            <Input
-              id="image"
-              type="text"
-              value={formData.image}
-              onChange={e => setFormData({ ...formData, image: e.target.value })}
-              placeholder="https://... (ลิงก์รูปภาพเท่านั้น)"
-              className="border border-purple-200 rounded-lg"
-            />
-            {formData.image && (
-              <div className="mt-2 flex justify-center">
-                <img
-                  src={formData.image}
-                  alt="Preview"
-                  className="w-32 h-32 object-cover rounded border"
-                  onError={e => {
-                    (e.target as HTMLImageElement).src =
-                      "https://ui-avatars.com/api/?name=No+Image";
-                  }}
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white border border-purple-200 rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-purple-800">
+              {editingProduct ? "แก้ไขสินค้า" : "+ เพิ่มสินค้าใหม่"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="sku">SKU</Label>
+                <Input 
+                  id="sku"
+                  value={formData.sku}
+                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                  placeholder="รหัสสินค้า (Auto generate ถ้าเว้นว่าง)"
+                  className="border border-purple-200 rounded-lg"
                 />
               </div>
-            )}
-          </div>
+              <div>
+                <Label htmlFor="name">ชื่อสินค้า *</Label>
+                <Input 
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="ชื่อสินค้า"
+                  className="border border-purple-200 rounded-lg"
+                />
+              </div>
+            </div>
 
-          <div className="grid grid-cols-3 gap-4">
+            {/* ประเภทสินค้า */}
             <div>
-              <Label htmlFor="priceYuan">ราคาหยวน</Label>
-              <Input 
-                id="priceYuan"
-                type="number"
-                step="0.01"
-                value={formData.priceYuan}
-                onChange={(e) => setFormData({ ...formData, priceYuan: parseFloat(e.target.value) || 0 })}
-                placeholder="0"
-                className="border border-purple-200 rounded-lg"
-              />
+              <Label>ประเภทสินค้า</Label>
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <Select value={formData.productType} onValueChange={(value) => setFormData({ ...formData, productType: value })}>
+                    <SelectTrigger className="border border-purple-200 rounded-lg">
+                      <SelectValue placeholder="เลือกประเภทสินค้า" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">ไม่ระบุ</SelectItem>
+                      {productTypes.map(type => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowProductTypeModal(true)}
+                  className="border border-purple-300 text-purple-600 hover:bg-purple-50 rounded-lg"
+                >
+                  <Settings className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="exchangeRate">อัตราแลกเปลี่ยน</Label>
-              <Input 
-                id="exchangeRate"
-                type="number"
-                step="0.0001"
-                value={formData.exchangeRate}
-                onChange={(e) => setFormData({ ...formData, exchangeRate: parseFloat(e.target.value) || 1 })}
-                placeholder="1"
-                className="border border-purple-200 rounded-lg"
-              />
-            </div>
-            <div>
-              <Label htmlFor="priceThb">ราคาบาท</Label>
-              <Input 
-                id="priceThb"
-                type="number"
-                step="0.01"
-                value={formData.priceThb}
-                readOnly
-                className="border border-purple-200 rounded-lg bg-gray-50"
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-4">
+            {/* หมวดหมู่ */}
             <div>
-              <Label htmlFor="importCost">ค่านำเข้า (บาท)</Label>
-              <Input 
-                id="importCost"
-                type="number"
-                step="0.01"
-                value={formData.importCost}
-                onChange={(e) => setFormData({ ...formData, importCost: parseFloat(e.target.value) || 0 })}
-                placeholder="0"
-                className="border border-purple-200 rounded-lg"
-              />
-            </div>
-            <div>
-              <Label htmlFor="costThb">ต้นทุนรวม (บาท)</Label>
-              <Input 
-                id="costThb"
-                type="number"
-                step="0.01"
-                value={formData.costThb}
-                readOnly
-                className="border border-purple-200 rounded-lg bg-gray-50"
-              />
-            </div>
-            <div>
-              <Label htmlFor="sellingPrice">ราคาขาย</Label>
-              <Input 
-                id="sellingPrice"
-                type="number"
-                step="0.01"
-                value={formData.sellingPrice}
-                onChange={(e) => setFormData({ ...formData, sellingPrice: parseFloat(e.target.value) || 0 })}
-                placeholder="0"
-                className="border border-purple-200 rounded-lg"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="status">สถานะ</Label>
-              <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                <SelectTrigger className="border border-purple-200 rounded-lg">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="พรีออเดอร์">พรีออเดอร์</SelectItem>
-                  <SelectItem value="พร้อมส่ง">พร้อมส่ง</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="shipmentDate">วันที่จัดส่ง</Label>
-              <Input 
-                id="shipmentDate"
-                type="date"
-                value={formData.shipmentDate}
-                onChange={(e) => setFormData({ ...formData, shipmentDate: e.target.value })}
-                className="border border-purple-200 rounded-lg"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="link">ลิงก์สินค้า</Label>
-            <Input 
-              id="link"
-              value={formData.link}
-              onChange={(e) => setFormData({ ...formData, link: e.target.value })}
-              placeholder="https://..."
-              className="border border-purple-200 rounded-lg"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="description">รายละเอียด</Label>
-            <Textarea 
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="รายละเอียดสินค้า"
-              className="border border-purple-200 rounded-lg"
-              rows={3}
-            />
-          </div>
-
-          {/* ตัวเลือกสินค้า */}
-          <div>
-            <Label className="font-semibold">ตัวเลือกสินค้า (ถ้ามี)</Label>
-            <div className="space-y-2">
-              {options.map((option, idx) => (
-                <div key={option.id} className="border border-purple-200 p-4 rounded-lg mb-2 relative bg-purple-50">
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-2">
-                      <Label>ชื่อ/ตัวเลือก</Label>
-                      <Input
-                        value={option.name}
-                        onChange={e => updateOption(idx, { name: e.target.value })}
-                        placeholder="เช่น สีแดง, L, หรือลายแมว"
-                        className="border border-purple-200 rounded-lg"
+              <Label>หมวดหมู่ * (เลือกได้หลายหมวดหมู่)</Label>
+              <div className="mt-2 space-y-2">
+                {/* แสดงหมวดหมู่ที่เลือกแล้ว */}
+                {selectedCategories.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {selectedCategories.map((cat) => (
+                      <Badge key={cat} variant="secondary" className="bg-purple-100 text-purple-800 px-3 py-1">
+                        {cat}
+                        <button
+                          type="button"
+                          onClick={() => toggleCategory(cat)}
+                          className="ml-2 text-purple-600 hover:text-purple-800"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                
+                {/* รายการหมวดหมู่ทั้งหมด */}
+                <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto border border-purple-200 rounded-lg p-3">
+                  {categories.map(category => (
+                    <div key={category} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`category-${category}`}
+                        checked={selectedCategories.includes(category)}
+                        onCheckedChange={() => toggleCategory(category)}
+                        className="border-purple-300"
                       />
-                    </div>
-                    <div className="col-span-3">
-                      <Label>SKU Option</Label>
-                      <Input
-                        readOnly
-                        value={option.id}
-                        className="border border-purple-200 rounded-lg bg-gray-50"
-                      />
-                    </div>
-                    {/* เปลี่ยน field รูปภาพใน option ให้เป็น URL ด้วย */}
-                    <div className="col-span-2">
-                      <Label>รูปภาพ (URL)</Label>
-                      <Input
-                        type="text"
-                        value={option.image}
-                        onChange={e => updateOption(idx, { image: e.target.value })}
-                        placeholder="https://... (ลิงก์รูปภาพ)"
-                        className="border border-purple-200 rounded-lg"
-                      />
-                      {option.image && (
-                        <div className="mt-1 flex justify-center">
-                          <img
-                            src={option.image}
-                            alt="Preview"
-                            className="w-12 h-12 object-cover rounded border"
-                            onError={e => {
-                              (e.target as HTMLImageElement).src =
-                                "https://ui-avatars.com/api/?name=No+Image";
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <div className="col-span-2">
-                      <Label>ต้นทุนรวม (บาท)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={option.costThb}
-                        onChange={e => updateOption(idx, { costThb: parseFloat(e.target.value) || 0 })}
-                        className="border border-purple-200 rounded-lg"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label>ราคาขาย (บาท)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={option.sellingPrice}
-                        onChange={e => updateOption(idx, { sellingPrice: parseFloat(e.target.value) || 0 })}
-                        className="border border-purple-200 rounded-lg"
-                      />
-                    </div>
-                    <div className="col-span-1">
-                      <Label>จำนวน</Label>
-                      <Input
-                        type="number"
-                        value={option.quantity}
-                        onChange={e => updateOption(idx, { quantity: parseInt(e.target.value) || 0 })}
-                        className="border border-purple-200 rounded-lg"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label>กำไร</Label>
-                      <Input
-                        readOnly
-                        value={option.profit}
-                        className="border border-purple-200 rounded-lg bg-gray-50"
-                      />
-                    </div>
-                    <div className="col-span-1 flex items-center">
-                      <button
-                        type="button"
-                        className="text-red-500 underline text-sm ml-2"
-                        onClick={() => removeOption(idx)}
-                        tabIndex={-1}
+                      <Label 
+                        htmlFor={`category-${category}`} 
+                        className="text-sm cursor-pointer"
                       >
-                        ลบ
-                      </button>
+                        {category}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* รูปภาพสินค้า: เปลี่ยนเป็นลิงก์ URL */}
+            <div>
+              <Label htmlFor="image">รูปภาพสินค้า (URL)</Label>
+              <Input
+                id="image"
+                type="text"
+                value={formData.image}
+                onChange={e => setFormData({ ...formData, image: e.target.value })}
+                placeholder="https://... (ลิงก์รูปภาพเท่านั้น)"
+                className="border border-purple-200 rounded-lg"
+              />
+              {formData.image && (
+                <div className="mt-2 flex justify-center">
+                  <img
+                    src={formData.image}
+                    alt="Preview"
+                    className="w-32 h-32 object-cover rounded border"
+                    onError={e => {
+                      (e.target as HTMLImageElement).src =
+                        "https://ui-avatars.com/api/?name=No+Image";
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="priceYuan">ราคาหยวน</Label>
+                <Input 
+                  id="priceYuan"
+                  type="number"
+                  step="0.01"
+                  value={formData.priceYuan}
+                  onChange={(e) => setFormData({ ...formData, priceYuan: parseFloat(e.target.value) || 0 })}
+                  placeholder="0"
+                  className="border border-purple-200 rounded-lg"
+                />
+              </div>
+              <div>
+                <Label htmlFor="exchangeRate">อัตราแลกเปลี่ยน</Label>
+                <Input 
+                  id="exchangeRate"
+                  type="number"
+                  step="0.0001"
+                  value={formData.exchangeRate}
+                  onChange={(e) => setFormData({ ...formData, exchangeRate: parseFloat(e.target.value) || 1 })}
+                  placeholder="1"
+                  className="border border-purple-200 rounded-lg"
+                />
+              </div>
+              <div>
+                <Label htmlFor="priceThb">ราคาบาท</Label>
+                <Input 
+                  id="priceThb"
+                  type="number"
+                  step="0.01"
+                  value={formData.priceThb}
+                  readOnly
+                  className="border border-purple-200 rounded-lg bg-gray-50"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="importCost">ค่านำเข้า (บาท)</Label>
+                <Input 
+                  id="importCost"
+                  type="number"
+                  step="0.01"
+                  value={formData.importCost}
+                  onChange={(e) => setFormData({ ...formData, importCost: parseFloat(e.target.value) || 0 })}
+                  placeholder="0"
+                  className="border border-purple-200 rounded-lg"
+                />
+              </div>
+              <div>
+                <Label htmlFor="costThb">ต้นทุนรวม (บาท)</Label>
+                <Input 
+                  id="costThb"
+                  type="number"
+                  step="0.01"
+                  value={formData.costThb}
+                  readOnly
+                  className="border border-purple-200 rounded-lg bg-gray-50"
+                />
+              </div>
+              <div>
+                <Label htmlFor="sellingPrice">ราคาขาย</Label>
+                <Input 
+                  id="sellingPrice"
+                  type="number"
+                  step="0.01"
+                  value={formData.sellingPrice}
+                  onChange={(e) => setFormData({ ...formData, sellingPrice: parseFloat(e.target.value) || 0 })}
+                  placeholder="0"
+                  className="border border-purple-200 rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="status">สถานะ</Label>
+                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                  <SelectTrigger className="border border-purple-200 rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="พรีออเดอร์">พรีออเดอร์</SelectItem>
+                    <SelectItem value="พร้อมส่ง">พร้อมส่ง</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="shipmentDate">วันที่จัดส่ง</Label>
+                <Input 
+                  id="shipmentDate"
+                  type="date"
+                  value={formData.shipmentDate}
+                  onChange={(e) => setFormData({ ...formData, shipmentDate: e.target.value })}
+                  className="border border-purple-200 rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="link">ลิงก์สินค้า</Label>
+              <Input 
+                id="link"
+                value={formData.link}
+                onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+                placeholder="https://..."
+                className="border border-purple-200 rounded-lg"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="description">รายละเอียด</Label>
+              <Textarea 
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="รายละเอียดสินค้า"
+                className="border border-purple-200 rounded-lg"
+                rows={3}
+              />
+            </div>
+
+            {/* ตัวเลือกสินค้า */}
+            <div>
+              <Label className="font-semibold">ตัวเลือกสินค้า (ถ้ามี)</Label>
+              <div className="space-y-2">
+                {options.map((option, idx) => (
+                  <div key={option.id} className="border border-purple-200 p-4 rounded-lg mb-2 relative bg-purple-50">
+                    <div className="grid grid-cols-12 gap-3 items-end">
+                      <div className="col-span-2">
+                        <Label>ชื่อ/ตัวเลือก</Label>
+                        <Input
+                          value={option.name}
+                          onChange={e => updateOption(idx, { name: e.target.value })}
+                          placeholder="เช่น สีแดง, L, หรือลายแมว"
+                          className="border border-purple-200 rounded-lg"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label>SKU Option</Label>
+                        <Input
+                          readOnly
+                          value={option.id}
+                          className="border border-purple-200 rounded-lg bg-gray-50"
+                        />
+                      </div>
+                      {/* เปลี่ยน field รูปภาพใน option ให้เป็น URL ด้วย */}
+                      <div className="col-span-2">
+                        <Label>รูปภาพ (URL)</Label>
+                        <Input
+                          type="text"
+                          value={option.image}
+                          onChange={e => updateOption(idx, { image: e.target.value })}
+                          placeholder="https://... (ลิงก์รูปภาพ)"
+                          className="border border-purple-200 rounded-lg"
+                        />
+                        {option.image && (
+                          <div className="mt-1 flex justify-center">
+                            <img
+                              src={option.image}
+                              alt="Preview"
+                              className="w-12 h-12 object-cover rounded border"
+                              onError={e => {
+                                (e.target as HTMLImageElement).src =
+                                  "https://ui-avatars.com/api/?name=No+Image";
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <div className="col-span-2">
+                        <Label>ต้นทุนรวม (บาท)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={option.costThb}
+                          onChange={e => updateOption(idx, { costThb: parseFloat(e.target.value) || 0 })}
+                          className="border border-purple-200 rounded-lg"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label>ราคาขาย (บาท)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={option.sellingPrice}
+                          onChange={e => updateOption(idx, { sellingPrice: parseFloat(e.target.value) || 0 })}
+                          className="border border-purple-200 rounded-lg"
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        <Label>จำนวน</Label>
+                        <Input
+                          type="number"
+                          value={option.quantity}
+                          onChange={e => updateOption(idx, { quantity: parseInt(e.target.value) || 0 })}
+                          className="border border-purple-200 rounded-lg"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label>กำไร</Label>
+                        <Input
+                          readOnly
+                          value={option.profit}
+                          className="border border-purple-200 rounded-lg bg-gray-50"
+                        />
+                      </div>
+                      <div className="col-span-1 flex items-center">
+                        <button
+                          type="button"
+                          className="text-red-500 underline text-sm ml-2"
+                          onClick={() => removeOption(idx)}
+                          tabIndex={-1}
+                        >
+                          ลบ
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="secondary"
-                className="text-purple-700 border border-purple-300 rounded"
-                onClick={addOption}
-              >
-                + เพิ่มตัวเลือกสินค้า
-              </Button>
+                ))}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="text-purple-700 border border-purple-300 rounded"
+                  onClick={addOption}
+                >
+                  + เพิ่มตัวเลือกสินค้า
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-purple-200">
-          <Button 
-            variant="outline" 
-            onClick={() => onOpenChange(false)}
-            className="border border-purple-300 text-purple-600 hover:bg-purple-50 rounded-lg"
-          >
-            ยกเลิก
-          </Button>
-          <Button 
-            onClick={handleSubmit} 
-            className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
-            disabled={!formData.name || selectedCategories.length === 0}
-          >
-            {editingProduct ? "บันทึกการแก้ไข" : "บันทึก"}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+          <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-purple-200">
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              className="border border-purple-300 text-purple-600 hover:bg-purple-50 rounded-lg"
+            >
+              ยกเลิก
+            </Button>
+            <Button 
+              onClick={handleSubmit} 
+              className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
+              disabled={!formData.name || selectedCategories.length === 0}
+            >
+              {editingProduct ? "บันทึกการแก้ไข" : "บันทึก"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Product Type Management Modal */}
+      <ProductTypeManagementModal
+        open={showProductTypeModal}
+        onOpenChange={setShowProductTypeModal}
+        productTypes={productTypes}
+        setProductTypes={setProductTypes}
+      />
+    </>
   );
 };
 

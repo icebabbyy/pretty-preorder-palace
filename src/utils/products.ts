@@ -10,6 +10,7 @@ function supabaseProductToProduct(p: any): Product {
     name: p.name,
     category: p.category || "",
     categories: p.categories || (p.category ? [p.category] : []), // ใช้ categories หรือสร้างจาก category เดี่ยว
+    productType: p.product_type || "", // เพิ่มประเภทสินค้า
     image: p.image || "",
     priceYuan: p.price_yuan ?? 0,
     exchangeRate: p.exchange_rate ?? 5,
@@ -38,6 +39,7 @@ function productToSupabaseInsert(product: Omit<Product, "id"> | Product) {
     name: product.name,
     category: product.category,
     categories: product.categories || [product.category].filter(Boolean), // เก็บ categories ใน database
+    product_type: product.productType || null, // เพิ่มประเภทสินค้า
     image: product.image,
     price_yuan: product.priceYuan,
     exchange_rate: product.exchangeRate,

@@ -16,6 +16,7 @@ export interface Product {
   name: string;
   category: string;
   categories?: string[]; // เพิ่ม array ของหมวดหมู่หลายอัน
+  productType?: string; // เพิ่มประเภทสินค้า
   image: string;
   priceYuan: number;
   exchangeRate: number;
