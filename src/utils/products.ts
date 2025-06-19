@@ -1,6 +1,7 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/types";
-import { fetchProductImages, type ProductImage } from "./productImages";
+import { fetchProductImages, addProductImage, type ProductImage } from "./productImages";
 
 // Helper: snake_case to camelCase
 async function supabaseProductToProduct(p: any): Promise<Product> {
@@ -93,7 +94,7 @@ export async function fetchProducts(): Promise<Product[]> {
   return products;
 }
 
-export async function addProduct(product: Omit<Product, "id">): Promise<Product> {
+export async function addProduct(product: Omit<Product, "id"> & { images?: ProductImage[] }): Promise<Product> {
   const obj = productToSupabaseInsert(product);
   console.log("addProduct: data to insert:", obj);
 
@@ -118,10 +119,24 @@ export async function addProduct(product: Omit<Product, "id">): Promise<Product>
     );
     throw new Error('Failed to add product');
   }
+
+  // If there are images to add, add them to product_images table
+  if (product.images && product.images.length > 0) {
+    try {
+      for (let i = 0; i < product.images.length; i++) {
+        const image = product.images[i];
+        await addProductImage(data.id, image.image_url, i + 1);
+      }
+    } catch (error) {
+      console.error('Error adding product images:', error);
+      // Don't throw error here, product is already created
+    }
+  }
+
   return await supabaseProductToProduct(data);
 }
 
-export async function updateProduct(product: Product): Promise<Product> {
+export async function updateProduct(product: Product & { images?: ProductImage[] }): Promise<Product> {
   const obj = productToSupabaseInsert(product);
   console.log("updateProduct: data to update:", obj, "ID:", product.id);
   
@@ -140,6 +155,10 @@ export async function updateProduct(product: Product): Promise<Product> {
     );
     throw new Error('Failed to update product');
   }
+
+  // Note: Image management is handled separately by ProductImageManager
+  // so we don't need to update images here
+  
   return await supabaseProductToProduct(data);
 }
 

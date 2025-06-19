@@ -35,8 +35,22 @@ const ProductImageManager = ({
     setImages(initialImages || []);
   }, [initialImages]);
 
+  const validateImageUrl = (url: string): boolean => {
+    try {
+      new URL(url);
+      return /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(url);
+    } catch {
+      return false;
+    }
+  };
+
   const handleAddImage = async () => {
     if (!newImageUrl.trim()) return;
+    
+    if (!validateImageUrl(newImageUrl.trim())) {
+      alert("กรุณาใส่ URL รูปภาพที่ถูกต้อง (.jpg, .jpeg, .png, .gif, .webp, .svg)");
+      return;
+    }
     
     if (productId) {
       // Product exists, save to database
@@ -76,7 +90,8 @@ const ProductImageManager = ({
         await deleteProductImage(imageId);
       } catch (error) {
         console.error("Failed to delete image:", error);
-        alert("ไม่สามารถลบรูปภาพได้");
+        alert("ไม่สามารถลบรู่อภาพได้");
+        setLoading(false);
         return;
       } finally {
         setLoading(false);
@@ -111,13 +126,37 @@ const ProductImageManager = ({
     // If product exists, update database
     if (productId) {
       try {
-        const updates = newImages.map((img, idx) => ({
-          id: img.id,
-          order: idx + 1
-        }));
-        await reorderProductImages(updates);
+        const updates = newImages
+          .filter(img => img.id > 1000) // Only update real database records
+          .map((img, idx) => ({
+            id: img.id,
+            order: idx + 1
+          }));
+        if (updates.length > 0) {
+          await reorderProductImages(updates);
+        }
       } catch (error) {
         console.error("Failed to reorder images:", error);
+      }
+    }
+  };
+
+  const handleUpdateImageUrl = async (index: number, newUrl: string) => {
+    if (!validateImageUrl(newUrl) && newUrl.trim()) {
+      return; // Don't update if invalid URL
+    }
+
+    const updatedImages = [...images];
+    updatedImages[index] = { ...updatedImages[index], image_url: newUrl };
+    setImages(updatedImages);
+    onImagesChange(updatedImages);
+
+    // If product exists and this is a real database record, update it
+    if (productId && updatedImages[index].id > 1000) {
+      try {
+        await updateProductImage(updatedImages[index].id, { image_url: newUrl });
+      } catch (error) {
+        console.error("Failed to update image URL:", error);
       }
     }
   };
@@ -158,7 +197,7 @@ const ProductImageManager = ({
                     className="w-16 h-16 object-cover rounded border"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 
-                        "https://ui-avatars.com/api/?name=No+Image";
+                        "https://ui-avatars.com/api/?name=No+Image&background=f3f4f6&color=6b7280";
                     }}
                   />
                 </div>
@@ -167,15 +206,14 @@ const ProductImageManager = ({
                 <div className="flex-1 min-w-0">
                   <Input
                     value={image.image_url}
-                    onChange={(e) => {
-                      const updatedImages = [...images];
-                      updatedImages[index] = { ...image, image_url: e.target.value };
-                      setImages(updatedImages);
-                      onImagesChange(updatedImages);
-                    }}
+                    onChange={(e) => handleUpdateImageUrl(index, e.target.value)}
                     className="text-sm border border-purple-200 rounded"
                     disabled={disabled}
+                    placeholder="https://... (URL รูปภาพ)"
                   />
+                  {image.image_url && !validateImageUrl(image.image_url) && (
+                    <p className="text-xs text-red-500 mt-1">URL รูปภาพไม่ถูกต้อง</p>
+                  )}
                 </div>
 
                 {/* Controls */}
@@ -223,8 +261,10 @@ const ProductImageManager = ({
       </div>
 
       {images.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
           ยังไม่มีรูปภาพสินค้า
+          <br />
+          <span className="text-sm">กรุณาเพิ่ม URL รูปภาพในช่องด้านบน</span>
         </div>
       )}
     </div>

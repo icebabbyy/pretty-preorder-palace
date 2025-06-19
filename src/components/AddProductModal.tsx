@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,9 @@ import { nanoid } from "nanoid";
 import { Product, ProductOption } from "@/types";
 import { generateSKU } from "@/utils/sku";
 import { fetchProductTypes } from "@/utils/productTypes";
+import { fetchProductImages, addProductImage, type ProductImage } from "@/utils/productImages";
 import ProductTypeManagementModal from "./ProductTypeManagementModal";
+import ProductImageManager from "./ProductImageManager";
 
 interface AddProductModalProps {
   open: boolean;
@@ -46,6 +49,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [productTypes, setProductTypes] = useState<string[]>([]);
   const [showProductTypeModal, setShowProductTypeModal] = useState(false);
+  const [productImages, setProductImages] = useState<ProductImage[]>([]);
 
   // Load product types when modal opens
   useEffect(() => {
@@ -91,6 +95,21 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
       } else {
         setOptions([]);
       }
+      
+      // Load product images if editing existing product
+      if (editingProduct.id) {
+        fetchProductImages(editingProduct.id)
+          .then(images => {
+            setProductImages(images);
+            // Update main image in form data if images exist
+            if (images.length > 0) {
+              setFormData(prev => ({ ...prev, image: images[0].image_url }));
+            }
+          })
+          .catch(console.error);
+      } else {
+        setProductImages([]);
+      }
     } else {
       setFormData({
         sku: "",
@@ -112,6 +131,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
       });
       setSelectedCategories([]);
       setOptions([]);
+      setProductImages([]);
     }
   }, [editingProduct, open]);
 
@@ -193,7 +213,17 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     );
   }, [options.length]);
 
-  const handleSubmit = () => {
+  const handleImagesChange = (images: ProductImage[]) => {
+    setProductImages(images);
+    // Update main image to be the first image
+    if (images.length > 0) {
+      setFormData(prev => ({ ...prev, image: images[0].image_url }));
+    } else {
+      setFormData(prev => ({ ...prev, image: "" }));
+    }
+  };
+
+  const handleSubmit = async () => {
     if (!formData.name || selectedCategories.length === 0) {
       alert("กรุณากรอกชื่อสินค้าและเลือกหมวดหมู่อย่างน้อย 1 หมวดหมู่");
       return;
@@ -209,33 +239,45 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
       categories: selectedCategories,
       category: selectedCategories[0], // หมวดหมู่หลัก
       quantity,
-      options: options.length > 0 ? options : undefined
+      options: options.length > 0 ? options : undefined,
+      images: productImages // Include images data
     };
     
-    onAddProduct(dataToSave);
-    onOpenChange(false);
+    try {
+      await onAddProduct(dataToSave);
+      
+      // If this is a new product, we need to handle images after the product is created
+      // The onAddProduct function should return the product ID for new products
+      // For now, we'll let the parent component handle this
+      
+      onOpenChange(false);
 
-    if (!editingProduct) {
-      setFormData({
-        sku: "",
-        name: "",
-        category: "",
-        categories: [],
-        productType: "",
-        image: "",
-        priceYuan: 0,
-        exchangeRate: 1,
-        priceThb: 0,
-        importCost: 0,
-        costThb: 0,
-        sellingPrice: 0,
-        status: "พรีออเดอร์",
-        shipmentDate: "",
-        link: "",
-        description: ""
-      });
-      setSelectedCategories([]);
-      setOptions([]);
+      if (!editingProduct) {
+        setFormData({
+          sku: "",
+          name: "",
+          category: "",
+          categories: [],
+          productType: "",
+          image: "",
+          priceYuan: 0,
+          exchangeRate: 1,
+          priceThb: 0,
+          importCost: 0,
+          costThb: 0,
+          sellingPrice: 0,
+          status: "พรีออเดอร์",
+          shipmentDate: "",
+          link: "",
+          description: ""
+        });
+        setSelectedCategories([]);
+        setOptions([]);
+        setProductImages([]);
+      }
+    } catch (error) {
+      console.error("Error saving product:", error);
+      alert("เกิดข้อผิดพลาดในการบันทึกสินค้า");
     }
   };
 
@@ -344,31 +386,13 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
               </div>
             </div>
 
-            {/* รูปภาพสินค้า: เปลี่ยนเป็นลิงก์ URL */}
-            <div>
-              <Label htmlFor="image">รูปภาพสินค้า (URL)</Label>
-              <Input
-                id="image"
-                type="text"
-                value={formData.image}
-                onChange={e => setFormData({ ...formData, image: e.target.value })}
-                placeholder="https://... (ลิงก์รูปภาพเท่านั้น)"
-                className="border border-purple-200 rounded-lg"
-              />
-              {formData.image && (
-                <div className="mt-2 flex justify-center">
-                  <img
-                    src={formData.image}
-                    alt="Preview"
-                    className="w-32 h-32 object-cover rounded border"
-                    onError={e => {
-                      (e.target as HTMLImageElement).src =
-                        "https://ui-avatars.com/api/?name=No+Image";
-                    }}
-                  />
-                </div>
-              )}
-            </div>
+            {/* รูปภาพสินค้า - ใช้ ProductImageManager แทน */}
+            <ProductImageManager
+              productId={editingProduct?.id}
+              images={productImages}
+              onImagesChange={handleImagesChange}
+              disabled={false}
+            />
 
             <div className="grid grid-cols-3 gap-4">
               <div>
