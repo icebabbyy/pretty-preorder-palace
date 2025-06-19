@@ -1,3 +1,4 @@
+
 export interface ProductOption {
   id: string;
   name: string;
@@ -14,6 +15,8 @@ export interface ProductImage {
   image_url: string;
   order: number;
   created_at: string;
+  variant_id?: string | null;
+  variant_name?: string | null;
 }
 
 export interface Product {

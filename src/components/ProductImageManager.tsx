@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X, Plus, ArrowUp, ArrowDown } from "lucide-react";
 import {
   addProductImage,
@@ -13,12 +14,14 @@ import {
   type ProductImage,
 } from "@/utils/productImages";
 import { supabase } from "@/integrations/supabase/client";
+import { ProductOption } from "@/types";
 
 interface ProductImageManagerProps {
   productId?: number;
   images: ProductImage[];
   onImagesChange: (images: ProductImage[]) => void;
   disabled?: boolean;
+  productOptions?: ProductOption[];
 }
 
 const ProductImageManager = ({
@@ -26,10 +29,12 @@ const ProductImageManager = ({
   images: initialImages,
   onImagesChange,
   disabled = false,
+  productOptions = [],
 }: ProductImageManagerProps) => {
   const [images, setImages] = useState<ProductImage[]>(initialImages || []);
   const [isUpdating, setIsUpdating] = useState(false);
   const [newImageUrl, setNewImageUrl] = useState("");
+  const [selectedVariant, setSelectedVariant] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -77,16 +82,24 @@ const ProductImageManager = ({
     return () => window.removeEventListener("paste", handlePasteEvent);
   }, [isUpdating]);
 
-  const addImage = async (url: string) => {
+  const addImage = async (url: string, variantId?: string) => {
     if (!url.trim() || isUpdating) return;
     
     try {
       setIsUpdating(true);
-      console.log('Adding image:', url, 'Product ID:', productId);
+      console.log('Adding image:', url, 'Product ID:', productId, 'Variant ID:', variantId);
+      
+      const selectedVariantOption = variantId ? productOptions.find(opt => opt.id === variantId) : null;
       
       if (productId) {
         // For existing products, add to database
-        const newImage = await addProductImage(productId, url.trim());
+        const newImage = await addProductImage(
+          productId, 
+          url.trim(), 
+          undefined, 
+          variantId || undefined, 
+          selectedVariantOption?.name || undefined
+        );
         const updated = [...images, newImage];
         setImages(updated);
         onImagesChange(updated);
@@ -98,7 +111,9 @@ const ProductImageManager = ({
           product_id: 0,
           image_url: url.trim(),
           order: images.length + 1,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          variant_id: variantId || null,
+          variant_name: selectedVariantOption?.name || null
         };
         const updated = [...images, tempImage];
         setImages(updated);
@@ -115,8 +130,9 @@ const ProductImageManager = ({
 
   const handleAddImageUrl = async () => {
     if (!newImageUrl.trim()) return;
-    await addImage(newImageUrl);
+    await addImage(newImageUrl, selectedVariant || undefined);
     setNewImageUrl("");
+    setSelectedVariant("");
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,9 +142,10 @@ const ProductImageManager = ({
     setIsUpdating(true);
     const url = await uploadImageToStorage(file);
     if (url) {
-      await addImage(url);
+      await addImage(url, selectedVariant || undefined);
     }
     setIsUpdating(false);
+    setSelectedVariant("");
     
     // Reset file input
     if (fileInputRef.current) {
@@ -212,6 +229,34 @@ const ProductImageManager = ({
     }
   };
 
+  const handleVariantChange = async (imageIndex: number, variantId: string) => {
+    if (isUpdating) return;
+    
+    try {
+      setIsUpdating(true);
+      const updated = [...images];
+      const selectedVariantOption = variantId ? productOptions.find(opt => opt.id === variantId) : null;
+      
+      updated[imageIndex].variant_id = variantId || null;
+      updated[imageIndex].variant_name = selectedVariantOption?.name || null;
+      
+      setImages(updated);
+      onImagesChange(updated);
+      
+      if (productId && updated[imageIndex].id > 0) {
+        await updateProductImage(updated[imageIndex].id, { 
+          variant_id: variantId || null,
+          variant_name: selectedVariantOption?.name || null
+        });
+      }
+    } catch (error) {
+      console.error('Error updating image variant:', error);
+      alert('เกิดข้อผิดพลาดในการอัปเดตตัวเลือกสินค้า');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Label>จัดการรูปภาพสินค้า</Label>
@@ -225,6 +270,26 @@ const ProductImageManager = ({
         onChange={handleFileUpload}
         disabled={disabled || isUpdating}
       />
+      
+      {/* Variant Selection for New Images */}
+      {productOptions.length > 0 && (
+        <div className="space-y-2">
+          <Label>เลือกตัวเลือกสินค้า (ไม่บังคับ)</Label>
+          <Select value={selectedVariant} onValueChange={setSelectedVariant}>
+            <SelectTrigger>
+              <SelectValue placeholder="เลือกตัวเลือกสินค้า หรือปล่อยว่างสำหรับรูปหลัก" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">รูปหลักของสินค้า</SelectItem>
+              {productOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       
       {/* Add Image Controls */}
       <div className="flex gap-2">
@@ -264,11 +329,32 @@ const ProductImageManager = ({
                   (e.target as HTMLImageElement).src = "/placeholder.svg";
                 }}
               />
-              <Input
-                value={img.image_url}
-                onChange={(e) => handleImageUrlChange(index, e.target.value)}
-                disabled={isUpdating}
-              />
+              <div className="flex-1 space-y-2">
+                <Input
+                  value={img.image_url}
+                  onChange={(e) => handleImageUrlChange(index, e.target.value)}
+                  disabled={isUpdating}
+                />
+                {productOptions.length > 0 && (
+                  <Select 
+                    value={img.variant_id || ""} 
+                    onValueChange={(value) => handleVariantChange(index, value)}
+                    disabled={isUpdating}
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue placeholder="เลือกตัวเลือกสินค้า" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">รูปหลักของสินค้า</SelectItem>
+                      {productOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
               <div className="flex gap-1">
                 <Button
                   size="sm"
@@ -296,11 +382,18 @@ const ProductImageManager = ({
                   <X className="w-4 h-4" />
                 </Button>
               </div>
-              {index === 0 && (
-                <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded">
-                  รูปหลัก
-                </span>
-              )}
+              <div className="flex flex-col gap-1">
+                {index === 0 && !img.variant_id && (
+                  <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded">
+                    รูปหลัก
+                  </span>
+                )}
+                {img.variant_id && (
+                  <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
+                    {img.variant_name}
+                  </span>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -308,7 +401,7 @@ const ProductImageManager = ({
       </div>
       
       <p className="text-sm text-gray-500">
-        💡 เคล็ดลับ: คุณสามารถ Paste รูปภาพจาก clipboard ได้โดยตรง (Ctrl+V)
+        💡 เคล็ดลับ: คุณสามารถ Paste รูปภาพจาก clipboard ได้โดยตรง (Ctrl+V) และเลือกตัวเลือกสินค้าเพื่อจัดหมวดหมู่รูปภาพ
       </p>
     </div>
   );

@@ -148,6 +148,8 @@ export type Database = {
           image_url: string | null
           order: number | null
           product_id: number | null
+          variant_id: string | null
+          variant_name: string | null
         }
         Insert: {
           created_at?: string
@@ -155,6 +157,8 @@ export type Database = {
           image_url?: string | null
           order?: number | null
           product_id?: number | null
+          variant_id?: string | null
+          variant_name?: string | null
         }
         Update: {
           created_at?: string
@@ -162,6 +166,8 @@ export type Database = {
           image_url?: string | null
           order?: number | null
           product_id?: number | null
+          variant_id?: string | null
+          variant_name?: string | null
         }
         Relationships: [
           {

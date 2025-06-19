@@ -125,7 +125,13 @@ export async function addProduct(product: Omit<Product, "id"> & { images?: Produ
     try {
       for (let i = 0; i < product.images.length; i++) {
         const image = product.images[i];
-        await addProductImage(data.id, image.image_url, i + 1);
+        await addProductImage(
+          data.id, 
+          image.image_url, 
+          i + 1, 
+          image.variant_id || undefined, 
+          image.variant_name || undefined
+        );
       }
     } catch (error) {
       console.error('Error adding product images:', error);

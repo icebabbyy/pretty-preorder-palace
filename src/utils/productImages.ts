@@ -7,6 +7,8 @@ export interface ProductImage {
   image_url: string;
   order: number;
   created_at: string;
+  variant_id?: string | null;
+  variant_name?: string | null;
 }
 
 // Fetch all images for a product
@@ -29,7 +31,9 @@ export async function fetchProductImages(productId: number): Promise<ProductImag
 export async function addProductImage(
   productId: number, 
   imageUrl: string, 
-  order?: number
+  order?: number,
+  variantId?: string,
+  variantName?: string
 ): Promise<ProductImage> {
   // If no order specified, get the next order number
   if (order === undefined) {
@@ -48,7 +52,9 @@ export async function addProductImage(
     .insert([{
       product_id: productId,
       image_url: imageUrl,
-      order: order
+      order: order,
+      variant_id: variantId || null,
+      variant_name: variantName || null
     }])
     .select()
     .single();
@@ -64,7 +70,12 @@ export async function addProductImage(
 // Update image order or URL
 export async function updateProductImage(
   imageId: number, 
-  updates: { image_url?: string; order?: number }
+  updates: { 
+    image_url?: string; 
+    order?: number;
+    variant_id?: string | null;
+    variant_name?: string | null;
+  }
 ): Promise<ProductImage> {
   const { data, error } = await supabase
     .from('product_images')
