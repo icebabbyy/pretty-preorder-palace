@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -248,14 +249,21 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                         <SelectValue placeholder="เลือกตัวเลือก" />
                       </SelectTrigger>
                       <SelectContent>
-                        {options.map(opt => (
-                          <SelectItem 
-                            key={opt.id} 
-                            value={opt.id ? opt.id : `option-${Math.random().toString(36).substr(2, 9)}`}
-                          >
-                            {opt.name} - ฿{opt.sellingPrice?.toLocaleString() || 0} ({opt.id})
-                          </SelectItem>
-                        ))}
+                        {options.map((opt, index) => {
+                          // Ensure we never have an empty string as value
+                          const optionValue = opt.id && opt.id.trim() !== '' 
+                            ? opt.id 
+                            : `option-${index}-${Math.random().toString(36).substr(2, 9)}`;
+                          
+                          return (
+                            <SelectItem 
+                              key={optionValue} 
+                              value={optionValue}
+                            >
+                              {opt.name} - ฿{opt.sellingPrice?.toLocaleString() || 0} ({opt.id})
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <Button
