@@ -45,7 +45,10 @@ const OrderProductPicker: React.FC<OrderProductPickerProps> = ({
           <SelectContent>
             {filteredProducts.length > 0 ? (
               filteredProducts.map(product => (
-                <SelectItem key={product.id} value={product.id?.toString() || `product-${product.id}`}>
+                <SelectItem 
+                  key={product.id} 
+                  value={product.id ? product.id.toString() : `product-${Math.random().toString(36).substr(2, 9)}`}
+                >
                   {product.name} - ฿{product.sellingPrice?.toLocaleString() || 0} ({product.sku})
                 </SelectItem>
               ))

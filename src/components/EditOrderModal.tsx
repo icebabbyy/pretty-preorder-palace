@@ -226,7 +226,10 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
                   </SelectTrigger>
                   <SelectContent>
                     {opts.map(opt => (
-                      <SelectItem key={opt.id} value={opt.id || `option-${Math.random()}`}>
+                      <SelectItem 
+                        key={opt.id} 
+                        value={opt.id ? opt.id : `option-${Math.random().toString(36).substr(2, 9)}`}
+                      >
                         {`${product.name} (${opt.name}) ฿${opt.sellingPrice}`}
                       </SelectItem>
                     ))}
