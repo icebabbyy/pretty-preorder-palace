@@ -212,13 +212,13 @@ export type Database = {
           name: string
           options: Json | null
           price_yuan: number
+          product_status: string | null
           product_type: string | null
           quantity: number
           selling_price: number
           shipment_date: string | null
           shipping_fee: string | null
           sku: string
-          status: string | null
           updated_at: string | null
         }
         Insert: {
@@ -234,13 +234,13 @@ export type Database = {
           name: string
           options?: Json | null
           price_yuan?: number
+          product_status?: string | null
           product_type?: string | null
           quantity?: number
           selling_price?: number
           shipment_date?: string | null
           shipping_fee?: string | null
           sku: string
-          status?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -256,13 +256,13 @@ export type Database = {
           name?: string
           options?: Json | null
           price_yuan?: number
+          product_status?: string | null
           product_type?: string | null
           quantity?: number
           selling_price?: number
           shipment_date?: string | null
           shipping_fee?: string | null
           sku?: string
-          status?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -319,10 +319,10 @@ export type Database = {
           image: string | null
           name: string | null
           options: Json | null
+          product_status: string | null
           selling_price: number | null
           shipment_date: string | null
           sku: string | null
-          "status TEXT DEFAULT": string | null
         }
         Insert: {
           category?: string | null
@@ -331,10 +331,10 @@ export type Database = {
           image?: string | null
           name?: string | null
           options?: Json | null
+          product_status?: string | null
           selling_price?: number | null
           shipment_date?: string | null
           sku?: string | null
-          "status TEXT DEFAULT"?: string | null
         }
         Update: {
           category?: string | null
@@ -343,10 +343,10 @@ export type Database = {
           image?: string | null
           name?: string | null
           options?: Json | null
+          product_status?: string | null
           selling_price?: number | null
           shipment_date?: string | null
           sku?: string | null
-          "status TEXT DEFAULT"?: string | null
         }
         Relationships: []
       }

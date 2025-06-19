@@ -18,7 +18,7 @@ function supabaseProductToProduct(p: any): Product {
     importCost: p.import_cost ?? 0,
     costThb: p.cost_thb ?? 0,
     sellingPrice: p.selling_price ?? 0,
-    status: p.status || "",
+    status: p.product_status || "", // Use product_status column
     shipmentDate: p.shipment_date ? p.shipment_date.toString() : "",
     link: p.link || "",
     description: p.description || "",
@@ -28,7 +28,7 @@ function supabaseProductToProduct(p: any): Product {
 }
 
 // Helper: camelCase to snake_case for insert
-function productToSupabaseInsert(product: Omit<Product, "id"> | Product) {
+function productToSupabaseInsert(product: Omit<Product, "id") | Product) {
   // Ensure quantity is always a valid number, never null or undefined
   const quantity = typeof product.quantity === "number" && !isNaN(product.quantity) 
     ? product.quantity 
@@ -50,7 +50,7 @@ function productToSupabaseInsert(product: Omit<Product, "id"> | Product) {
     import_cost: product.importCost,
     cost_thb: product.costThb,
     selling_price: product.sellingPrice,
-    status: product.status,
+    product_status: product.status, // Use product_status column
     shipment_date:
       product.shipmentDate && product.shipmentDate !== ""
         ? product.shipmentDate
