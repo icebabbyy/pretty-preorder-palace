@@ -40,14 +40,16 @@ const EditOrderOptionSelector: React.FC<EditOrderOptionSelectorProps> = ({
         </SelectTrigger>
         <SelectContent>
           {opts.map((opt, index) => {
-            // Ensure we never have an empty string as value
-            const optionValue = opt.id && opt.id.trim() !== '' 
-              ? opt.id 
-              : `option-${index}-${Math.random().toString(36).substr(2, 9)}`;
+            // Create a guaranteed non-empty value
+            const optionValue = (opt.id && typeof opt.id === 'string' && opt.id.trim() !== '') 
+              ? opt.id.trim()
+              : `fallback-edit-option-${index}-${Date.now()}`;
+            
+            console.log('Edit option value generated:', optionValue, 'for option:', opt);
             
             return (
               <SelectItem 
-                key={optionValue} 
+                key={`edit-option-${index}-${optionValue}`} 
                 value={optionValue}
               >
                 {`${product?.name} (${opt.name}) ฿${opt.sellingPrice}`}

@@ -45,14 +45,16 @@ const OrderProductPicker: React.FC<OrderProductPickerProps> = ({
           <SelectContent>
             {filteredProducts.length > 0 ? (
               filteredProducts.map((product, index) => {
-                // Ensure we never have an empty string as value
-                const productValue = product.id && product.id.toString().trim() !== '' 
-                  ? product.id.toString() 
-                  : `product-${index}-${Math.random().toString(36).substr(2, 9)}`;
+                // Create a guaranteed non-empty value
+                const productValue = (product.id && product.id.toString().trim() !== '') 
+                  ? product.id.toString().trim()
+                  : `fallback-product-${index}-${Date.now()}`;
+                
+                console.log('Product value generated:', productValue, 'for product:', product);
                 
                 return (
                   <SelectItem 
-                    key={productValue} 
+                    key={`product-${index}-${productValue}`} 
                     value={productValue}
                   >
                     {product.name} - ฿{product.sellingPrice?.toLocaleString() || 0} ({product.sku})
@@ -60,7 +62,7 @@ const OrderProductPicker: React.FC<OrderProductPickerProps> = ({
                 );
               })
             ) : (
-              <SelectItem value="no-results-found" disabled>
+              <SelectItem value="no-results-found-placeholder" disabled>
                 ไม่พบสินค้าที่ค้นหา
               </SelectItem>
             )}

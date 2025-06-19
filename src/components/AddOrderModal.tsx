@@ -250,17 +250,19 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                       </SelectTrigger>
                       <SelectContent>
                         {options.map((opt, index) => {
-                          // Ensure we never have an empty string as value
-                          const optionValue = opt.id && opt.id.trim() !== '' 
-                            ? opt.id 
-                            : `option-${index}-${Math.random().toString(36).substr(2, 9)}`;
+                          // Create a guaranteed non-empty value
+                          const optionValue = (opt.id && typeof opt.id === 'string' && opt.id.trim() !== '') 
+                            ? opt.id.trim()
+                            : `fallback-option-${index}-${Date.now()}`;
+                          
+                          console.log('Option value generated:', optionValue, 'for option:', opt);
                           
                           return (
                             <SelectItem 
-                              key={optionValue} 
+                              key={`option-${index}-${optionValue}`} 
                               value={optionValue}
                             >
-                              {opt.name} - ฿{opt.sellingPrice?.toLocaleString() || 0} ({opt.id})
+                              {opt.name} - ฿{opt.sellingPrice?.toLocaleString() || 0} ({opt.id || 'ไม่มี ID'})
                             </SelectItem>
                           );
                         })}
