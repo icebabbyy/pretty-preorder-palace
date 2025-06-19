@@ -29,6 +29,7 @@ const ProductImageManager = ({
 }: ProductImageManagerProps) => {
   const [images, setImages] = useState<ProductImage[]>(initialImages || []);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [newImageUrl, setNewImageUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -36,47 +37,102 @@ const ProductImageManager = ({
   }, [initialImages]);
 
   const uploadImageToStorage = async (file: File): Promise<string | null> => {
-    const filename = `${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from("product-images").upload(filename, file);
-    if (error) return null;
-    const { data } = supabase.storage.from("product-images").getPublicUrl(filename);
-    return data.publicUrl;
+    try {
+      const filename = `${Date.now()}-${file.name}`;
+      const { error } = await supabase.storage.from("product-images").upload(filename, file);
+      if (error) {
+        console.error('Upload error:', error);
+        return null;
+      }
+      const { data } = supabase.storage.from("product-images").getPublicUrl(filename);
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Upload error:', error);
+      return null;
+    }
   };
 
   const handlePaste = async (e: ClipboardEvent) => {
     const items = e.clipboardData?.items;
-    if (!items) return;
+    if (!items || isUpdating) return;
+    
     for (const item of items) {
       if (item.type.indexOf("image") !== -1) {
         const file = item.getAsFile();
         if (file) {
+          setIsUpdating(true);
           const url = await uploadImageToStorage(file);
-          if (url) await addImage(url);
+          if (url) {
+            await addImage(url);
+          }
+          setIsUpdating(false);
         }
       }
     }
   };
 
   useEffect(() => {
-    window.addEventListener("paste", handlePaste as any);
-    return () => window.removeEventListener("paste", handlePaste as any);
-  }, []);
+    const handlePasteEvent = (e: Event) => handlePaste(e as ClipboardEvent);
+    window.addEventListener("paste", handlePasteEvent);
+    return () => window.removeEventListener("paste", handlePasteEvent);
+  }, [isUpdating]);
 
   const addImage = async (url: string) => {
-    if (!url.trim()) return;
-    if (productId) {
-      try {
-        setIsUpdating(true);
+    if (!url.trim() || isUpdating) return;
+    
+    try {
+      setIsUpdating(true);
+      console.log('Adding image:', url, 'Product ID:', productId);
+      
+      if (productId) {
+        // For existing products, add to database
         const newImage = await addProductImage(productId, url.trim());
         const updated = [...images, newImage];
         setImages(updated);
         onImagesChange(updated);
-      } catch (error) {
-        console.error('Error adding image:', error);
-        alert('เกิดข้อผิดพลาดในการเพิ่มรูปภาพ');
-      } finally {
-        setIsUpdating(false);
+        console.log('Image added to database:', newImage);
+      } else {
+        // For new products, add to local state
+        const tempImage: ProductImage = {
+          id: Date.now(), // Temporary ID
+          product_id: 0,
+          image_url: url.trim(),
+          order: images.length + 1,
+          created_at: new Date().toISOString()
+        };
+        const updated = [...images, tempImage];
+        setImages(updated);
+        onImagesChange(updated);
+        console.log('Image added to local state:', tempImage);
       }
+    } catch (error) {
+      console.error('Error adding image:', error);
+      alert('เกิดข้อผิดพลาดในการเพิ่มรูปภาพ: ' + error.message);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleAddImageUrl = async () => {
+    if (!newImageUrl.trim()) return;
+    await addImage(newImageUrl);
+    setNewImageUrl("");
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || isUpdating) return;
+    
+    setIsUpdating(true);
+    const url = await uploadImageToStorage(file);
+    if (url) {
+      await addImage(url);
+    }
+    setIsUpdating(false);
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -159,25 +215,43 @@ const ProductImageManager = ({
   return (
     <div className="space-y-4">
       <Label>จัดการรูปภาพสินค้า</Label>
+      
+      {/* File Upload */}
       <Input
         type="file"
         accept="image/*"
         ref={fileInputRef}
         className="hidden"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            const url = await uploadImageToStorage(file);
-            if (url) await addImage(url);
-          }
-        }}
-      />
-      <Button 
-        onClick={() => fileInputRef.current?.click()} 
+        onChange={handleFileUpload}
         disabled={disabled || isUpdating}
-      >
-        {isUpdating ? 'กำลังดำเนินการ...' : 'เพิ่มรูปภาพ'}
-      </Button>
+      />
+      
+      {/* Add Image Controls */}
+      <div className="flex gap-2">
+        <Button 
+          onClick={() => fileInputRef.current?.click()} 
+          disabled={disabled || isUpdating}
+          variant="outline"
+        >
+          {isUpdating ? 'กำลังอัปโหลด...' : 'เลือกไฟล์'}
+        </Button>
+        <div className="flex-1 flex gap-2">
+          <Input
+            value={newImageUrl}
+            onChange={(e) => setNewImageUrl(e.target.value)}
+            placeholder="หรือใส่ URL รูปภาพ"
+            disabled={disabled || isUpdating}
+          />
+          <Button 
+            onClick={handleAddImageUrl}
+            disabled={disabled || isUpdating || !newImageUrl.trim()}
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+      
+      {/* Images List */}
       <div className="grid gap-3">
         {images.map((img, index) => (
           <Card key={`${img.id}-${index}`} className="border">
@@ -232,6 +306,10 @@ const ProductImageManager = ({
         ))}
         {images.length === 0 && <p className="text-center text-gray-500">ยังไม่มีรูปภาพสินค้า</p>}
       </div>
+      
+      <p className="text-sm text-gray-500">
+        💡 เคล็ดลับ: คุณสามารถ Paste รูปภาพจาก clipboard ได้โดยตรง (Ctrl+V)
+      </p>
     </div>
   );
 };
