@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,13 +37,22 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
   const filteredOrders = orders.filter(order => {
+    // Ensure order has valid structure and items array
+    if (!order || !Array.isArray(order.items)) {
+      console.warn('Order with invalid structure detected:', order);
+      return false;
+    }
+
     const matchesSearch =
-      Array.isArray(order.items) &&
       order.items.some(item =>
-        item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.sku.toLowerCase().includes(searchTerm.toLowerCase())
+        // Safe null/undefined checks for item properties
+        (item?.productName && typeof item.productName === 'string' && 
+         item.productName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item?.sku && typeof item.sku === 'string' && 
+         item.sku.toLowerCase().includes(searchTerm.toLowerCase()))
       ) ||
-      order.username.toLowerCase().includes(searchTerm.toLowerCase());
+      (order.username && typeof order.username === 'string' && 
+       order.username.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     
