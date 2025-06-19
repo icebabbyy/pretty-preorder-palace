@@ -1,5 +1,3 @@
-
-
 export interface ProductOption {
   id: string;
   name: string;
@@ -10,14 +8,23 @@ export interface ProductOption {
   profit: number;
 }
 
+export interface ProductImage {
+  id: number;
+  product_id: number;
+  image_url: string;
+  order: number;
+  created_at: string;
+}
+
 export interface Product {
   id?: number; // Made optional so local state "new product" can omit it
   sku: string;
   name: string;
   category: string;
-  categories?: string[]; // เพิ่ม array ของหมวดหมู่หลายอัน
-  productType?: string; // เพิ่มประเภทสินค้า
+  categories: string[];
+  productType: string;
   image: string;
+  images?: ProductImage[]; // Add images array
   priceYuan: number;
   exchangeRate: number;
   priceThb: number;
@@ -29,7 +36,7 @@ export interface Product {
   link: string;
   description: string;
   quantity?: number;
-  options?: ProductOption[]; // เพิ่ม array ของตัวเลือก
+  options?: ProductOption[];
 }
 
 export interface OrderItem {
@@ -58,4 +65,3 @@ export interface Order {
   username: string;
   address: string;
 }
-

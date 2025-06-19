@@ -1,24 +1,36 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/types";
+import { fetchProductImages, type ProductImage } from "./productImages";
 
 // Helper: snake_case to camelCase
-function supabaseProductToProduct(p: any): Product {
+async function supabaseProductToProduct(p: any): Promise<Product> {
+  // Fetch product images from product_images table
+  let productImages: ProductImage[] = [];
+  try {
+    productImages = await fetchProductImages(p.id);
+  } catch (error) {
+    console.warn('Failed to fetch product images for product', p.id, error);
+  }
+
+  // Use first image from product_images table, fallback to existing image field
+  const mainImage = productImages.length > 0 ? productImages[0].image_url : (p.image || "");
+
   return {
     id: p.id,
     sku: p.sku,
     name: p.name,
     category: p.category || "",
-    categories: p.category ? [p.category] : [], // Create categories array from single category
+    categories: p.category ? [p.category] : [],
     productType: p.product_type || "",
-    image: p.image || "",
+    image: mainImage,
+    images: productImages, // Add all images array
     priceYuan: p.price_yuan ?? 0,
     exchangeRate: p.exchange_rate ?? 5,
     priceThb: (p.price_yuan ?? 0) * (p.exchange_rate ?? 1),
     importCost: p.import_cost ?? 0,
     costThb: p.cost_thb ?? 0,
     sellingPrice: p.selling_price ?? 0,
-    status: p.product_status || "", // Use product_status column
+    status: p.product_status || "",
     shipmentDate: p.shipment_date ? p.shipment_date.toString() : "",
     link: p.link || "",
     description: p.description || "",
@@ -73,12 +85,18 @@ export async function fetchProducts(): Promise<Product[]> {
     throw new Error('Failed to fetch products');
   }
 
-  return (data ?? []).map(supabaseProductToProduct);
+  // Convert each product with images
+  const products = await Promise.all(
+    (data ?? []).map(supabaseProductToProduct)
+  );
+
+  return products;
 }
 
 export async function addProduct(product: Omit<Product, "id">): Promise<Product> {
   const obj = productToSupabaseInsert(product);
   console.log("addProduct: data to insert:", obj);
+
   // log ว่า fields สำคัญขาดหรือไม่
   ['sku', 'name', 'price_yuan', 'quantity'].forEach((key) => {
     if (!obj[key]) {
@@ -90,7 +108,7 @@ export async function addProduct(product: Omit<Product, "id">): Promise<Product>
     .from('products')
     .insert([obj as any])
     .select()
-    .maybeSingle();
+    .single();
   if (error) {
     console.error('Error adding product:', error);
     alert(
@@ -100,18 +118,19 @@ export async function addProduct(product: Omit<Product, "id">): Promise<Product>
     );
     throw new Error('Failed to add product');
   }
-  return supabaseProductToProduct(data);
+  return await supabaseProductToProduct(data);
 }
 
 export async function updateProduct(product: Product): Promise<Product> {
   const obj = productToSupabaseInsert(product);
   console.log("updateProduct: data to update:", obj, "ID:", product.id);
+  
   const { data, error } = await supabase
     .from('products')
     .update({ ...obj, updated_at: new Date().toISOString() } as any)
     .eq('id', product.id)
     .select()
-    .maybeSingle();
+    .single();
   if (error) {
     console.error('Error updating product:', error);
     alert(
@@ -121,7 +140,7 @@ export async function updateProduct(product: Product): Promise<Product> {
     );
     throw new Error('Failed to update product');
   }
-  return supabaseProductToProduct(data);
+  return await supabaseProductToProduct(data);
 }
 
 export async function deleteProduct(productId: number): Promise<void> {
