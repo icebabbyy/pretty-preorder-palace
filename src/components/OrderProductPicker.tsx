@@ -44,14 +44,21 @@ const OrderProductPicker: React.FC<OrderProductPickerProps> = ({
           </SelectTrigger>
           <SelectContent>
             {filteredProducts.length > 0 ? (
-              filteredProducts.map(product => (
-                <SelectItem 
-                  key={product.id} 
-                  value={product.id ? product.id.toString() : `product-${Math.random().toString(36).substr(2, 9)}`}
-                >
-                  {product.name} - ฿{product.sellingPrice?.toLocaleString() || 0} ({product.sku})
-                </SelectItem>
-              ))
+              filteredProducts.map((product, index) => {
+                // Ensure we never have an empty string as value
+                const productValue = product.id && product.id.toString().trim() !== '' 
+                  ? product.id.toString() 
+                  : `product-${index}-${Math.random().toString(36).substr(2, 9)}`;
+                
+                return (
+                  <SelectItem 
+                    key={productValue} 
+                    value={productValue}
+                  >
+                    {product.name} - ฿{product.sellingPrice?.toLocaleString() || 0} ({product.sku})
+                  </SelectItem>
+                );
+              })
             ) : (
               <SelectItem value="no-results-found" disabled>
                 ไม่พบสินค้าที่ค้นหา

@@ -39,14 +39,21 @@ const EditOrderOptionSelector: React.FC<EditOrderOptionSelectorProps> = ({
           <SelectValue placeholder="เลือกตัวเลือกสินค้า" />
         </SelectTrigger>
         <SelectContent>
-          {opts.map(opt => (
-            <SelectItem 
-              key={opt.id} 
-              value={opt.id ? opt.id : `option-${Math.random().toString(36).substr(2, 9)}`}
-            >
-              {`${product?.name} (${opt.name}) ฿${opt.sellingPrice}`}
-            </SelectItem>
-          ))}
+          {opts.map((opt, index) => {
+            // Ensure we never have an empty string as value
+            const optionValue = opt.id && opt.id.trim() !== '' 
+              ? opt.id 
+              : `option-${index}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            return (
+              <SelectItem 
+                key={optionValue} 
+                value={optionValue}
+              >
+                {`${product?.name} (${opt.name}) ฿${opt.sellingPrice}`}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
       <div className="flex gap-2 mt-2">
