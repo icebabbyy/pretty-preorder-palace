@@ -45,24 +45,38 @@ const OrderProductPicker: React.FC<OrderProductPickerProps> = ({
           <SelectContent>
             {filteredProducts.length > 0 ? (
               filteredProducts.map((product, index) => {
-                // Create a guaranteed non-empty value
-                const productValue = (product.id && product.id.toString().trim() !== '') 
-                  ? product.id.toString().trim()
-                  : `fallback-product-${index}-${Date.now()}`;
+                // Ensure we have a non-empty value - triple validation
+                let productValue = "";
                 
-                console.log('Product value generated:', productValue, 'for product:', product);
+                if (product.id && product.id.toString().trim() !== '') {
+                  productValue = product.id.toString().trim();
+                } else if (product.sku && typeof product.sku === 'string' && product.sku.trim() !== '') {
+                  productValue = `product-sku-${product.sku.trim()}-${index}`;
+                } else if (product.name && typeof product.name === 'string' && product.name.trim() !== '') {
+                  productValue = `product-name-${product.name.trim()}-${index}`;
+                } else {
+                  productValue = `fallback-product-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                }
+                
+                console.log('Product Picker - Product value generated:', productValue, 'for product:', product);
+                
+                // Additional safety check before rendering
+                if (!productValue || productValue.trim() === '') {
+                  console.error('Empty product value detected, skipping product:', product);
+                  return null;
+                }
                 
                 return (
                   <SelectItem 
-                    key={`product-${index}-${productValue}`} 
+                    key={`product-picker-${index}-${productValue}`} 
                     value={productValue}
                   >
-                    {product.name} - ฿{product.sellingPrice?.toLocaleString() || 0} ({product.sku})
+                    {product.name} - ฿{product.sellingPrice?.toLocaleString() || 0} ({product.sku || productValue})
                   </SelectItem>
                 );
-              })
+              }).filter(Boolean)
             ) : (
-              <SelectItem value="no-results-found-placeholder" disabled>
+              <SelectItem value="no-results-found-placeholder-unique" disabled>
                 ไม่พบสินค้าที่ค้นหา
               </SelectItem>
             )}

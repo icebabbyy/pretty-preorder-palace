@@ -40,22 +40,34 @@ const EditOrderOptionSelector: React.FC<EditOrderOptionSelectorProps> = ({
         </SelectTrigger>
         <SelectContent>
           {opts.map((opt, index) => {
-            // Create a guaranteed non-empty value
-            const optionValue = (opt.id && typeof opt.id === 'string' && opt.id.trim() !== '') 
-              ? opt.id.trim()
-              : `fallback-edit-option-${index}-${Date.now()}`;
+            // Ensure we have a non-empty value - triple validation
+            let optionValue = "";
             
-            console.log('Edit option value generated:', optionValue, 'for option:', opt);
+            if (opt.id && typeof opt.id === 'string' && opt.id.trim() !== '') {
+              optionValue = opt.id.trim();
+            } else if (opt.name && typeof opt.name === 'string' && opt.name.trim() !== '') {
+              optionValue = `edit-option-name-${opt.name.trim()}-${index}`;
+            } else {
+              optionValue = `fallback-edit-option-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            }
+            
+            console.log('Edit Option Selector - Option value generated:', optionValue, 'for option:', opt);
+            
+            // Additional safety check before rendering
+            if (!optionValue || optionValue.trim() === '') {
+              console.error('Empty edit option value detected, skipping option:', opt);
+              return null;
+            }
             
             return (
               <SelectItem 
-                key={`edit-option-${index}-${optionValue}`} 
+                key={`edit-option-selector-${index}-${optionValue}`} 
                 value={optionValue}
               >
-                {`${product?.name} (${opt.name}) ฿${opt.sellingPrice}`}
+                {`${product?.name} (${opt.name || 'ไม่มีชื่อ'}) ฿${opt.sellingPrice || 0}`}
               </SelectItem>
             );
-          })}
+          }).filter(Boolean)}
         </SelectContent>
       </Select>
       <div className="flex gap-2 mt-2">

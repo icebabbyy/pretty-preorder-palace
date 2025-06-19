@@ -62,9 +62,20 @@ const OrdersTable: React.FC<OrdersTableProps> = ({
           </TableRow>
         ) : (
           orders.map((order) => {
-            // Ensure order status is never empty
-            const currentStatus = (order.status && order.status.trim() !== '') ? order.status : "รอชำระเงิน";
-            console.log('Order status for Select:', currentStatus, 'for order:', order.id);
+            // Ensure order status is never empty - stronger validation
+            let currentStatus = "รอชำระเงิน"; // Default fallback
+            
+            if (order.status && typeof order.status === 'string' && order.status.trim() !== '') {
+              currentStatus = order.status.trim();
+            }
+            
+            // Validate that the status is one of the allowed values
+            const allowedStatuses = ["รอชำระเงิน", "รอโรงงานจัดส่ง", "กำลังมาไทย", "จัดส่งแล้ว"];
+            if (!allowedStatuses.includes(currentStatus)) {
+              currentStatus = "รอชำระเงิน";
+            }
+            
+            console.log('Orders Table - Order status validated:', currentStatus, 'for order:', order.id);
             
             return (
               <TableRow key={order.id} className="hover:bg-purple-25 border-b border-purple-50">

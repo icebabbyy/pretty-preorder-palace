@@ -250,22 +250,34 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                       </SelectTrigger>
                       <SelectContent>
                         {options.map((opt, index) => {
-                          // Create a guaranteed non-empty value
-                          const optionValue = (opt.id && typeof opt.id === 'string' && opt.id.trim() !== '') 
-                            ? opt.id.trim()
-                            : `fallback-option-${index}-${Date.now()}`;
+                          // Ensure we have a non-empty value - triple validation
+                          let optionValue = "";
                           
-                          console.log('Option value generated:', optionValue, 'for option:', opt);
+                          if (opt.id && typeof opt.id === 'string' && opt.id.trim() !== '') {
+                            optionValue = opt.id.trim();
+                          } else if (opt.name && typeof opt.name === 'string' && opt.name.trim() !== '') {
+                            optionValue = `option-name-${opt.name.trim()}-${index}`;
+                          } else {
+                            optionValue = `fallback-option-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                          }
+                          
+                          console.log('Add Modal - Option value generated:', optionValue, 'for option:', opt);
+                          
+                          // Additional safety check before rendering
+                          if (!optionValue || optionValue.trim() === '') {
+                            console.error('Empty option value detected, skipping option:', opt);
+                            return null;
+                          }
                           
                           return (
                             <SelectItem 
-                              key={`option-${index}-${optionValue}`} 
+                              key={`add-option-${index}-${optionValue}`} 
                               value={optionValue}
                             >
-                              {opt.name} - ฿{opt.sellingPrice?.toLocaleString() || 0} ({opt.id || 'ไม่มี ID'})
+                              {opt.name} - ฿{opt.sellingPrice?.toLocaleString() || 0} ({optionValue})
                             </SelectItem>
                           );
-                        })}
+                        }).filter(Boolean)}
                       </SelectContent>
                     </Select>
                     <Button
