@@ -249,7 +249,10 @@ const AddOrderModal = ({ open, onOpenChange, onAddOrder, products }: AddOrderMod
                       </SelectTrigger>
                       <SelectContent>
                         {options.map(opt => (
-                          <SelectItem key={opt.id} value={opt.id}>
+                          <SelectItem 
+                            key={opt.id} 
+                            value={opt.id ? opt.id : `option-${Math.random().toString(36).substr(2, 9)}`}
+                          >
                             {opt.name} - ฿{opt.sellingPrice?.toLocaleString() || 0} ({opt.id})
                           </SelectItem>
                         ))}

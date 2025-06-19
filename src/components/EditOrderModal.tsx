@@ -1,12 +1,13 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { updateOrder } from "@/utils/orders";
 import EditOrderItemList from "./EditOrderItemList";
 import OrderSummary from "./OrderSummary";
+import EditOrderForm from "./edit-order/EditOrderForm";
+import EditOrderPricing from "./edit-order/EditOrderPricing";
+import EditOrderOptionSelector from "./edit-order/EditOrderOptionSelector";
 import type { Order, OrderItem, Product } from "@/types";
 
 interface EditOrderModalProps {
@@ -29,7 +30,7 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
   const [items, setItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // สำหรับแก้ไข option ของสินค้า (ถ้าต้องการ)
+  // สำหรับแก้ไข option ของสินค้า
   const [selectedEditIdx, setSelectedEditIdx] = useState<number | null>(null);
   const [selectedEditOptionId, setSelectedEditOptionId] = useState<string>("");
 
@@ -46,11 +47,6 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
       setPaymentSlip(order.paymentSlip ?? "");
     }
   }, [order]);
-
-  const handleEditOption = (itemIdx: number) => {
-    setSelectedEditIdx(itemIdx);
-    setSelectedEditOptionId("");
-  };
 
   const confirmEditOption = () => {
     if (selectedEditIdx == null || !selectedEditOptionId) return;
@@ -153,146 +149,46 @@ const EditOrderModal = ({ open, onOpenChange, onUpdateOrder, order, products = [
           <DialogTitle className="text-xl text-purple-700">✏️ แก้ไขออเดอร์</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-6">
-          <div>
-            <Label htmlFor="username">Username *</Label>
-            <Input
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="ชื่อผู้ใช้"
-              className="border border-purple-200 rounded-lg"
-            />
-          </div>
-          <div>
-            <Label htmlFor="address">ที่อยู่ *</Label>
-            <Input
-              id="address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="ที่อยู่จัดส่ง"
-              className="border border-purple-200 rounded-lg"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="paymentDate">วันที่ชำระเงิน</Label>
-              <Input
-                id="paymentDate"
-                type="date"
-                value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-                className="border border-purple-200 rounded-lg"
-              />
-            </div>
-            <div>
-              <Label htmlFor="paymentSlip">URL สลิปโอนเงิน</Label>
-              <Input
-                id="paymentSlip"
-                value={paymentSlip}
-                onChange={(e) => setPaymentSlip(e.target.value)}
-                placeholder="https://..."
-                className="border border-purple-200 rounded-lg"
-              />
-              {paymentSlip && (paymentSlip.startsWith("http://") || paymentSlip.startsWith("https://")) && (
-                <div className="mt-2">
-                  <a href={paymentSlip} target="_blank" rel="noopener noreferrer">
-                    <img
-                      src={paymentSlip}
-                      alt="สลิปโอนเงิน"
-                      className="w-32 h-32 object-cover border rounded"
-                    />
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
+          <EditOrderForm
+            order={order}
+            username={username}
+            setUsername={setUsername}
+            address={address}
+            setAddress={setAddress}
+            paymentDate={paymentDate}
+            setPaymentDate={setPaymentDate}
+            paymentSlip={paymentSlip}
+            setPaymentSlip={setPaymentSlip}
+            status={status}
+            setStatus={setStatus}
+          />
+          
           <EditOrderItemList
             items={items}
             updateItemQuantity={updateItemQuantity}
             updateItemCost={updateItemCost}
             removeItem={removeItem}
           />
-          {/* หากกำลังแก้ไข option ของสินค้า */}
-          {selectedEditIdx !== null && products.length > 0 && (() => {
-            const item = items[selectedEditIdx];
-            const product = products.find(p => p.id === item.productId);
-            const opts = product?.options || [];
-            return opts.length > 0 ? (
-              <div className="my-2">
-                <Label>เลือกตัวเลือกสินค้าใหม่</Label>
-                <Select value={selectedEditOptionId} onValueChange={setSelectedEditOptionId}>
-                  <SelectTrigger className="border border-purple-200 rounded-lg w-64 mt-1">
-                    <SelectValue placeholder="เลือกตัวเลือกสินค้า" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {opts.map(opt => (
-                      <SelectItem 
-                        key={opt.id} 
-                        value={opt.id ? opt.id : `option-${Math.random().toString(36).substr(2, 9)}`}
-                      >
-                        {`${product.name} (${opt.name}) ฿${opt.sellingPrice}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="flex gap-2 mt-2">
-                  <Button onClick={confirmEditOption} className="bg-green-500 text-white">เปลี่ยนตัวเลือก</Button>
-                  <Button onClick={() => setSelectedEditIdx(null)} variant="outline">ยกเลิก</Button>
-                </div>
-              </div>
-            ) : null;
-          })()}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="shippingCost">ค่าจัดส่ง (฿)</Label>
-              <Input
-                id="shippingCost"
-                type="number"
-                value={shippingCost}
-                onChange={(e) => setShippingCost(e.target.value)}
-                placeholder="0"
-                className="border border-purple-200 rounded-lg"
-              />
-            </div>
-            <div>
-              <Label htmlFor="discount">ส่วนลด (฿)</Label>
-              <Input
-                id="discount"
-                type="number"
-                value={discount}
-                onChange={(e) => setDiscount(e.target.value)}
-                placeholder="0"
-                className="border border-purple-200 rounded-lg"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="deposit">มัดจำ (฿)</Label>
-              <Input
-                id="deposit"
-                type="number"
-                value={deposit}
-                onChange={(e) => setDeposit(e.target.value)}
-                placeholder="0"
-                className="border border-purple-200 rounded-lg"
-              />
-            </div>
-            <div>
-              <Label htmlFor="status">สถานะ</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="border border-purple-200 rounded-lg">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="รอชำระเงิน">รอชำระเงิน</SelectItem>
-                  <SelectItem value="รอโรงงานจัดส่ง">รอโรงงานจัดส่ง</SelectItem>
-                  <SelectItem value="กำลังมาไทย">กำลังมาไทย</SelectItem>
-                  <SelectItem value="จัดส่งแล้ว">จัดส่งแล้ว</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          
+          <EditOrderOptionSelector
+            selectedEditIdx={selectedEditIdx}
+            selectedEditOptionId={selectedEditOptionId}
+            setSelectedEditOptionId={setSelectedEditOptionId}
+            products={products}
+            items={items}
+            onConfirmEdit={confirmEditOption}
+            onCancel={() => setSelectedEditIdx(null)}
+          />
+          
+          <EditOrderPricing
+            shippingCost={shippingCost}
+            setShippingCost={setShippingCost}
+            discount={discount}
+            setDiscount={setDiscount}
+            deposit={deposit}
+            setDeposit={setDeposit}
+          />
+          
           <OrderSummary
             totalSellingPrice={totalSellingPrice}
             discountAmount={discountAmount}

@@ -178,6 +178,7 @@ const OrderManagement = ({ products, orders, setOrders }: OrderManagementProps) 
         onOpenChange={setShowEditModal}
         onUpdateOrder={updateOrder}
         order={editingOrder}
+        products={products}
       />
     </div>
   );

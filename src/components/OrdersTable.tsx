@@ -102,12 +102,12 @@ const OrdersTable: React.FC<OrdersTableProps> = ({
               </TableCell>
               <TableCell>
                 <Select
-                  value={order.status}
+                  value={order.status || "รอชำระเงิน"}
                   onValueChange={(newStatus) => updateOrderStatus(order, newStatus)}
                 >
                   <SelectTrigger className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                     {getStatusIcon(order.status)}
-                    <SelectValue placeholder={order.status} />
+                    <SelectValue placeholder={order.status || "รอชำระเงิน"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="รอชำระเงิน">รอชำระเงิน</SelectItem>
@@ -118,10 +118,10 @@ const OrdersTable: React.FC<OrdersTableProps> = ({
                 </Select>
               </TableCell>
               <TableCell className="text-sm">
-  {order.paymentDate
-    ? new Date(order.paymentDate).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
-    : '-'}
-</TableCell>
+                {order.paymentDate
+                  ? new Date(order.paymentDate).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
+                  : '-'}
+              </TableCell>
               <TableCell>
                 <div className="flex gap-1">
                   <Button
