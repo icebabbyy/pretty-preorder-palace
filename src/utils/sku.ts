@@ -7,7 +7,7 @@
  */
 export function generateSKU(category?: string) {
   const categoryPart = (category ? category.slice(0, 3) : 'SKU').toUpperCase(); // e.g. 'GEN'
-  const numPart = Math.floor(1000 + Math.random() * 9000); // 4 digit
+  const numPart = Math.floor(1000 + Math.random() * 900); // 3 digit
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   let alphaPart = '';
   for (let i = 0; i < 3; i++) {
