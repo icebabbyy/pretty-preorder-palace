@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,12 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { X, Settings } from "lucide-react";
+import { X, Settings, Upload, Image } from "lucide-react";
 import { nanoid } from "nanoid";
 import { Product, ProductOption } from "@/types";
 import { generateSKU } from "@/utils/sku";
 import { fetchProductTypes } from "@/utils/productTypes";
 import { fetchProductImages, addProductImage, type ProductImage } from "@/utils/productImages";
+import { supabase } from "@/integrations/supabase/client";
 import ProductTypeManagementModal from "./ProductTypeManagementModal";
 import ProductImageManager from "./ProductImageManager";
 
@@ -50,6 +50,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   const [productTypes, setProductTypes] = useState<string[]>([]);
   const [showProductTypeModal, setShowProductTypeModal] = useState(false);
   const [productImages, setProductImages] = useState<ProductImage[]>([]);
+  const [optionFileInputRefs, setOptionFileInputRefs] = useState<{[key: string]: React.RefObject<HTMLInputElement>}>({});
 
   // Load product types when modal opens
   useEffect(() => {
@@ -88,20 +89,27 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
       setFormData(editingProduct);
       setSelectedCategories(editingProduct.categories || [editingProduct.category].filter(Boolean));
       if (editingProduct.options) {
-        setOptions(editingProduct.options.map(opt => ({
+        const optionsWithIds = editingProduct.options.map(opt => ({
           ...opt,
           id: opt.id || nanoid()
-        })));
+        }));
+        setOptions(optionsWithIds);
+        
+        // Create file input refs for existing options
+        const refs: {[key: string]: React.RefObject<HTMLInputElement>} = {};
+        optionsWithIds.forEach(opt => {
+          refs[opt.id] = useRef<HTMLInputElement>(null);
+        });
+        setOptionFileInputRefs(refs);
       } else {
         setOptions([]);
+        setOptionFileInputRefs({});
       }
       
-      // Load product images if editing existing product
       if (editingProduct.id) {
         fetchProductImages(editingProduct.id)
           .then(images => {
             setProductImages(images);
-            // Update main image in form data if images exist
             if (images.length > 0) {
               setFormData(prev => ({ ...prev, image: images[0].image_url }));
             }
@@ -132,6 +140,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
       setSelectedCategories([]);
       setOptions([]);
       setProductImages([]);
+      setOptionFileInputRefs({});
     }
   }, [editingProduct, open]);
 
@@ -147,13 +156,55 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     }
   }, [selectedCategories, open]);
 
+  // Upload image to Supabase storage
+  const uploadImageToStorage = async (file: File): Promise<string | null> => {
+    try {
+      const filename = `${Date.now()}-${file.name}`;
+      const { error } = await supabase.storage.from("product-images").upload(filename, file);
+      if (error) {
+        console.error('Upload error:', error);
+        return null;
+      }
+      const { data } = supabase.storage.from("product-images").getPublicUrl(filename);
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Upload error:', error);
+      return null;
+    }
+  };
+
+  // Handle option image upload
+  const handleOptionImageUpload = async (optionId: string, file: File) => {
+    const url = await uploadImageToStorage(file);
+    if (url) {
+      updateOption(
+        options.findIndex(opt => opt.id === optionId), 
+        { image: url }
+      );
+    }
+  };
+
+  // Handle option image paste
+  const handleOptionImagePaste = async (optionId: string, e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    for (const item of items) {
+      if (item.type.indexOf("image") !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          await handleOptionImageUpload(optionId, file);
+        }
+      }
+    }
+  };
+
   const toggleCategory = (category: string) => {
     setSelectedCategories(prev => {
       const newCategories = prev.includes(category) 
         ? prev.filter(c => c !== category)
         : [...prev, category];
       
-      // อัปเดต category หลักเป็นหมวดหมู่แรก
       if (newCategories.length > 0) {
         setFormData(prevForm => ({
           ...prevForm,
@@ -174,22 +225,36 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
 
   // เมื่อลูกค้ากด "เพิ่มตัวเลือกสินค้า" จะ auto gen รหัสให้ตัวเลือกด้วย
   const addOption = () => {
-    setOptions(opts => [
-      ...opts,
-      {
-        id: generateSKU(formData.category) + "-" + (opts.length + 1).toString().padStart(3,"0"),
-        name: "",
-        image: "",
-        costThb: 0,
-        sellingPrice: 0,
-        quantity: 0,
-        profit: 0
-      }
-    ]);
+    const newOptionId = generateSKU(formData.category) + "-" + (options.length + 1).toString().padStart(3,"0");
+    const newOption = {
+      id: newOptionId,
+      name: "",
+      image: "",
+      costThb: 0,
+      sellingPrice: 0,
+      quantity: 0,
+      profit: 0
+    };
+    
+    setOptions(opts => [...opts, newOption]);
+    
+    // Create file input ref for new option
+    setOptionFileInputRefs(prev => ({
+      ...prev,
+      [newOptionId]: useRef<HTMLInputElement>(null)
+    }));
   };
 
   const removeOption = (idx: number) => {
+    const removedOption = options[idx];
     setOptions(opts => opts.filter((_, i) => i !== idx));
+    
+    // Remove file input ref
+    setOptionFileInputRefs(prev => {
+      const newRefs = { ...prev };
+      delete newRefs[removedOption.id];
+      return newRefs;
+    });
   };
 
   const updateOption = (idx: number, update: Partial<Omit<ProductOption, "id" | "profit">>) => {
@@ -215,7 +280,6 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
 
   const handleImagesChange = (images: ProductImage[]) => {
     setProductImages(images);
-    // Update main image to be the first image
     if (images.length > 0) {
       setFormData(prev => ({ ...prev, image: images[0].image_url }));
     } else {
@@ -237,19 +301,14 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     const dataToSave = {
       ...formData,
       categories: selectedCategories,
-      category: selectedCategories[0], // หมวดหมู่หลัก
+      category: selectedCategories[0],
       quantity,
       options: options.length > 0 ? options : undefined,
-      images: productImages // Include images data
+      images: productImages
     };
     
     try {
       await onAddProduct(dataToSave);
-      
-      // If this is a new product, we need to handle images after the product is created
-      // The onAddProduct function should return the product ID for new products
-      // For now, we'll let the parent component handle this
-      
       onOpenChange(false);
 
       if (!editingProduct) {
@@ -274,6 +333,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
         setSelectedCategories([]);
         setOptions([]);
         setProductImages([]);
+        setOptionFileInputRefs({});
       }
     } catch (error) {
       console.error("Error saving product:", error);
@@ -392,6 +452,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
               images={productImages}
               onImagesChange={handleImagesChange}
               disabled={false}
+              productOptions={options}
             />
 
             <div className="grid grid-cols-3 gap-4">
@@ -518,7 +579,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
               />
             </div>
 
-            {/* ตัวเลือกสินค้า */}
+            {/* ตัวเลือกสินค้า - Updated with image upload functionality */}
             <div>
               <Label className="font-semibold">ตัวเลือกสินค้า (ถ้ามี)</Label>
               <div className="space-y-2">
@@ -534,7 +595,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
                           className="border border-purple-200 rounded-lg"
                         />
                       </div>
-                      <div className="col-span-3">
+                      <div className="col-span-2">
                         <Label>SKU Option</Label>
                         <Input
                           readOnly
@@ -542,29 +603,58 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
                           className="border border-purple-200 rounded-lg bg-gray-50"
                         />
                       </div>
-                      {/* เปลี่ยน field รูปภาพใน option ให้เป็น URL ด้วย */}
-                      <div className="col-span-2">
-                        <Label>รูปภาพ (URL)</Label>
-                        <Input
-                          type="text"
-                          value={option.image}
-                          onChange={e => updateOption(idx, { image: e.target.value })}
-                          placeholder="https://... (ลิงก์รูปภาพ)"
-                          className="border border-purple-200 rounded-lg"
-                        />
-                        {option.image && (
-                          <div className="mt-1 flex justify-center">
-                            <img
-                              src={option.image}
-                              alt="Preview"
-                              className="w-12 h-12 object-cover rounded border"
-                              onError={e => {
-                                (e.target as HTMLImageElement).src =
-                                  "https://ui-avatars.com/api/?name=No+Image";
+                      <div className="col-span-3">
+                        <Label>รูปภาพ</Label>
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Input
+                              type="file"
+                              accept="image/*"
+                              ref={optionFileInputRefs[option.id]}
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  handleOptionImageUpload(option.id, file);
+                                }
                               }}
                             />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => optionFileInputRefs[option.id]?.current?.click()}
+                              className="border border-purple-300 text-purple-600 hover:bg-purple-50"
+                            >
+                              <Upload className="w-4 h-4 mr-1" />
+                              อัปโหลด
+                            </Button>
+                            <Input
+                              type="text"
+                              value={option.image}
+                              onChange={e => updateOption(idx, { image: e.target.value })}
+                              placeholder="หรือใส่ URL"
+                              className="border border-purple-200 rounded-lg flex-1"
+                              onPaste={(e) => handleOptionImagePaste(option.id, e)}
+                            />
                           </div>
-                        )}
+                          {option.image && (
+                            <div className="flex justify-center">
+                              <img
+                                src={option.image}
+                                alt="Preview"
+                                className="w-16 h-16 object-cover rounded border"
+                                onError={e => {
+                                  (e.target as HTMLImageElement).src =
+                                    "https://ui-avatars.com/api/?name=No+Image";
+                                }}
+                              />
+                            </div>
+                          )}
+                          <p className="text-xs text-gray-500">
+                            💡 Ctrl+V เพื่อ paste รูปภาพ
+                          </p>
+                        </div>
                       </div>
                       <div className="col-span-2">
                         <Label>ต้นทุนรวม (บาท)</Label>
@@ -595,7 +685,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
                           className="border border-purple-200 rounded-lg"
                         />
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-1">
                         <Label>กำไร</Label>
                         <Input
                           readOnly
