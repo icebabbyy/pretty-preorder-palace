@@ -1,10 +1,12 @@
+
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Plus, ArrowUp, ArrowDown, Upload } from "lucide-react";
+import { X, Plus, ArrowUp, ArrowDown, Upload, ImageIcon } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import {
   addProductImage,
   deleteProductImage,
@@ -33,12 +35,18 @@ const ProductImageManager = ({
   const [images, setImages] = useState<ProductImage[]>(initialImages || []);
   const [isUpdating, setIsUpdating] = useState(false);
   const [newImageUrl, setNewImageUrl] = useState("");
+  const [selectedImageType, setSelectedImageType] = useState<"main" | "additional" | "variant">("main");
   const [selectedVariant, setSelectedVariant] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setImages(initialImages || []);
   }, [initialImages]);
+
+  // Categorize images
+  const mainImages = images.filter(img => !img.variant_id && img.order === 1);
+  const additionalImages = images.filter(img => !img.variant_id && img.order > 1);
+  const variantImages = images.filter(img => img.variant_id);
 
   const uploadImageToStorage = async (file: File): Promise<string | null> => {
     try {
@@ -67,7 +75,7 @@ const ProductImageManager = ({
           setIsUpdating(true);
           const url = await uploadImageToStorage(file);
           if (url) {
-            await addImage(url);
+            await addImageByType(url);
           }
           setIsUpdating(false);
         }
@@ -79,25 +87,38 @@ const ProductImageManager = ({
     const handlePasteEvent = (e: Event) => handlePaste(e as ClipboardEvent);
     window.addEventListener("paste", handlePasteEvent);
     return () => window.removeEventListener("paste", handlePasteEvent);
-  }, [isUpdating]);
+  }, [isUpdating, selectedImageType, selectedVariant]);
 
-  const addImage = async (url: string, variantId?: string) => {
+  const addImageByType = async (url: string) => {
     if (!url.trim() || isUpdating) return;
     
     try {
       setIsUpdating(true);
-      console.log('Adding image:', url, 'Product ID:', productId, 'Variant ID:', variantId);
+      console.log('Adding image:', url, 'Type:', selectedImageType, 'Variant:', selectedVariant);
       
-      const selectedVariantOption = variantId ? productOptions.find(opt => opt.id === variantId) : null;
-      
+      let variantId: string | undefined;
+      let variantName: string | undefined;
+      let order: number | undefined;
+
+      if (selectedImageType === "variant" && selectedVariant) {
+        const selectedVariantOption = productOptions.find(opt => opt.id === selectedVariant);
+        variantId = selectedVariant;
+        variantName = selectedVariantOption?.name;
+      } else if (selectedImageType === "main") {
+        order = 1; // Main image always has order 1
+      } else if (selectedImageType === "additional") {
+        // Find the next order number for additional images
+        const maxOrder = Math.max(...additionalImages.map(img => img.order), 1);
+        order = maxOrder + 1;
+      }
+
       if (productId) {
-        // For existing products, add to database
         const newImage = await addProductImage(
           productId, 
           url.trim(), 
-          undefined, 
-          variantId || undefined, 
-          selectedVariantOption?.name || undefined
+          order, 
+          variantId, 
+          variantName
         );
         const updated = [...images, newImage];
         setImages(updated);
@@ -105,19 +126,19 @@ const ProductImageManager = ({
         console.log('Image added to database:', newImage);
 
         // If this is for a variant, also update the variant's image in the product options
-        if (variantId && selectedVariantOption) {
+        if (variantId && variantName) {
           await updateVariantImageInProduct(variantId, url.trim());
         }
       } else {
         // For new products, add to local state
         const tempImage: ProductImage = {
-          id: Date.now(), // Temporary ID
+          id: Date.now(),
           product_id: 0,
           image_url: url.trim(),
-          order: images.length + 1,
+          order: order || images.length + 1,
           created_at: new Date().toISOString(),
           variant_id: variantId || null,
-          variant_name: selectedVariantOption?.name || null
+          variant_name: variantName || null
         };
         const updated = [...images, tempImage];
         setImages(updated);
@@ -137,7 +158,6 @@ const ProductImageManager = ({
     if (!productId) return;
     
     try {
-      // Get current product data
       const { data: product, error } = await supabase
         .from('products')
         .select('options')
@@ -149,7 +169,6 @@ const ProductImageManager = ({
         return;
       }
 
-      // Type cast the options to array and update the specific variant's image
       const optionsArray = Array.isArray(product.options) ? product.options : [];
       const updatedOptions = optionsArray.map((option: any) => {
         if (option.id === variantId) {
@@ -158,7 +177,6 @@ const ProductImageManager = ({
         return option;
       });
 
-      // Update the product with new options
       const { error: updateError } = await supabase
         .from('products')
         .update({ 
@@ -179,7 +197,7 @@ const ProductImageManager = ({
 
   const handleAddImageUrl = async () => {
     if (!newImageUrl.trim()) return;
-    await addImage(newImageUrl, selectedVariant || undefined);
+    await addImageByType(newImageUrl);
     setNewImageUrl("");
     setSelectedVariant("");
   };
@@ -191,32 +209,29 @@ const ProductImageManager = ({
     setIsUpdating(true);
     const url = await uploadImageToStorage(file);
     if (url) {
-      await addImage(url, selectedVariant || undefined);
+      await addImageByType(url);
     }
     setIsUpdating(false);
     setSelectedVariant("");
     
-    // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  const handleDeleteImage = async (imageId: number, index: number) => {
+  const handleDeleteImage = async (imageId: number, index: number, imageList: ProductImage[]) => {
     if (isUpdating) return;
     
     try {
       setIsUpdating(true);
       console.log('Deleting image:', imageId, 'at index:', index);
       
-      // Delete from database if it's a real image (not temporary)
       if (productId && imageId > 0) {
         await deleteProductImage(imageId);
         console.log('Image deleted from database');
       }
       
-      // Update local state
-      const updated = images.filter((_, i) => i !== index);
+      const updated = images.filter(img => img.id !== imageId);
       console.log('Updated images after delete:', updated);
       
       setImages(updated);
@@ -229,20 +244,26 @@ const ProductImageManager = ({
     }
   };
 
-  const handleMoveImage = async (index: number, direction: "up" | "down") => {
+  const handleMoveImage = async (imageId: number, direction: "up" | "down", imageList: ProductImage[]) => {
     if (isUpdating) return;
     
-    const newIndex = direction === "up" ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= images.length) return;
+    const currentIndex = imageList.findIndex(img => img.id === imageId);
+    const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= imageList.length) return;
     
     try {
       setIsUpdating(true);
-      const reordered = [...images];
-      [reordered[index], reordered[newIndex]] = [reordered[newIndex], reordered[index]];
+      const reordered = [...imageList];
+      [reordered[currentIndex], reordered[newIndex]] = [reordered[newIndex], reordered[currentIndex]];
       reordered.forEach((img, i) => (img.order = i + 1));
       
-      setImages(reordered);
-      onImagesChange(reordered);
+      const updatedAllImages = images.map(img => {
+        const reorderedImg = reordered.find(r => r.id === img.id);
+        return reorderedImg || img;
+      });
+      
+      setImages(updatedAllImages);
+      onImagesChange(updatedAllImages);
       
       if (productId) {
         await reorderProductImages(
@@ -257,188 +278,21 @@ const ProductImageManager = ({
     }
   };
 
-  const handleImageUrlChange = async (index: number, newUrl: string) => {
-    if (isUpdating) return;
-    
-    try {
-      setIsUpdating(true);
-      const updated = [...images];
-      updated[index].image_url = newUrl;
-      setImages(updated);
-      onImagesChange(updated);
-      
-      if (productId && updated[index].id > 0) {
-        await updateProductImage(updated[index].id, { image_url: newUrl });
-        
-        // If this is a variant image, also update the product options
-        if (updated[index].variant_id) {
-          await updateVariantImageInProduct(updated[index].variant_id, newUrl);
-        }
-      }
-    } catch (error) {
-      console.error('Error updating image URL:', error);
-      alert('เกิดข้อผิดพลาดในการอัปเดต URL รูปภาพ');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleVariantChange = async (imageIndex: number, variantId: string) => {
-    if (isUpdating) return;
-    
-    try {
-      setIsUpdating(true);
-      const updated = [...images];
-      const selectedVariantOption = variantId ? productOptions.find(opt => opt.id === variantId) : null;
-      
-      updated[imageIndex].variant_id = variantId || null;
-      updated[imageIndex].variant_name = selectedVariantOption?.name || null;
-      
-      setImages(updated);
-      onImagesChange(updated);
-      
-      if (productId && updated[imageIndex].id > 0) {
-        await updateProductImage(updated[imageIndex].id, { 
-          variant_id: variantId || null,
-          variant_name: selectedVariantOption?.name || null
-        });
-
-        // If associating with a variant, update the variant's image in product options
-        if (variantId && selectedVariantOption) {
-          await updateVariantImageInProduct(variantId, updated[imageIndex].image_url);
-        }
-      }
-    } catch (error) {
-      console.error('Error updating image variant:', error);
-      alert('เกิดข้อผิดพลาดในการอัปเดตตัวเลือกสินค้า');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  // Function to sync variant images from product options
-  const syncVariantImages = async () => {
-    if (!productId || !productOptions.length || isUpdating) return;
-
-    try {
-      setIsUpdating(true);
-      console.log('Syncing variant images from product options...');
-
-      for (const option of productOptions) {
-        if (option.image && option.image.trim()) {
-          // Check if this variant already has an image in our list
-          const existingImage = images.find(img => img.variant_id === option.id);
-          
-          if (!existingImage) {
-            // Add the variant image
-            await addProductImage(
-              productId,
-              option.image,
-              undefined,
-              option.id,
-              option.name
-            );
-            console.log(`Synced image for variant ${option.name}`);
-          }
-        }
-      }
-
-      // Refresh images list
-      const { data: updatedImages } = await supabase
-        .from('product_images')
-        .select('*')
-        .eq('product_id', productId)
-        .order('order', { ascending: true });
-
-      if (updatedImages) {
-        setImages(updatedImages);
-        onImagesChange(updatedImages);
-      }
-    } catch (error) {
-      console.error('Error syncing variant images:', error);
-      alert('เกิดข้อผิดพลาดในการ sync รูปภาพตัวเลือกสินค้า');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Label>จัดการรูปภาพสินค้า</Label>
-        {productId && productOptions.length > 0 && (
-          <Button
-            onClick={syncVariantImages}
-            disabled={disabled || isUpdating}
-            variant="outline"
-            size="sm"
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            {isUpdating ? 'กำลัง Sync...' : 'Sync รูปตัวเลือก'}
-          </Button>
-        )}
-      </div>
-      
-      {/* File Upload */}
-      <Input
-        type="file"
-        accept="image/*"
-        ref={fileInputRef}
-        className="hidden"
-        onChange={handleFileUpload}
-        disabled={disabled || isUpdating}
-      />
-      
-      {/* Variant Selection for New Images */}
-      {productOptions.length > 0 && (
-        <div className="space-y-2">
-          <Label>เลือกตัวเลือกสินค้า (ไม่บังคับ)</Label>
-          <Select value={selectedVariant} onValueChange={setSelectedVariant}>
-            <SelectTrigger>
-              <SelectValue placeholder="เลือกตัวเลือกสินค้า หรือปล่อยว่างสำหรับรูปหลัก" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">รูปหลักของสินค้า</SelectItem>
-              {productOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-      
-      {/* Add Image Controls */}
-      <div className="flex gap-2">
-        <Button 
-          onClick={() => fileInputRef.current?.click()} 
-          disabled={disabled || isUpdating}
-          variant="outline"
-        >
-          {isUpdating ? 'กำลังอัปโหลด...' : 'เลือกไฟล์'}
-        </Button>
-        <div className="flex-1 flex gap-2">
-          <Input
-            value={newImageUrl}
-            onChange={(e) => setNewImageUrl(e.target.value)}
-            placeholder="หรือใส่ URL รูปภาพ"
-            disabled={disabled || isUpdating}
-          />
-          <Button 
-            onClick={handleAddImageUrl}
-            disabled={disabled || isUpdating || !newImageUrl.trim()}
-          >
-            <Plus className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-      
-      {/* Images List */}
-      <div className="grid gap-3">
-        {images.map((img, index) => (
-          <Card key={`${img.id}-${index}`} className="border">
-            <CardContent className="flex gap-3 p-3 items-center">
+  const renderImageList = (imageList: ProductImage[], title: string, emptyMessage: string) => (
+    <Card className="border">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <ImageIcon className="w-4 h-4" />
+          {title}
+          <span className="text-xs text-gray-500">({imageList.length})</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {imageList.length === 0 ? (
+          <p className="text-center text-gray-400 text-sm py-4">{emptyMessage}</p>
+        ) : (
+          imageList.map((img, index) => (
+            <div key={`${img.id}-${index}`} className="flex gap-3 p-3 items-center border rounded">
               <img
                 src={img.image_url}
                 alt=""
@@ -450,34 +304,21 @@ const ProductImageManager = ({
               <div className="flex-1 space-y-2">
                 <Input
                   value={img.image_url}
-                  onChange={(e) => handleImageUrlChange(index, e.target.value)}
+                  onChange={(e) => handleImageUrlChange(img.id, e.target.value)}
                   disabled={isUpdating}
+                  className="text-xs"
                 />
-                {productOptions.length > 0 && (
-                  <Select 
-                    value={img.variant_id || ""} 
-                    onValueChange={(value) => handleVariantChange(index, value)}
-                    disabled={isUpdating}
-                  >
-                    <SelectTrigger className="h-8">
-                      <SelectValue placeholder="เลือกตัวเลือกสินค้า" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">รูปหลักของสินค้า</SelectItem>
-                      {productOptions.map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {img.variant_id && (
+                  <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
+                    {img.variant_name}
+                  </span>
                 )}
               </div>
               <div className="flex gap-1">
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => handleMoveImage(index, "up")}
+                  onClick={() => handleMoveImage(img.id, "up", imageList)}
                   disabled={index === 0 || isUpdating}
                 >
                   <ArrowUp className="w-4 h-4" />
@@ -485,42 +326,156 @@ const ProductImageManager = ({
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => handleMoveImage(index, "down")}
-                  disabled={index === images.length - 1 || isUpdating}
+                  onClick={() => handleMoveImage(img.id, "down", imageList)}
+                  disabled={index === imageList.length - 1 || isUpdating}
                 >
                   <ArrowDown className="w-4 h-4" />
                 </Button>
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => handleDeleteImage(img.id, index)}
+                  onClick={() => handleDeleteImage(img.id, index, imageList)}
                   className="text-red-500"
                   disabled={isUpdating}
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
-              <div className="flex flex-col gap-1">
-                {index === 0 && !img.variant_id && (
-                  <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded">
-                    รูปหลัก
-                  </span>
-                )}
-                {img.variant_id && (
-                  <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
-                    {img.variant_name}
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {images.length === 0 && <p className="text-center text-gray-500">ยังไม่มีรูปภาพสินค้า</p>}
+            </div>
+          ))
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const handleImageUrlChange = async (imageId: number, newUrl: string) => {
+    if (isUpdating) return;
+    
+    try {
+      setIsUpdating(true);
+      const updated = images.map(img => 
+        img.id === imageId ? { ...img, image_url: newUrl } : img
+      );
+      setImages(updated);
+      onImagesChange(updated);
+      
+      if (productId && imageId > 0) {
+        await updateProductImage(imageId, { image_url: newUrl });
+        
+        const image = images.find(img => img.id === imageId);
+        if (image?.variant_id) {
+          await updateVariantImageInProduct(image.variant_id, newUrl);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating image URL:', error);
+      alert('เกิดข้อผิดพลาดในการอัปเดต URL รูปภาพ');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Label className="text-lg font-semibold">จัดการรูปภาพสินค้า</Label>
       </div>
       
-      <p className="text-sm text-gray-500">
-        💡 เคล็ดลับ: คุณสามารถ Paste รูปภาพจาก clipboard ได้โดยตรง (Ctrl+V), เลือกตัวเลือกสินค้าเพื่อจัดหมวดหมู่รูปภาพ และใช้ปุ่ม "Sync รูปตัวเลือก" เพื่อนำรูปจากตัวเลือกสินค้ามาเก็บใน product_images
-      </p>
+      {/* Add Image Controls */}
+      <Card className="border-purple-200">
+        <CardHeader>
+          <CardTitle className="text-base">เพิ่มรูปภาพใหม่</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Image Type Selection */}
+          <div className="space-y-2">
+            <Label>ประเภทรูปภาพ *</Label>
+            <Select value={selectedImageType} onValueChange={(value: "main" | "additional" | "variant") => setSelectedImageType(value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="เลือกประเภทรูปภาพ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="main">🖼️ รูปภาพหลักของสินค้า</SelectItem>
+                <SelectItem value="additional">📸 รูปภาพเพิ่มเติม</SelectItem>
+                <SelectItem value="variant">🧩 รูปภาพของตัวเลือกสินค้า</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Variant Selection - only show when variant is selected */}
+          {selectedImageType === "variant" && productOptions.length > 0 && (
+            <div className="space-y-2">
+              <Label>เลือกตัวเลือกสินค้า *</Label>
+              <Select value={selectedVariant} onValueChange={setSelectedVariant}>
+                <SelectTrigger>
+                  <SelectValue placeholder="เลือกตัวเลือกสินค้าที่ต้องการเพิ่มรูป" />
+                </SelectTrigger>
+                <SelectContent>
+                  {productOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Upload Controls */}
+          <Input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            className="hidden"
+            onChange={handleFileUpload}
+            disabled={disabled || isUpdating || (selectedImageType === "variant" && !selectedVariant)}
+          />
+          
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => fileInputRef.current?.click()} 
+              disabled={disabled || isUpdating || (selectedImageType === "variant" && !selectedVariant)}
+              variant="outline"
+            >
+              {isUpdating ? 'กำลังอัปโหลด...' : 'เลือกไฟล์'}
+            </Button>
+            <div className="flex-1 flex gap-2">
+              <Input
+                value={newImageUrl}
+                onChange={(e) => setNewImageUrl(e.target.value)}
+                placeholder="หรือใส่ URL รูปภาพ"
+                disabled={disabled || isUpdating || (selectedImageType === "variant" && !selectedVariant)}
+              />
+              <Button 
+                onClick={handleAddImageUrl}
+                disabled={disabled || isUpdating || !newImageUrl.trim() || (selectedImageType === "variant" && !selectedVariant)}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          <p className="text-sm text-gray-500">
+            💡 เคล็ดลับ: คุณสามารถ Paste รูปภาพจาก clipboard ได้โดยตรง (Ctrl+V)
+          </p>
+        </CardContent>
+      </Card>
+
+      <Separator />
+
+      {/* Image Categories */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">รูปภาพที่มีอยู่</h3>
+        
+        {/* Main Images */}
+        {renderImageList(mainImages, "🖼️ รูปภาพหลักของสินค้า", "ยังไม่มีรูปภาพหลัก")}
+        
+        {/* Additional Images */}
+        {renderImageList(additionalImages, "📸 รูปภาพเพิ่มเติม", "ยังไม่มีรูปภาพเพิ่มเติม")}
+        
+        {/* Variant Images */}
+        {productOptions.length > 0 && renderImageList(variantImages, "🧩 รูปภาพตัวเลือกสินค้า", "ยังไม่มีรูปภาพตัวเลือกสินค้า")}
+      </div>
     </div>
   );
 };
