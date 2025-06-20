@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -51,16 +52,26 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   const [showProductTypeModal, setShowProductTypeModal] = useState(false);
   const [productImages, setProductImages] = useState<ProductImage[]>([]);
 
-  // Use a ref to store file input refs - this avoids the hooks violation
+  // Store file input refs for each option
   const optionFileInputRefs = useRef<{[key: string]: React.RefObject<HTMLInputElement>}>({});
 
-  // Function to get or create a ref for an option
-  const getOptionFileInputRef = (optionId: string) => {
-    if (!optionFileInputRefs.current[optionId]) {
-      optionFileInputRefs.current[optionId] = useRef<HTMLInputElement>(null);
-    }
-    return optionFileInputRefs.current[optionId];
-  };
+  // Create/update refs whenever options change
+  useEffect(() => {
+    // Clean up refs for removed options
+    const currentOptionIds = options.map(opt => opt.id);
+    Object.keys(optionFileInputRefs.current).forEach(refId => {
+      if (!currentOptionIds.includes(refId)) {
+        delete optionFileInputRefs.current[refId];
+      }
+    });
+
+    // Create refs for new options
+    options.forEach(option => {
+      if (!optionFileInputRefs.current[option.id]) {
+        optionFileInputRefs.current[option.id] = { current: null };
+      }
+    });
+  }, [options]);
 
   // Load product types when modal opens
   useEffect(() => {
@@ -571,7 +582,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
               />
             </div>
 
-            {/* ตัวเลือกสินค้า - Fixed with proper ref management */}
+            {/* ตัวเลือกสินค้า */}
             <div>
               <Label className="font-semibold">ตัวเลือกสินค้า (ถ้ามี)</Label>
               <div className="space-y-2">
@@ -602,7 +613,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
                             <Input
                               type="file"
                               accept="image/*"
-                              ref={getOptionFileInputRef(option.id)}
+                              ref={optionFileInputRefs.current[option.id]}
                               className="hidden"
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
@@ -615,7 +626,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
                               type="button"
                               variant="outline"
                               size="sm"
-                              onClick={() => getOptionFileInputRef(option.id)?.current?.click()}
+                              onClick={() => optionFileInputRefs.current[option.id]?.current?.click()}
                               className="border border-purple-300 text-purple-600 hover:bg-purple-50"
                             >
                               <Upload className="w-4 h-4 mr-1" />
