@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -150,8 +149,9 @@ const ProductImageManager = ({
         return;
       }
 
-      // Update the specific variant's image
-      const updatedOptions = product.options.map((option: any) => {
+      // Type cast the options to array and update the specific variant's image
+      const optionsArray = Array.isArray(product.options) ? product.options : [];
+      const updatedOptions = optionsArray.map((option: any) => {
         if (option.id === variantId) {
           return { ...option, image: imageUrl };
         }
