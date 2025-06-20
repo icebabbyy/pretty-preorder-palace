@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,7 +50,15 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   const [productTypes, setProductTypes] = useState<string[]>([]);
   const [showProductTypeModal, setShowProductTypeModal] = useState(false);
   const [productImages, setProductImages] = useState<ProductImage[]>([]);
-  const [optionFileInputRefs, setOptionFileInputRefs] = useState<{[key: string]: React.RefObject<HTMLInputElement>}>({});
+
+  // Create refs for file inputs using useMemo to avoid recreating on every render
+  const optionFileInputRefs = useMemo(() => {
+    const refs: {[key: string]: React.RefObject<HTMLInputElement>} = {};
+    options.forEach(option => {
+      refs[option.id] = useRef<HTMLInputElement>(null);
+    });
+    return refs;
+  }, [options.map(opt => opt.id).join(',')]);
 
   // Load product types when modal opens
   useEffect(() => {
@@ -94,16 +102,8 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
           id: opt.id || nanoid()
         }));
         setOptions(optionsWithIds);
-        
-        // Create file input refs for existing options
-        const refs: {[key: string]: React.RefObject<HTMLInputElement>} = {};
-        optionsWithIds.forEach(opt => {
-          refs[opt.id] = useRef<HTMLInputElement>(null);
-        });
-        setOptionFileInputRefs(refs);
       } else {
         setOptions([]);
-        setOptionFileInputRefs({});
       }
       
       if (editingProduct.id) {
@@ -140,7 +140,6 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
       setSelectedCategories([]);
       setOptions([]);
       setProductImages([]);
-      setOptionFileInputRefs({});
     }
   }, [editingProduct, open]);
 
@@ -237,24 +236,10 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     };
     
     setOptions(opts => [...opts, newOption]);
-    
-    // Create file input ref for new option
-    setOptionFileInputRefs(prev => ({
-      ...prev,
-      [newOptionId]: useRef<HTMLInputElement>(null)
-    }));
   };
 
   const removeOption = (idx: number) => {
-    const removedOption = options[idx];
     setOptions(opts => opts.filter((_, i) => i !== idx));
-    
-    // Remove file input ref
-    setOptionFileInputRefs(prev => {
-      const newRefs = { ...prev };
-      delete newRefs[removedOption.id];
-      return newRefs;
-    });
   };
 
   const updateOption = (idx: number, update: Partial<Omit<ProductOption, "id" | "profit">>) => {
@@ -333,7 +318,6 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
         setSelectedCategories([]);
         setOptions([]);
         setProductImages([]);
-        setOptionFileInputRefs({});
       }
     } catch (error) {
       console.error("Error saving product:", error);
@@ -446,7 +430,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
               </div>
             </div>
 
-            {/* รูปภาพสินค้า - ใช้ ProductImageManager แทน */}
+            {/* รูปภาพสินค้า - ใช้ ProductImageManager */}
             <ProductImageManager
               productId={editingProduct?.id}
               images={productImages}
@@ -579,7 +563,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
               />
             </div>
 
-            {/* ตัวเลือกสินค้า - Updated with image upload functionality */}
+            {/* ตัวเลือกสินค้า - Fixed with proper ref management */}
             <div>
               <Label className="font-semibold">ตัวเลือกสินค้า (ถ้ามี)</Label>
               <div className="space-y-2">
