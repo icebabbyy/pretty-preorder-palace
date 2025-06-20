@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Plus, ArrowUp, ArrowDown } from "lucide-react";
+import { X, Plus, ArrowUp, ArrowDown, Upload } from "lucide-react";
 import {
   addProductImage,
   deleteProductImage,
@@ -104,6 +104,11 @@ const ProductImageManager = ({
         setImages(updated);
         onImagesChange(updated);
         console.log('Image added to database:', newImage);
+
+        // If this is for a variant, also update the variant's image in the product options
+        if (variantId && selectedVariantOption) {
+          await updateVariantImageInProduct(variantId, url.trim());
+        }
       } else {
         // For new products, add to local state
         const tempImage: ProductImage = {
@@ -125,6 +130,50 @@ const ProductImageManager = ({
       alert('เกิดข้อผิดพลาดในการเพิ่มรูปภาพ: ' + error.message);
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  // Helper function to update variant image in the product's options
+  const updateVariantImageInProduct = async (variantId: string, imageUrl: string) => {
+    if (!productId) return;
+    
+    try {
+      // Get current product data
+      const { data: product, error } = await supabase
+        .from('products')
+        .select('options')
+        .eq('id', productId)
+        .single();
+
+      if (error || !product?.options) {
+        console.error('Error fetching product options:', error);
+        return;
+      }
+
+      // Update the specific variant's image
+      const updatedOptions = product.options.map((option: any) => {
+        if (option.id === variantId) {
+          return { ...option, image: imageUrl };
+        }
+        return option;
+      });
+
+      // Update the product with new options
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ 
+          options: updatedOptions,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', productId);
+
+      if (updateError) {
+        console.error('Error updating product options:', updateError);
+      } else {
+        console.log('Updated variant image in product options');
+      }
+    } catch (error) {
+      console.error('Error updating variant image in product:', error);
     }
   };
 
@@ -220,6 +269,11 @@ const ProductImageManager = ({
       
       if (productId && updated[index].id > 0) {
         await updateProductImage(updated[index].id, { image_url: newUrl });
+        
+        // If this is a variant image, also update the product options
+        if (updated[index].variant_id) {
+          await updateVariantImageInProduct(updated[index].variant_id, newUrl);
+        }
       }
     } catch (error) {
       console.error('Error updating image URL:', error);
@@ -248,6 +302,11 @@ const ProductImageManager = ({
           variant_id: variantId || null,
           variant_name: selectedVariantOption?.name || null
         });
+
+        // If associating with a variant, update the variant's image in product options
+        if (variantId && selectedVariantOption) {
+          await updateVariantImageInProduct(variantId, updated[imageIndex].image_url);
+        }
       }
     } catch (error) {
       console.error('Error updating image variant:', error);
@@ -257,9 +316,68 @@ const ProductImageManager = ({
     }
   };
 
+  // Function to sync variant images from product options
+  const syncVariantImages = async () => {
+    if (!productId || !productOptions.length || isUpdating) return;
+
+    try {
+      setIsUpdating(true);
+      console.log('Syncing variant images from product options...');
+
+      for (const option of productOptions) {
+        if (option.image && option.image.trim()) {
+          // Check if this variant already has an image in our list
+          const existingImage = images.find(img => img.variant_id === option.id);
+          
+          if (!existingImage) {
+            // Add the variant image
+            await addProductImage(
+              productId,
+              option.image,
+              undefined,
+              option.id,
+              option.name
+            );
+            console.log(`Synced image for variant ${option.name}`);
+          }
+        }
+      }
+
+      // Refresh images list
+      const { data: updatedImages } = await supabase
+        .from('product_images')
+        .select('*')
+        .eq('product_id', productId)
+        .order('order', { ascending: true });
+
+      if (updatedImages) {
+        setImages(updatedImages);
+        onImagesChange(updatedImages);
+      }
+    } catch (error) {
+      console.error('Error syncing variant images:', error);
+      alert('เกิดข้อผิดพลาดในการ sync รูปภาพตัวเลือกสินค้า');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <Label>จัดการรูปภาพสินค้า</Label>
+      <div className="flex items-center justify-between">
+        <Label>จัดการรูปภาพสินค้า</Label>
+        {productId && productOptions.length > 0 && (
+          <Button
+            onClick={syncVariantImages}
+            disabled={disabled || isUpdating}
+            variant="outline"
+            size="sm"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            {isUpdating ? 'กำลัง Sync...' : 'Sync รูปตัวเลือก'}
+          </Button>
+        )}
+      </div>
       
       {/* File Upload */}
       <Input
@@ -401,7 +519,7 @@ const ProductImageManager = ({
       </div>
       
       <p className="text-sm text-gray-500">
-        💡 เคล็ดลับ: คุณสามารถ Paste รูปภาพจาก clipboard ได้โดยตรง (Ctrl+V) และเลือกตัวเลือกสินค้าเพื่อจัดหมวดหมู่รูปภาพ
+        💡 เคล็ดลับ: คุณสามารถ Paste รูปภาพจาก clipboard ได้โดยตรง (Ctrl+V), เลือกตัวเลือกสินค้าเพื่อจัดหมวดหมู่รูปภาพ และใช้ปุ่ม "Sync รูปตัวเลือก" เพื่อนำรูปจากตัวเลือกสินค้ามาเก็บใน product_images
       </p>
     </div>
   );

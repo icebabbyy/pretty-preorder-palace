@@ -75,6 +75,59 @@ function productToSupabaseInsert(product: Omit<Product, "id"> | Product) {
   };
 }
 
+// Helper function to sync product option images to product_images table
+async function syncProductOptionImages(productId: number, options: any[]) {
+  if (!options || options.length === 0) return;
+
+  try {
+    // Sync each option's image to product_images table
+    for (const option of options) {
+      if (option.image && option.image !== '') {
+        console.log(`Syncing image for option ${option.name}:`, option.image);
+        
+        // Check if this variant image already exists
+        const { data: existingImages } = await supabase
+          .from('product_images')
+          .select('*')
+          .eq('product_id', productId)
+          .eq('variant_id', option.id);
+
+        if (!existingImages || existingImages.length === 0) {
+          // Add new image for this variant
+          await addProductImage(
+            productId,
+            option.image,
+            undefined, // Let it auto-determine order
+            option.id,
+            option.name
+          );
+          console.log(`Added image for variant ${option.name}`);
+        } else {
+          // Update existing image if URL has changed
+          const existingImage = existingImages[0];
+          if (existingImage.image_url !== option.image) {
+            const { error } = await supabase
+              .from('product_images')
+              .update({ 
+                image_url: option.image,
+                variant_name: option.name // Update variant name too
+              })
+              .eq('id', existingImage.id);
+            
+            if (error) {
+              console.error('Error updating variant image:', error);
+            } else {
+              console.log(`Updated image for variant ${option.name}`);
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error syncing product option images:', error);
+  }
+}
+
 export async function fetchProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('products')
@@ -139,6 +192,11 @@ export async function addProduct(product: Omit<Product, "id"> & { images?: Produ
     }
   }
 
+  // Sync product option images to product_images table
+  if (product.options && product.options.length > 0) {
+    await syncProductOptionImages(data.id, product.options);
+  }
+
   return await supabaseProductToProduct(data);
 }
 
@@ -160,6 +218,11 @@ export async function updateProduct(product: Product & { images?: ProductImage[]
       (error.details ? '\nDetails: ' + error.details : '')
     );
     throw new Error('Failed to update product');
+  }
+
+  // Sync product option images to product_images table after update
+  if (product.options && product.options.length > 0) {
+    await syncProductOptionImages(product.id!, product.options);
   }
 
   // Note: Image management is handled separately by ProductImageManager
