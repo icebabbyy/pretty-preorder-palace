@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -33,7 +32,6 @@ const ProductImageManager = ({
 }: ProductImageManagerProps) => {
   const [images, setImages] = useState<ProductImage[]>(initialImages || []);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [selectedImageType, setSelectedImageType] = useState<"main" | "extra" | "variant">("main");
   const [selectedVariant, setSelectedVariant] = useState<string>("");
   
   const mainFileInputRef = useRef<HTMLInputElement>(null);
@@ -108,6 +106,7 @@ const ProductImageManager = ({
         }
 
         if (productId) {
+          // สำหรับสินค้าที่มี ID แล้ว - บันทึกใน database
           const newImage = await addProductImage(
             productId, 
             url, 
@@ -120,9 +119,9 @@ const ProductImageManager = ({
           setImages(updated);
           onImagesChange(updated);
         } else {
-          // For new products, add to local state
+          // สำหรับสินค้าใหม่ - เก็บใน state ก่อน
           const tempImage: ProductImage = {
-            id: Date.now(),
+            id: Date.now(), // ใช้ timestamp เป็น temp ID
             product_id: 0,
             image_url: url,
             order: index,
@@ -139,7 +138,7 @@ const ProductImageManager = ({
       }
     } catch (error) {
       console.error('Error uploading image:', error);
-      alert('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ: ' + error.message);
+      alert('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ: ' + (error as Error).message);
     } finally {
       setIsUpdating(false);
       setSelectedVariant("");
@@ -157,7 +156,8 @@ const ProductImageManager = ({
     try {
       setIsUpdating(true);
       
-      if (productId && imageId > 0) {
+      // เฉพาะสินค้าที่มี ID และรูปภาพที่มี ID จริง (ไม่ใช่ temp) เท่านั้นที่จะลบใน database
+      if (productId && imageId > 1000000000000) { // temp ID มี timestamp ที่มากกว่านี้
         await deleteProductImage(imageId);
       }
       
@@ -193,9 +193,12 @@ const ProductImageManager = ({
       setImages(updatedAllImages);
       onImagesChange(updatedAllImages);
       
+      // เฉพาะสินค้าที่มี ID แล้วเท่านั้นที่จะอัปเดตใน database
       if (productId) {
         await reorderProductImages(
-          reordered.map((img) => ({ id: img.id, order: img.index || 0 }))
+          reordered
+            .filter(img => img.id < 1000000000000) // เฉพาะรูปที่มี ID จริง
+            .map((img) => ({ id: img.id, order: img.index || 0 }))
         );
       }
     } catch (error) {
