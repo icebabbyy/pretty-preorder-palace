@@ -53,6 +53,8 @@ const ProductImageManager = ({
       const variantPath = variantId ? `variant-${variantId}` : type;
       const filename = `${productId || 'temp'}/${variantPath}/${index}.${fileExtension}`;
       
+      console.log('Uploading to storage:', filename);
+      
       const { error } = await supabase.storage
         .from("product-images")
         .upload(filename, file, { upsert: true });
@@ -66,6 +68,7 @@ const ProductImageManager = ({
         .from("product-images")
         .getPublicUrl(filename);
         
+      console.log('Upload successful, URL:', data.publicUrl);
       return data.publicUrl;
     } catch (error) {
       console.error('Upload error:', error);
@@ -82,6 +85,7 @@ const ProductImageManager = ({
       return;
     }
     
+    console.log(`Starting ${type} image upload for productId:`, productId);
     setIsUpdating(true);
     
     try {
@@ -105,7 +109,8 @@ const ProductImageManager = ({
           variantName = selectedVariantOption?.name;
         }
 
-        if (productId) {
+        if (productId && productId > 0) {
+          console.log('Adding image to database for product:', productId);
           // สำหรับสินค้าที่มี ID แล้ว - บันทึกใน database
           const newImage = await addProductImage(
             productId, 
@@ -115,10 +120,12 @@ const ProductImageManager = ({
             variantName,
             type
           );
+          console.log('Image added to database:', newImage);
           const updated = [...images, newImage];
           setImages(updated);
           onImagesChange(updated);
         } else {
+          console.log('Adding image to local state for new product');
           // สำหรับสินค้าใหม่ - เก็บใน state ก่อน
           const tempImage: ProductImage = {
             id: Date.now(), // ใช้ timestamp เป็น temp ID
@@ -153,12 +160,19 @@ const ProductImageManager = ({
   const handleDeleteImage = async (imageId: number) => {
     if (isUpdating) return;
     
+    console.log('Deleting image:', imageId, 'productId:', productId);
+    
     try {
       setIsUpdating(true);
       
-      // เฉพาะสินค้าที่มี ID และรูปภาพที่มี ID จริง (ไม่ใช่ temp) เท่านั้นที่จะลบใน database
-      if (productId && imageId > 1000000000000) { // temp ID มี timestamp ที่มากกว่านี้
+      // ตรวจสอบว่าเป็น temp ID หรือ real ID
+      const isRealId = imageId < 1000000000000; // ID ที่มาจาก database จะเป็นตัวเลขเล็กกว่า timestamp
+      
+      if (productId && productId > 0 && isRealId) {
+        console.log('Deleting from database');
         await deleteProductImage(imageId);
+      } else {
+        console.log('Deleting from local state only');
       }
       
       const updated = images.filter(img => img.id !== imageId);
@@ -166,7 +180,7 @@ const ProductImageManager = ({
       onImagesChange(updated);
     } catch (error) {
       console.error('Error deleting image:', error);
-      alert('เกิดข้อผิดพลาดในการลบรูปภาพ');
+      alert('เกิดข้อผิดพลาดในการลบรูปภาพ: ' + (error as Error).message);
     } finally {
       setIsUpdating(false);
     }
@@ -193,17 +207,18 @@ const ProductImageManager = ({
       setImages(updatedAllImages);
       onImagesChange(updatedAllImages);
       
-      // เฉพาะสินค้าที่มี ID แล้วเท่านั้นที่จะอัปเดตใน database
-      if (productId) {
-        await reorderProductImages(
-          reordered
-            .filter(img => img.id < 1000000000000) // เฉพาะรูปที่มี ID จริง
-            .map((img) => ({ id: img.id, order: img.index || 0 }))
-        );
+      // เฉพาะสินค้าที่มี ID แล้วและรูปภาพที่มี real ID เท่านั้นที่จะอัปเดตใน database
+      if (productId && productId > 0) {
+        const realImages = reordered.filter(img => img.id < 1000000000000); // เฉพาะรูปที่มี ID จริง
+        if (realImages.length > 0) {
+          await reorderProductImages(
+            realImages.map((img) => ({ id: img.id, order: img.index || 0 }))
+          );
+        }
       }
     } catch (error) {
       console.error('Error reordering images:', error);
-      alert('เกิดข้อผิดพลาดในการเรียงลำดับรูปภาพ');
+      alert('เกิดข้อผิดพลาดในการเรียงลำดับรูปภาพ: ' + (error as Error).message);
     } finally {
       setIsUpdating(false);
     }
@@ -325,6 +340,9 @@ const ProductImageManager = ({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <Label className="text-lg font-semibold">จัดการรูปภาพสินค้า</Label>
+        {productId && (
+          <span className="text-sm text-gray-500">Product ID: {productId}</span>
+        )}
       </div>
       
       {/* Upload Sections */}
