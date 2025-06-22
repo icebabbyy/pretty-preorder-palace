@@ -168,22 +168,30 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     }
   }, [selectedCategories, open]);
 
-  // Upload image to Supabase storage
-  const uploadImageToStorage = async (file: File): Promise<string | null> => {
-    try {
-      const filename = `${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage.from("product-images").upload(filename, file);
-      if (error) {
-        console.error('Upload error:', error);
-        return null;
-      }
-      const { data } = supabase.storage.from("product-images").getPublicUrl(filename);
-      return data.publicUrl;
-    } catch (error) {
-      console.error('Upload error:', error);
+// Upload image to Supabase storage
+const uploadImageToStorage = async (
+  file: File,
+  productId: string,
+  folder: "main" | "extra" | "variant"
+): Promise<string | null> => {
+  try {
+    const filename = `${Date.now()}-${file.name}`;
+    const path = `products/${productId}/${folder}/${filename}`;
+    
+    const { error } = await supabase.storage.from("product-images").upload(path, file);
+    if (error) {
+      console.error("Upload error:", error);
       return null;
     }
-  };
+    
+    const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+    return data.publicUrl;
+  } catch (error) {
+    console.error("Upload error:", error);
+    return null;
+  }
+};
+
 
   // Handle option image upload
   const handleOptionImageUpload = async (optionId: string, file: File) => {
@@ -292,28 +300,54 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || selectedCategories.length === 0) {
-      alert("กรุณากรอกชื่อสินค้าและเลือกหมวดหมู่อย่างน้อย 1 หมวดหมู่");
-      return;
+  if (!formData.name || selectedCategories.length === 0) {
+    alert("กรุณากรอกชื่อสินค้าและเลือกหมวดหมู่อย่างน้อย 1 หมวดหมู่");
+    return;
+  }
+
+  let quantity = formData.quantity;
+  if (options.length > 0) {
+    quantity = options.reduce((sum, o) => sum + (o.quantity || 0), 0);
+  }
+
+  // สมมติ productId สร้างจาก timestamp (ถ้ามี productId จริงใช้ตัวนั้น)
+  const productId = `${Date.now()}`; 
+
+  const uploadedImages: ProductImage[] = [];
+
+  for (let i = 0; i < productImages.length; i++) {
+    const img = productImages[i];
+    if (img.file) {  // สมมติ productImages เก็บ File ไว้ใน field file
+      const folder = i === 0 ? "main" : "extra"; // รูปแรก = main, ที่เหลือ = extra
+      const url = await uploadImageToStorage(img.file, productId, folder);
+      if (url) {
+        uploadedImages.push({
+          image_url: url,
+          file: undefined // ไม่ต้องเก็บ file แล้ว
+        });
+      }
+    } else {
+      // เผื่อเป็น URL ที่มีอยู่แล้ว
+      uploadedImages.push(img);
     }
-    
-    let quantity = formData.quantity;
-    if (options.length > 0) {
-      quantity = options.reduce((sum, o) => sum + (o.quantity || 0), 0);
-    }
-    
-    const dataToSave = {
-      ...formData,
-      categories: selectedCategories,
-      category: selectedCategories[0],
-      quantity,
-      options: options.length > 0 ? options : undefined,
-      images: productImages
-    };
-    
-    try {
-      await onAddProduct(dataToSave);
-      onOpenChange(false);
+  }
+
+  const dataToSave = {
+    ...formData,
+    categories: selectedCategories,
+    category: selectedCategories[0],
+    quantity,
+    options: options.length > 0 ? options : undefined,
+    images: uploadedImages
+  };
+
+  try {
+    await onAddProduct(dataToSave);
+    onOpenChange(false);
+  } catch (err) {
+    console.error("Add product failed", err);
+  }
+};
 
       if (!editingProduct) {
         setFormData({
