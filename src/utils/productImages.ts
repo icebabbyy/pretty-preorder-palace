@@ -9,6 +9,8 @@ export interface ProductImage {
   created_at: string;
   variant_id?: string | null;
   variant_name?: string | null;
+  type: string;
+  index?: number;
 }
 
 // Fetch all images for a product
@@ -17,7 +19,8 @@ export async function fetchProductImages(productId: number): Promise<ProductImag
     .from('product_images')
     .select('*')
     .eq('product_id', productId)
-    .order('order', { ascending: true });
+    .order('type', { ascending: true })
+    .order('index', { ascending: true });
 
   if (error) {
     console.error('Error fetching product images:', error);
@@ -31,20 +34,22 @@ export async function fetchProductImages(productId: number): Promise<ProductImag
 export async function addProductImage(
   productId: number, 
   imageUrl: string, 
-  order?: number,
+  index?: number,
   variantId?: string,
-  variantName?: string
+  variantName?: string,
+  type: string = 'extra'
 ): Promise<ProductImage> {
-  // If no order specified, get the next order number
-  if (order === undefined) {
+  // If no index specified, get the next index number for this type
+  if (index === undefined) {
     const { data: existingImages } = await supabase
       .from('product_images')
-      .select('order')
+      .select('index')
       .eq('product_id', productId)
-      .order('order', { ascending: false })
+      .eq('type', type)
+      .order('index', { ascending: false })
       .limit(1);
     
-    order = existingImages && existingImages.length > 0 ? existingImages[0].order + 1 : 1;
+    index = existingImages && existingImages.length > 0 ? (existingImages[0].index || 0) + 1 : 0;
   }
 
   const { data, error } = await supabase
@@ -52,9 +57,11 @@ export async function addProductImage(
     .insert([{
       product_id: productId,
       image_url: imageUrl,
-      order: order,
+      order: index || 0,
+      index: index || 0,
       variant_id: variantId || null,
-      variant_name: variantName || null
+      variant_name: variantName || null,
+      type: type
     }])
     .select()
     .single();
@@ -73,8 +80,10 @@ export async function updateProductImage(
   updates: { 
     image_url?: string; 
     order?: number;
+    index?: number;
     variant_id?: string | null;
     variant_name?: string | null;
+    type?: string;
   }
 ): Promise<ProductImage> {
   const { data, error } = await supabase
@@ -112,7 +121,7 @@ export async function reorderProductImages(
   const promises = imageUpdates.map(({ id, order }) =>
     supabase
       .from('product_images')
-      .update({ order })
+      .update({ order, index: order })
       .eq('id', id)
   );
 
