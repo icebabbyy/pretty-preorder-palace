@@ -178,13 +178,24 @@ const uploadImageToStorage = async (
     const filename = `${Date.now()}-${file.name}`;
     const path = `products/${productId}/${folder}/${filename}`;
     
-    const { error } = await supabase.storage.from("product-images").upload(path, file);
+    const { error } = await supabase
+      .storage
+      .from("product-images")
+      .upload(path, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
     if (error) {
       console.error("Upload error:", error);
       return null;
     }
-    
-    const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+
+    const { data } = supabase
+      .storage
+      .from("product-images")
+      .getPublicUrl(path);
+      
     return data.publicUrl;
   } catch (error) {
     console.error("Upload error:", error);
