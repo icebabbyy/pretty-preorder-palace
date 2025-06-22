@@ -5,7 +5,7 @@ import { fetchProductImages, addProductImage, deleteProductImage, type ProductIm
 
 // Helper: snake_case to camelCase
 async function supabaseProductToProduct(p: any): Promise<Product> {
-  // Fetch product images from product_images table, categorized by type
+  // Fetch product images from product_images table
   let productImages: ProductImage[] = [];
   try {
     productImages = await fetchProductImages(p.id);
@@ -13,9 +13,9 @@ async function supabaseProductToProduct(p: any): Promise<Product> {
     console.warn('Failed to fetch product images for product', p.id, error);
   }
 
-  // Separate images by type
-  const mainImage = productImages.find(img => img.type === 'main')?.image_url || p.image || "";
-  
+  // Use first image from product_images table, fallback to existing image field
+  const mainImage = productImages.length > 0 ? productImages[0].image_url : (p.image || "");
+
   return {
     id: p.id,
     sku: p.sku,
@@ -90,18 +90,16 @@ async function syncProductOptionImages(productId: number, options: any[]) {
           .from('product_images')
           .select('*')
           .eq('product_id', productId)
-          .eq('variant_id', option.id)
-          .eq('type', 'variant');
+          .eq('variant_id', option.id);
 
         if (!existingImages || existingImages.length === 0) {
           // Add new image for this variant
           await addProductImage(
             productId,
             option.image,
-            0, // index
+            undefined, // Let it auto-determine order
             option.id,
-            option.name,
-            'variant'
+            option.name
           );
           console.log(`Added image for variant ${option.name}`);
         } else {

@@ -63,97 +63,6 @@ export type Database = {
         }
         Relationships: []
       }
-      "email tracking": {
-        Row: {
-          created_at: string
-          id: number
-          message: string
-          product_sku: string | null
-          recipient_email: string
-          send_at: string | null
-          subject: string | null
-          type: string | null
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          message: string
-          product_sku?: string | null
-          recipient_email: string
-          send_at?: string | null
-          subject?: string | null
-          type?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          message?: string
-          product_sku?: string | null
-          recipient_email?: string
-          send_at?: string | null
-          subject?: string | null
-          type?: string | null
-        }
-        Relationships: []
-      }
-      notifications: {
-        Row: {
-          created_at: string | null
-          id: number
-          message: string
-          order_id: number | null
-          product_sku: string | null
-          recipient_email: string
-          sent_at: string | null
-          subject: string
-          type: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: number
-          message: string
-          order_id?: number | null
-          product_sku?: string | null
-          recipient_email: string
-          sent_at?: string | null
-          subject: string
-          type: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: number
-          message?: string
-          order_id?: number | null
-          product_sku?: string | null
-          recipient_email?: string
-          sent_at?: string | null
-          subject?: string
-          type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notifications_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notifications_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "publice_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notifications_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "publine_orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       orders: {
         Row: {
           address: string | null
@@ -234,35 +143,29 @@ export type Database = {
       }
       product_images: {
         Row: {
-          created_at: string | null
+          created_at: string
           id: number
-          image_url: string
-          index: number | null
+          image_url: string | null
           order: number | null
-          product_id: number
-          type: string
+          product_id: number | null
           variant_id: string | null
           variant_name: string | null
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           id?: number
-          image_url: string
-          index?: number | null
+          image_url?: string | null
           order?: number | null
-          product_id: number
-          type?: string
+          product_id?: number | null
           variant_id?: string | null
           variant_name?: string | null
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           id?: number
-          image_url?: string
-          index?: number | null
+          image_url?: string | null
           order?: number | null
-          product_id?: number
-          type?: string
+          product_id?: number | null
           variant_id?: string | null
           variant_name?: string | null
         }
@@ -381,7 +284,6 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
-          order_history: number | null
           phone: string | null
           role: string
           updated_at: string | null
@@ -395,7 +297,6 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
-          order_history?: number | null
           phone?: string | null
           role?: string
           updated_at?: string | null
@@ -409,7 +310,6 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
-          order_history?: number | null
           phone?: string | null
           role?: string
           updated_at?: string | null
@@ -423,15 +323,48 @@ export type Database = {
       public_products: {
         Row: {
           category: string | null
+          created_at: string | null
           description: string | null
           id: number | null
-          main_image_url: string | null
-          name: string | null
+          image: string | null
           options: Json | null
+          product_name: string | null
+          product_sku: string | null
           product_status: string | null
+          product_type: string | null
           selling_price: number | null
           shipment_date: string | null
-          sku: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: number | null
+          image?: string | null
+          options?: Json | null
+          product_name?: string | null
+          product_sku?: string | null
+          product_status?: string | null
+          product_type?: string | null
+          selling_price?: number | null
+          shipment_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: number | null
+          image?: string | null
+          options?: Json | null
+          product_name?: string | null
+          product_sku?: string | null
+          product_status?: string | null
+          product_type?: string | null
+          selling_price?: number | null
+          shipment_date?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
