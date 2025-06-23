@@ -67,7 +67,7 @@ const ProductFormFields = ({ formData, setFormData, productTypes, onShowProductT
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div>
           <Label htmlFor="status">สถานะ</Label>
           <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
@@ -79,6 +79,18 @@ const ProductFormFields = ({ formData, setFormData, productTypes, onShowProductT
               <SelectItem value="พร้อมส่ง">พร้อมส่ง</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div>
+          <Label htmlFor="quantity">จำนวนสต็อก</Label>
+          <Input 
+            id="quantity"
+            type="number"
+            value={formData.quantity || 0}
+            onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
+            placeholder="จำนวนสต็อก"
+            className="border border-purple-200 rounded-lg"
+            min="0"
+          />
         </div>
         <div>
           <Label htmlFor="shipmentDate">วันที่จัดส่ง</Label>
