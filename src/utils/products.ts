@@ -1,7 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import type { Product } from "@/types";
-import { fetchProductImages, addProductImage, deleteProductImage, type ProductImage } from "./productImages";
+import type { Product, ProductImage } from "@/types";
+import { fetchProductImages, addProductImage, deleteProductImage } from "./productImages";
 
 // Helper: snake_case to camelCase
 async function supabaseProductToProduct(p: any): Promise<Product> {
