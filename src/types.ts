@@ -1,4 +1,3 @@
-
 export interface ProductOption {
   id: string;
   name: string;
@@ -10,13 +9,14 @@ export interface ProductOption {
 }
 
 export interface ProductImage {
-  id: number;
-  product_id: number;
+  id?: number;
+  product_id?: number;
   image_url: string;
-  order: number;
-  created_at: string;
+  order?: number;
+  created_at?: string;
   variant_id?: string | null;
   variant_name?: string | null;
+  file?: File; // Add optional file property for temporary storage during upload
 }
 
 export interface Product {

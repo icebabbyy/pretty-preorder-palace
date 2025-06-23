@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -185,7 +184,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
       quantity = options.reduce((sum, o) => sum + (o.quantity || 0), 0);
     }
 
-    const productId = editingProduct?.id?.toString() || `${Date.now()}`;
+    const productId = editingProduct?.id || Date.now();
     const uploadedImages: ProductImage[] = [];
 
     for (let i = 0; i < productImages.length; i++) {
@@ -195,8 +194,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
         const url = await uploadImageToStorage(img.file, productId, folder);
         if (url) {
           uploadedImages.push({
-            image_url: url,
-            file: undefined
+            image_url: url
           });
         }
       } else {

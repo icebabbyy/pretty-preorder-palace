@@ -128,7 +128,7 @@ export async function reorderProductImages(
 // Upload image to Supabase storage with organized folder structure
 export async function uploadImageToStorage(
   file: File,
-  productId: number,
+  productId: string | number,
   folder: "main" | "extra" | "variant"
 ): Promise<string | null> {
   try {
