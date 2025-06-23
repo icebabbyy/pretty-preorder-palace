@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,10 +11,9 @@ import {
   deleteProductImage,
   reorderProductImages,
   updateProductImage,
-  type ProductImage,
 } from "@/utils/productImages";
 import { supabase } from "@/integrations/supabase/client";
-import { ProductOption } from "@/types";
+import { ProductOption, ProductImage } from "@/types";
 
 interface ProductImageManagerProps {
   productId?: number;
@@ -45,7 +43,7 @@ const ProductImageManager = ({
 
   // Categorize images
   const mainImages = images.filter(img => !img.variant_id && img.order === 1);
-  const additionalImages = images.filter(img => !img.variant_id && img.order > 1);
+  const additionalImages = images.filter(img => !img.variant_id && (img.order || 0) > 1);
   const variantImages = images.filter(img => img.variant_id);
 
   const uploadImageToStorage = async (file: File): Promise<string | null> => {
@@ -108,7 +106,7 @@ const ProductImageManager = ({
         order = 1; // Main image always has order 1
       } else if (selectedImageType === "additional") {
         // Find the next order number for additional images
-        const maxOrder = Math.max(...additionalImages.map(img => img.order), 1);
+        const maxOrder = Math.max(...additionalImages.map(img => img.order || 0), 1);
         order = maxOrder + 1;
       }
 
@@ -219,8 +217,8 @@ const ProductImageManager = ({
     }
   };
 
-  const handleDeleteImage = async (imageId: number, index: number, imageList: ProductImage[]) => {
-    if (isUpdating) return;
+  const handleDeleteImage = async (imageId: number | undefined, index: number, imageList: ProductImage[]) => {
+    if (isUpdating || !imageId) return;
     
     try {
       setIsUpdating(true);
@@ -244,8 +242,8 @@ const ProductImageManager = ({
     }
   };
 
-  const handleMoveImage = async (imageId: number, direction: "up" | "down", imageList: ProductImage[]) => {
-    if (isUpdating) return;
+  const handleMoveImage = async (imageId: number | undefined, direction: "up" | "down", imageList: ProductImage[]) => {
+    if (isUpdating || !imageId) return;
     
     const currentIndex = imageList.findIndex(img => img.id === imageId);
     const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
@@ -267,7 +265,7 @@ const ProductImageManager = ({
       
       if (productId) {
         await reorderProductImages(
-          reordered.map((img) => ({ id: img.id, order: img.order }))
+          reordered.map((img) => ({ id: img.id || 0, order: img.order || 0 }))
         );
       }
     } catch (error) {
@@ -348,8 +346,8 @@ const ProductImageManager = ({
     </Card>
   );
 
-  const handleImageUrlChange = async (imageId: number, newUrl: string) => {
-    if (isUpdating) return;
+  const handleImageUrlChange = async (imageId: number | undefined, newUrl: string) => {
+    if (isUpdating || !imageId) return;
     
     try {
       setIsUpdating(true);

@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { nanoid } from "nanoid";
-import { Product, ProductOption } from "@/types";
+import { Product, ProductOption, ProductImage } from "@/types";
 import { generateSKU } from "@/utils/sku";
 import { fetchProductTypes } from "@/utils/productTypes";
-import { fetchProductImages, uploadImageToStorage, type ProductImage } from "@/utils/productImages";
+import { fetchProductImages, uploadImageToStorage } from "@/utils/productImages";
 import ProductTypeManagementModal from "./ProductTypeManagementModal";
 import ProductImageManager from "./ProductImageManager";
 import ProductFormFields from "./product-form/ProductFormFields";
@@ -194,7 +194,13 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
         const url = await uploadImageToStorage(img.file, productId, folder);
         if (url) {
           uploadedImages.push({
-            image_url: url
+            image_url: url,
+            id: img.id,
+            product_id: img.product_id,
+            order: img.order,
+            created_at: img.created_at,
+            variant_id: img.variant_id,
+            variant_name: img.variant_name
           });
         }
       } else {

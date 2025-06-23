@@ -1,14 +1,6 @@
-import { supabase } from "@/integrations/supabase/client";
 
-export interface ProductImage {
-  id: number;
-  product_id: number;
-  image_url: string;
-  order: number;
-  created_at: string;
-  variant_id?: string | null;
-  variant_name?: string | null;
-}
+import { supabase } from "@/integrations/supabase/client";
+import { ProductImage } from "@/types";
 
 // Fetch all images for a product
 export async function fetchProductImages(productId: number): Promise<ProductImage[]> {
