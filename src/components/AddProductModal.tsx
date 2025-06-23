@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,7 @@ import { nanoid } from "nanoid";
 import { Product, ProductOption } from "@/types";
 import { generateSKU } from "@/utils/sku";
 import { fetchProductTypes } from "@/utils/productTypes";
-import { fetchProductImages, addProductImage, type ProductImage } from "@/utils/productImages";
+import { fetchProductImages, addProductImage, uploadImageToStorage, type ProductImage } from "@/utils/productImages";
 import { supabase } from "@/integrations/supabase/client";
 import ProductTypeManagementModal from "./ProductTypeManagementModal";
 import ProductImageManager from "./ProductImageManager";
