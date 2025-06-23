@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ProductImage {
@@ -123,5 +122,40 @@ export async function reorderProductImages(
       console.error('Error reordering product images:', result.error);
       throw new Error('Failed to reorder product images');
     }
+  }
+}
+
+// Upload image to Supabase storage with organized folder structure
+export async function uploadImageToStorage(
+  file: File,
+  productId: number,
+  folder: "main" | "extra" | "variant"
+): Promise<string | null> {
+  try {
+    const filename = `${Date.now()}-${file.name}`;
+    const path = `products/${productId}/${folder}/${filename}`;
+    
+    const { error } = await supabase
+      .storage
+      .from("product-images")
+      .upload(path, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      console.error("Upload error:", error);
+      return null;
+    }
+
+    const { data } = supabase
+      .storage
+      .from("product-images")
+      .getPublicUrl(path);
+      
+    return data.publicUrl;
+  } catch (error) {
+    console.error("Upload error:", error);
+    return null;
   }
 }
