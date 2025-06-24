@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { nanoid } from "nanoid";
-// ** ไม่ต้อง import Tag แล้ว **
 import { Product, ProductOption, ProductImage } from "@/types";
 import { generateSKU } from "@/utils/sku";
 import { fetchProductTypes } from "@/utils/productTypes";
@@ -16,7 +15,7 @@ import ProductCategorySelector from "./product-form/ProductCategorySelector";
 import ProductPricingFields from "./product-form/ProductPricingFields";
 import ProductOptionsManager from "./product-form/ProductOptionsManager";
 
-// Imports ที่จำเป็นสำหรับ Tag
+// --- เพิ่ม Imports ที่จำเป็นสำหรับ Tag ---
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -42,11 +41,11 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   const [showProductTypeModal, setShowProductTypeModal] = useState(false);
   const [productImages, setProductImages] = useState<ProductImage[]>([]);
 
-  // --- State สำหรับ Tag (แบบ Minimal ที่สุด) ---
+  // --- เพิ่ม State สำหรับ Tag ---
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
 
-  // --- useEffect ทั้งหมดของคุณ (ไม่แก้ไข) ---
+  // --- useEffect ทั้งหมดของคุณ (ไม่มีการแก้ไข) ---
   useEffect(() => { if (open) { fetchProductTypes().then(setProductTypes).catch(console.error); } }, [open]);
   useEffect(() => {
     const y = parseFloat(formData.priceYuan as any) || 0;
@@ -58,18 +57,20 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     const totalCost = (parseFloat(formData.priceThb as any) || 0) + (parseFloat(formData.importCost as any) || 0);
     setFormData(prev => ({ ...prev, costThb: totalCost }));
   }, [formData.priceThb, formData.importCost]);
-  useEffect(() => {
-    if (!editingProduct && (!formData.sku || formData.sku === "")) {
-      if (selectedCategories.length > 0) setFormData(prev => ({ ...prev, sku: generateSKU(selectedCategories[0]) }));
-    }
-  }, [selectedCategories, open, editingProduct, formData.sku]);
 
-  // --- useEffect หลัก: เพิ่มการดึง/reset Tag เข้าไป ---
+  // --- useEffect หลัก: แก้ไขโดยยึดโครงสร้างเดิมของคุณ ---
   useEffect(() => {
     if (editingProduct) {
       setFormData(editingProduct);
       setSelectedCategories(editingProduct.categories || [editingProduct.category].filter(Boolean));
-      setOptions(editingProduct.options?.map(opt => ({ ...opt, id: opt.id || nanoid() })) || []);
+      
+      // **ใช้โครงสร้าง if/else เดิมของคุณ ไม่เปลี่ยนมัน**
+      if (editingProduct.options) {
+        const optionsWithIds = editingProduct.options.map(opt => ({ ...opt, id: opt.id || nanoid() }));
+        setOptions(optionsWithIds);
+      } else {
+        setOptions([]);
+      }
       
       if (editingProduct.id) {
         fetchProductImages(editingProduct.id).then(images => {
@@ -77,7 +78,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
           if (images.length > 0) setFormData(prev => ({ ...prev, image: images[0].image_url }));
         }).catch(console.error);
 
-        // ดึง Tag ของสินค้านี้
+        // แทรกโค้ดดึง Tag เข้ามาตรงนี้
         const fetchProductTags = async () => {
           const { data, error } = await supabase.from('product_tags').select('tags(name)').eq('product_id', editingProduct.id);
           if (error) {
@@ -90,9 +91,10 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
           }
         };
         fetchProductTags();
+
       } else {
         setProductImages([]);
-        setSelectedTags([]);
+        setSelectedTags([]); // เพิ่ม reset tag ถ้าไม่มี id
       }
     } else {
       // Logic Reset เดิม + เพิ่ม reset tag
@@ -104,6 +106,13 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
       setTagInput("");
     }
   }, [editingProduct, open]);
+  
+  // --- useEffect สร้าง SKU (ไม่แก้ไข) ---
+  useEffect(() => {
+    if (!editingProduct && (!formData.sku || formData.sku === "")) {
+      if (selectedCategories.length > 0) setFormData(prev => ({ ...prev, sku: generateSKU(selectedCategories[0]) }));
+    }
+  }, [selectedCategories, open, editingProduct, formData.sku]);
 
   // --- ฟังก์ชัน Helper เดิม (ไม่แก้ไข) ---
   const toggleCategory = (category: string) => { /* ...โค้ดเดิม... */ };
@@ -116,6 +125,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     if (options.length > 0) { quantity = options.reduce((sum, o) => sum + (o.quantity || 0), 0); }
     const productId = editingProduct?.id || nanoid();
     const uploadedImages: ProductImage[] = [];
+    // ... logic upload image เดิม
     for (let i = 0; i < productImages.length; i++) {
         const img = productImages[i];
         if (img.file) {
@@ -129,7 +139,6 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
             uploadedImages.push(img);
         }
     }
-
     const dataToSave = {
       ...formData,
       categories: selectedCategories,
@@ -137,11 +146,12 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
       quantity,
       options: options.length > 0 ? options : undefined, // ใช้ logic เดิมของคุณ
       images: uploadedImages,
-      tags: selectedTags, // ส่งเป็น array ของ string ได้เลย
+      tags: selectedTags, // ส่งเป็น array ของ string
     };
     try {
       await onAddProduct(dataToSave);
       onOpenChange(false);
+      if (!editingProduct) { /* ...โค้ด reset form เดิม... */ }
     } catch (error) { console.error("Error saving product:", error); alert("เกิดข้อผิดพลาดในการบันทึกสินค้า"); }
   };
 
@@ -153,9 +163,9 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
           <div className="space-y-4 mt-6">
             <ProductFormFields formData={formData} setFormData={setFormData} productTypes={productTypes} onShowProductTypeModal={() => setShowProductTypeModal(true)} />
 
-            {/* --- UI ของ Tag --- */}
+            {/* เพิ่ม Card ของ Tag ไว้ตรงนี้ */}
             <Card>
-              <CardHeader><CardTitle className="text-base">Tags</CardTitle><p className="text-sm text-gray-500">เพิ่ม Tag เพื่อช่วยในการค้นหา (พิมพ์แล้วกด Enter)</p></CardHeader>
+              <CardHeader><CardTitle className="text-base">Tags</CardTitle><p className="text-sm text-gray-500">เพิ่ม Tag (พิมพ์แล้วกด Enter)</p></CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {selectedTags.map(tag => (
@@ -167,9 +177,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
                 </div>
                 <div className="flex items-center gap-2">
                   <Input
-                    type="text"
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
+                    type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -192,8 +200,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
                 </div>
               </CardContent>
             </Card>
-
-            {/* --- Component เดิมของคุณทั้งหมด --- */}
+            
             <ProductCategorySelector categories={categories} selectedCategories={selectedCategories} toggleCategory={toggleCategory} />
             <ProductImageManager productId={editingProduct?.id?.toString()} images={productImages} onImagesChange={handleImagesChange} disabled={false} productOptions={options} />
             <ProductPricingFields formData={formData} setFormData={setFormData} />
