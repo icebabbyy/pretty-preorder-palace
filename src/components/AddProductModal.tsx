@@ -13,6 +13,9 @@ import ProductCategorySelector from "./product-form/ProductCategorySelector";
 import ProductPricingFields from "./product-form/ProductPricingFields";
 import ProductOptionsManager from "./product-form/ProductOptionsManager";
 
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+
 interface AddProductModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
