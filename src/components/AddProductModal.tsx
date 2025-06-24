@@ -46,8 +46,8 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   const [productTypes, setProductTypes] = useState<string[]>([]);
   const [showProductTypeModal, setShowProductTypeModal] = useState(false);
   const [productImages, setProductImages] = useState<ProductImage[]>([]);
-const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
   // Load product types when modal opens
   useEffect(() => {
     if (open) {
