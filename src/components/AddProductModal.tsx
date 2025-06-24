@@ -91,6 +91,24 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   }, [editingProduct, open]);
   
   // --- useEffect สร้าง SKU (ไม่แก้ไข) ---
+   useEffect(() => {
+    const newCategories = selectedCategories;
+    
+    if (newCategories.length > 0) {
+      setFormData(prevForm => ({
+        ...prevForm,
+        category: newCategories[0],
+        categories: newCategories
+      }));
+    } else {
+      setFormData(prevForm => ({
+        ...prevForm,
+        category: "",
+        categories: []
+      }));
+    }
+  }, [selectedCategories]);
+  
   useEffect(() => {
     if (!editingProduct && (!formData.sku || formData.sku === "")) {
       if (selectedCategories.length > 0) setFormData(prev => ({ ...prev, sku: generateSKU(selectedCategories[0]) }));
@@ -98,7 +116,13 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   }, [selectedCategories, open, editingProduct, formData.sku]);
 
   // --- ฟังก์ชัน Helper เดิม (ไม่แก้ไข) ---
-  const toggleCategory = (category: string) => { /* ...โค้ดเดิม... */ };
+  const toggleCategory = (category: string) => {
+    setSelectedCategories(prev =>
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
   const handleImagesChange = (images: ProductImage[]) => { /* ...โค้ดเดิม... */ };
 
   // --- ฟังก์ชัน handleSubmit (เพิ่ม tags เข้าไป) ---
