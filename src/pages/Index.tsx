@@ -137,5 +137,11 @@ const Index = () => {
     </div>
   );
 };
+// src/types/index.ts
 
+export interface Tag {
+  id: number;
+  name: string;
+  slug: string;
+}
 export default Index;
