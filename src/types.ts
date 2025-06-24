@@ -8,6 +8,12 @@ export interface ProductOption {
   profit: number;
 }
 
+export interface Tag {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 export interface ProductImage {
   id?: number;
   product_id?: number;
