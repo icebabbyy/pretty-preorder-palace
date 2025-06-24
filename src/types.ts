@@ -36,6 +36,7 @@ export interface Product {
   sellingPrice: number;
   status: string;
   shipmentDate: string;
+  tags?: string[];
   link: string;
   description: string;
   quantity?: number;
