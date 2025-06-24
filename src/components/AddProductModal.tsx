@@ -13,7 +13,6 @@ import ProductCategorySelector from "./product-form/ProductCategorySelector";
 import ProductPricingFields from "./product-form/ProductPricingFields";
 import ProductOptionsManager from "./product-form/ProductOptionsManager";
 import { Input } from "@/components/ui/input";
-import { Card, ... } from "@/components/ui/card";
 
 interface AddProductModalProps {
   open: boolean;
