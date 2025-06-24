@@ -1,273 +1,184 @@
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
-import { X, Plus, ArrowUp, ArrowDown } from "lucide-react";
-import { 
-  fetchProductImages, 
-  addProductImage, 
-  deleteProductImage, 
-  updateProductImage,
-  reorderProductImages,
-  type ProductImage 
-} from "@/utils/productImages";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { X, Plus, Upload } from "lucide-react";
+import { ProductImage } from "@/types";
+import { nanoid } from "nanoid";
+import { DndProvider, useDrag, useDrop, XYCoord } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { cn } from '@/lib/utils';
+import { uploadImageToStorage } from "@/utils/productImages";
 
-interface ProductImageManagerProps {
-  productId?: number;
-  images: ProductImage[];
-  onImagesChange: (images: ProductImage[]) => void;
-  disabled?: boolean;
+// --- Component สำหรับรูปภาพที่ลากวางได้ ---
+interface DraggableImageProps {
+  image: ProductImage;
+  index: number;
+  moveImage: (dragIndex: number, hoverIndex: number) => void;
+  onRemove: (index: number) => void;
+  disabled: boolean;
 }
 
-const ProductImageManager = ({ 
-  productId, 
-  images: initialImages, 
-  onImagesChange, 
-  disabled = false 
-}: ProductImageManagerProps) => {
-  const [images, setImages] = useState<ProductImage[]>(initialImages || []);
-  const [newImageUrl, setNewImageUrl] = useState("");
-  const [loading, setLoading] = useState(false);
+const DraggableImage = ({ image, index, moveImage, onRemove, disabled }: DraggableImageProps) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [{ handlerId }, drop] = useDrop({
+    accept: 'image',
+    collect(monitor) {
+      return { handlerId: monitor.getHandlerId() };
+    },
+    hover(item: { index: number }, monitor) {
+      if (!ref.current) return;
+      const dragIndex = item.index;
+      const hoverIndex = index;
+      if (dragIndex === hoverIndex) return;
+      const hoverBoundingRect = ref.current?.getBoundingClientRect();
+      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+      const clientOffset = monitor.getClientOffset();
+      const hoverClientY = (clientOffset as XYCoord).y - hoverBoundingRect.top;
+      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
+      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
+      moveImage(dragIndex, hoverIndex);
+      item.index = hoverIndex;
+    },
+  });
+
+  const [{ isDragging }, drag] = useDrag({
+    type: 'image',
+    item: () => ({ id: image.id, index }),
+    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+  });
+
+  drag(drop(ref));
+
+  return (
+    <div ref={ref} data-handler-id={handlerId} className={cn("relative p-2 border rounded-lg bg-white flex items-center gap-3 cursor-move", isDragging ? "opacity-50" : "opacity-100")}>
+      <img src={image.image_url} alt={`Product image ${index + 1}`} className="w-16 h-16 object-cover rounded-md" />
+      <div className="flex-grow text-xs text-gray-500 truncate">{image.image_url}</div>
+      {!disabled && (
+        <Button variant="destructive" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => onRemove(index)}>
+          <X className="h-4 w-4" />
+        </Button>
+      )}
+    </div>
+  );
+};
+
+
+interface ProductImageManagerProps {
+  productId?: string;
+  images: ProductImage[];
+  onImagesChange: (images: ProductImage[]) => void;
+  disabled: boolean;
+  productOptions: ProductOption[];
+}
+
+const ProductImageManager = ({ images, onImagesChange, disabled, productId }: ProductImageManagerProps) => {
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [newImageUrl, setNewImageUrl] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const handleAddImage = (newImage: ProductImage) => {
+    onImagesChange([...images, newImage]);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUpdating(true);
+    const url = await uploadImageToStorage(file, productId || nanoid(), "extra");
+    if (url) {
+      handleAddImage({ id: nanoid(), image_url: url, order: images.length, file });
+    }
+    setIsUpdating(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+  
+  const handleAddFromUrl = () => {
+    if (!newImageUrl.trim()) return;
+    handleAddImage({ id: nanoid(), image_url: newImageUrl.trim(), order: images.length });
+    setNewImageUrl("");
+  };
+
+  const handlePaste = useCallback(async (e: ClipboardEvent) => {
+    if (isUpdating) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) {
+          e.preventDefault();
+          setIsUpdating(true);
+          const url = await uploadImageToStorage(file, productId || nanoid(), "extra");
+          if (url) {
+            handleAddImage({ id: nanoid(), image_url: url, order: images.length, file });
+          }
+          setIsUpdating(false);
+          break;
+        }
+      }
+    }
+  }, [isUpdating, images, onImagesChange, productId]);
 
   useEffect(() => {
-    setImages(initialImages || []);
-  }, [initialImages]);
+    window.addEventListener("paste", handlePaste);
+    return () => {
+      window.removeEventListener("paste", handlePaste);
+    };
+  }, [handlePaste]);
 
-  const validateImageUrl = (url: string): boolean => {
-    try {
-      new URL(url);
-      return /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(url);
-    } catch {
-      return false;
-    }
-  };
-
-  const handleAddImage = async () => {
-    if (!newImageUrl.trim()) return;
-    
-    if (!validateImageUrl(newImageUrl.trim())) {
-      alert("กรุณาใส่ URL รูปภาพที่ถูกต้อง (.jpg, .jpeg, .png, .gif, .webp, .svg)");
-      return;
-    }
-    
-    if (productId) {
-      // Product exists, save to database
-      setLoading(true);
-      try {
-        const newImage = await addProductImage(productId, newImageUrl.trim());
-        const updatedImages = [...images, newImage];
-        setImages(updatedImages);
-        onImagesChange(updatedImages);
-        setNewImageUrl("");
-      } catch (error) {
-        console.error("Failed to add image:", error);
-        alert("ไม่สามารถเพิ่มรูปภาพได้");
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      // New product, just add to local state
-      const newImage: ProductImage = {
-        id: Date.now(), // Temporary ID
-        product_id: 0,
-        image_url: newImageUrl.trim(),
-        order: images.length + 1,
-        created_at: new Date().toISOString()
-      };
-      const updatedImages = [...images, newImage];
-      setImages(updatedImages);
-      onImagesChange(updatedImages);
-      setNewImageUrl("");
-    }
-  };
-
-  const handleDeleteImage = async (imageId: number, index: number) => {
-    if (productId && imageId > 1000) { // Real ID from database
-      setLoading(true);
-      try {
-        await deleteProductImage(imageId);
-      } catch (error) {
-        console.error("Failed to delete image:", error);
-        alert("ไม่สามารถลบรู่อภาพได้");
-        setLoading(false);
-        return;
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    const updatedImages = images.filter((_, i) => i !== index);
-    setImages(updatedImages);
+  const handleRemoveImage = (indexToRemove: number) => {
+    if (disabled) return;
+    const updatedImages = images.filter((_, index) => index !== indexToRemove);
     onImagesChange(updatedImages);
   };
-
-  const handleMoveImage = async (index: number, direction: 'up' | 'down') => {
-    if (
-      (direction === 'up' && index === 0) || 
-      (direction === 'down' && index === images.length - 1)
-    ) {
-      return;
-    }
-
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    const newImages = [...images];
-    [newImages[index], newImages[newIndex]] = [newImages[newIndex], newImages[index]];
-    
-    // Update order values
-    newImages.forEach((img, idx) => {
-      img.order = idx + 1;
-    });
-
-    setImages(newImages);
-    onImagesChange(newImages);
-
-    // If product exists, update database
-    if (productId) {
-      try {
-        const updates = newImages
-          .filter(img => img.id > 1000) // Only update real database records
-          .map((img, idx) => ({
-            id: img.id,
-            order: idx + 1
-          }));
-        if (updates.length > 0) {
-          await reorderProductImages(updates);
-        }
-      } catch (error) {
-        console.error("Failed to reorder images:", error);
-      }
-    }
-  };
-
-  const handleUpdateImageUrl = async (index: number, newUrl: string) => {
-    if (!validateImageUrl(newUrl) && newUrl.trim()) {
-      return; // Don't update if invalid URL
-    }
-
+  
+  const moveImage = (dragIndex: number, hoverIndex: number) => {
+    const draggedImage = images[dragIndex];
     const updatedImages = [...images];
-    updatedImages[index] = { ...updatedImages[index], image_url: newUrl };
-    setImages(updatedImages);
+    updatedImages.splice(dragIndex, 1);
+    updatedImages.splice(hoverIndex, 0, draggedImage);
     onImagesChange(updatedImages);
-
-    // If product exists and this is a real database record, update it
-    if (productId && updatedImages[index].id > 1000) {
-      try {
-        await updateProductImage(updatedImages[index].id, { image_url: newUrl });
-      } catch (error) {
-        console.error("Failed to update image URL:", error);
-      }
-    }
   };
 
   return (
-    <div className="space-y-4">
-      <Label className="text-sm font-medium">รูปภาพสินค้า</Label>
-      
-      {/* Add new image */}
-      <div className="flex gap-2">
-        <Input
-          value={newImageUrl}
-          onChange={(e) => setNewImageUrl(e.target.value)}
-          placeholder="https://... (URL รูปภาพ)"
-          className="flex-1 border border-purple-200 rounded-lg"
-          disabled={disabled || loading}
-        />
-        <Button 
-          onClick={handleAddImage}
-          disabled={disabled || loading || !newImageUrl.trim()}
-          className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
-        >
-          <Plus className="w-4 h-4" />
-        </Button>
-      </div>
-
-      {/* Image list */}
-      <div className="grid grid-cols-1 gap-3">
-        {images.map((image, index) => (
-          <Card key={`${image.id}-${index}`} className="border border-purple-200">
-            <CardContent className="p-3">
-              <div className="flex items-center gap-3">
-                {/* Image preview */}
-                <div className="flex-shrink-0">
-                  <img
-                    src={image.image_url}
-                    alt={`Product image ${index + 1}`}
-                    className="w-16 h-16 object-cover rounded border"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 
-                        "https://ui-avatars.com/api/?name=No+Image&background=f3f4f6&color=6b7280";
-                    }}
-                  />
-                </div>
-
-                {/* Image URL */}
-                <div className="flex-1 min-w-0">
-                  <Input
-                    value={image.image_url}
-                    onChange={(e) => handleUpdateImageUrl(index, e.target.value)}
-                    className="text-sm border border-purple-200 rounded"
-                    disabled={disabled}
-                    placeholder="https://... (URL รูปภาพ)"
-                  />
-                  {image.image_url && !validateImageUrl(image.image_url) && (
-                    <p className="text-xs text-red-500 mt-1">URL รูปภาพไม่ถูกต้อง</p>
-                  )}
-                </div>
-
-                {/* Controls */}
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleMoveImage(index, 'up')}
-                    disabled={disabled || index === 0}
-                    className="text-purple-600 hover:bg-purple-50"
-                  >
-                    <ArrowUp className="w-4 h-4" />
+    <DndProvider backend={HTML5Backend}>
+      <Card>
+        <CardHeader><CardTitle className="text-base">จัดการรูปภาพสินค้า</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2 min-h-[5rem] bg-gray-50/50 p-2 rounded-md border">
+            {images.map((img, index) => (
+              <DraggableImage
+                key={img.id || index}
+                index={index}
+                image={img}
+                moveImage={moveImage}
+                onRemove={handleRemoveImage}
+                disabled={disabled}
+              />
+            ))}
+             {images.length === 0 && <p className="text-sm text-gray-500 text-center py-4">ยังไม่มีรูปภาพ (ลากวาง, Paste, หรือเพิ่มจาก URL)</p>}
+          </div>
+          {!disabled && (
+            <div className="flex flex-col gap-3 pt-4 border-t">
+               <Label className="text-sm font-medium">เพิ่มรูปภาพใหม่</Label>
+               <div className="flex gap-2 items-center">
+                  <Button onClick={() => fileInputRef.current?.click()} disabled={isUpdating} variant="outline" className="flex-shrink-0">
+                    <Upload className="w-4 h-4 mr-2"/>
+                    {isUpdating ? 'กำลังอัปโหลด...' : 'เลือกไฟล์'}
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleMoveImage(index, 'down')}
-                    disabled={disabled || index === images.length - 1}
-                    className="text-purple-600 hover:bg-purple-50"
-                  >
-                    <ArrowDown className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteImage(image.id, index)}
-                    disabled={disabled || loading}
-                    className="text-red-600 hover:bg-red-50"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              
-              {index === 0 && (
-                <div className="mt-2">
-                  <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
-                    รูปหลัก
-                  </span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {images.length === 0 && (
-        <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
-          ยังไม่มีรูปภาพสินค้า
-          <br />
-          <span className="text-sm">กรุณาเพิ่ม URL รูปภาพในช่องด้านบน</span>
-        </div>
-      )}
-    </div>
+                  <span className="text-sm text-gray-500">หรือ</span>
+                  <Input value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} placeholder="ใส่ URL รูปภาพ แล้วกดบวก" disabled={isUpdating} />
+                  <Button onClick={handleAddFromUrl} disabled={isUpdating || !newImageUrl.trim()} size="icon" className="flex-shrink-0"><Plus className="w-4 h-4" /></Button>
+               </div>
+               <Input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </DndProvider>
   );
 };
 
