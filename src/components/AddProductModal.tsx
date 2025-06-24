@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { nanoid } from "nanoid";
-import { Product, ProductOption, ProductImage, Tag } from "@/types";
+// ** ไม่ต้อง import Tag แล้ว **
+import { Product, ProductOption, ProductImage } from "@/types";
 import { generateSKU } from "@/utils/sku";
 import { fetchProductTypes } from "@/utils/productTypes";
 import { fetchProductImages, uploadImageToStorage } from "@/utils/productImages";
@@ -14,6 +15,8 @@ import ProductFormFields from "./product-form/ProductFormFields";
 import ProductCategorySelector from "./product-form/ProductCategorySelector";
 import ProductPricingFields from "./product-form/ProductPricingFields";
 import ProductOptionsManager from "./product-form/ProductOptionsManager";
+
+// Imports ที่จำเป็นสำหรับ Tag
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,7 +30,7 @@ interface AddProductModalProps {
 }
 
 const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editingProduct }: AddProductModalProps) => {
-  // --- State เดิมทั้งหมด (ไม่แก้ไข) ---
+  // --- State เดิมของคุณ (ไม่แก้ไข) ---
   const [formData, setFormData] = useState<Product>({
     sku: "", name: "", category: "", categories: [], productType: "", image: "",
     priceYuan: 0, exchangeRate: 1, priceThb: 0, importCost: 0, costThb: 0,
@@ -39,17 +42,29 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   const [showProductTypeModal, setShowProductTypeModal] = useState(false);
   const [productImages, setProductImages] = useState<ProductImage[]>([]);
 
-  // --- State สำหรับ Tag (เอาออกหมดเหลือแค่ 2 อันนี้) ---
-  const [selectedTags, setSelectedTags] = useState<{ value: string; label: string }[]>([]);
+  // --- State สำหรับ Tag (แบบ Minimal ที่สุด) ---
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
 
   // --- useEffect ทั้งหมดของคุณ (ไม่แก้ไข) ---
   useEffect(() => { if (open) { fetchProductTypes().then(setProductTypes).catch(console.error); } }, [open]);
-  useEffect(() => { /* ...คำนวณราคา... */ }, [formData.priceYuan, formData.exchangeRate]);
-  useEffect(() => { /* ...คำนวณต้นทุน... */ }, [formData.priceThb, formData.importCost]);
-  useEffect(() => { /* ...สร้าง SKU... */ }, [selectedCategories, open, editingProduct, formData.sku]);
+  useEffect(() => {
+    const y = parseFloat(formData.priceYuan as any) || 0;
+    const r = parseFloat(formData.exchangeRate as any) || 0;
+    if (y > 0 && r > 0) setFormData(prev => ({ ...prev, priceThb: parseFloat((y * r).toFixed(2)) }));
+    else setFormData(prev => ({ ...prev, priceThb: 0 }));
+  }, [formData.priceYuan, formData.exchangeRate]);
+  useEffect(() => {
+    const totalCost = (parseFloat(formData.priceThb as any) || 0) + (parseFloat(formData.importCost as any) || 0);
+    setFormData(prev => ({ ...prev, costThb: totalCost }));
+  }, [formData.priceThb, formData.importCost]);
+  useEffect(() => {
+    if (!editingProduct && (!formData.sku || formData.sku === "")) {
+      if (selectedCategories.length > 0) setFormData(prev => ({ ...prev, sku: generateSKU(selectedCategories[0]) }));
+    }
+  }, [selectedCategories, open, editingProduct, formData.sku]);
 
-  // --- useEffect หลัก (ลดทอนให้เหลือแค่ดึง Tag ของสินค้าที่แก้) ---
+  // --- useEffect หลัก: เพิ่มการดึง/reset Tag เข้าไป ---
   useEffect(() => {
     if (editingProduct) {
       setFormData(editingProduct);
@@ -62,7 +77,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
           if (images.length > 0) setFormData(prev => ({ ...prev, image: images[0].image_url }));
         }).catch(console.error);
 
-        // ดึง Tag ของสินค้านี้เท่านั้น
+        // ดึง Tag ของสินค้านี้
         const fetchProductTags = async () => {
           const { data, error } = await supabase.from('product_tags').select('tags(name)').eq('product_id', editingProduct.id);
           if (error) {
@@ -70,7 +85,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
             setSelectedTags([]);
           } else {
             // @ts-ignore
-            const currentTags = (data || []).map(pt => pt.tags ? { value: pt.tags.name, label: pt.tags.name } : null).filter(Boolean);
+            const currentTags = (data || []).map(pt => pt.tags?.name).filter(Boolean);
             setSelectedTags(currentTags);
           }
         };
@@ -80,7 +95,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
         setSelectedTags([]);
       }
     } else {
-      // --- Logic Reset เดิม (เพิ่มแค่ reset tag) ---
+      // Logic Reset เดิม + เพิ่ม reset tag
       setFormData({ sku: "", name: "", category: "", categories: [], productType: "", image: "", priceYuan: 0, exchangeRate: 1, priceThb: 0, importCost: 0, costThb: 0, sellingPrice: 0, status: "พรีออเดอร์", shipmentDate: "", link: "", description: "" });
       setSelectedCategories([]);
       setOptions([]);
@@ -96,52 +111,39 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
 
   // --- ฟังก์ชัน handleSubmit (แก้ไขเฉพาะการส่ง Tag) ---
   const handleSubmit = async () => {
-    if (!formData.name || selectedCategories.length === 0) { /* ...โค้ดเดิม... */ return; }
+    if (!formData.name || selectedCategories.length === 0) { alert("กรุณากรอกชื่อสินค้าและเลือกหมวดหมู่อย่างน้อย 1 หมวดหมู่"); return; }
     let quantity = formData.quantity;
     if (options.length > 0) { quantity = options.reduce((sum, o) => sum + (o.quantity || 0), 0); }
     const productId = editingProduct?.id || nanoid();
-    // ... logic upload image เดิม ...
     const uploadedImages: ProductImage[] = [];
-     for (let i = 0; i < productImages.length; i++) {
-       const img = productImages[i];
-       if (img.file) {
-         const folder = i === 0 ? "main" : "extra";
-         const url = await uploadImageToStorage(img.file, productId.toString(), folder);
-         if (url) {
-           const { file, ...rest } = img;
-           uploadedImages.push({ ...rest, image_url: url });
-         }
-       } else {
-         uploadedImages.push(img);
-       }
-     }
+    for (let i = 0; i < productImages.length; i++) {
+        const img = productImages[i];
+        if (img.file) {
+            const folder = i === 0 ? "main" : "extra";
+            const url = await uploadImageToStorage(img.file, productId.toString(), folder);
+            if (url) {
+                const { file, ...rest } = img;
+                uploadedImages.push({ ...rest, image_url: url });
+            }
+        } else {
+            uploadedImages.push(img);
+        }
+    }
 
     const dataToSave = {
       ...formData,
       categories: selectedCategories,
       category: selectedCategories[0],
       quantity,
-      // **ใช้ logic options เดิมของคุณ**
-      options: options.length > 0 ? options : undefined,
+      options: options.length > 0 ? options : undefined, // ใช้ logic เดิมของคุณ
       images: uploadedImages,
-      // เพิ่มแค่บรรทัดนี้
-      tags: selectedTags.map(tag => tag.value),
+      tags: selectedTags, // ส่งเป็น array ของ string ได้เลย
     };
     try {
       await onAddProduct(dataToSave);
       onOpenChange(false);
     } catch (error) { console.error("Error saving product:", error); alert("เกิดข้อผิดพลาดในการบันทึกสินค้า"); }
   };
-  
-  // ฟังก์ชันสำหรับเพิ่ม Tag (แบบง่ายที่สุด)
-  const handleAddTag = () => {
-    const newTagName = tagInput.trim();
-    if (newTagName && !selectedTags.some(t => t.value.toLowerCase() === newTagName.toLowerCase())) {
-        setSelectedTags([...selectedTags, { value: newTagName, label: newTagName }]);
-    }
-    setTagInput("");
-  };
-
 
   return (
     <>
@@ -151,28 +153,42 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
           <div className="space-y-4 mt-6">
             <ProductFormFields formData={formData} setFormData={setFormData} productTypes={productTypes} onShowProductTypeModal={() => setShowProductTypeModal(true)} />
 
-            {/* --- UI ของ Tag (แบบ Minimal ที่สุด) --- */}
+            {/* --- UI ของ Tag --- */}
             <Card>
-              <CardHeader><CardTitle className="text-base">Tags</CardTitle><p className="text-sm text-gray-500">เพิ่ม Tag เพื่อช่วยในการค้นหา (กด Enter เพื่อเพิ่ม)</p></CardHeader>
+              <CardHeader><CardTitle className="text-base">Tags</CardTitle><p className="text-sm text-gray-500">เพิ่ม Tag เพื่อช่วยในการค้นหา (พิมพ์แล้วกด Enter)</p></CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {selectedTags.map(tag => (
-                    <div key={tag.value} className="flex items-center bg-gray-200 rounded-full px-3 py-1 text-sm font-medium text-gray-800">
-                      <span>{tag.label}</span>
-                      <button type="button" onClick={() => setSelectedTags(selectedTags.filter(t => t.value !== tag.value))} className="ml-2 text-gray-500 hover:text-gray-700 focus:outline-none">&times;</button>
+                    <div key={tag} className="flex items-center bg-gray-200 rounded-full px-3 py-1 text-sm font-medium">
+                      <span>{tag}</span>
+                      <button type="button" onClick={() => setSelectedTags(currentTags => currentTags.filter(t => t !== tag))} className="ml-2 text-gray-500 hover:text-gray-700">&times;</button>
                     </div>
                   ))}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)}
+                  <Input
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        handleAddTag();
+                        const newTag = tagInput.trim();
+                        if (newTag && !selectedTags.find(t => t.toLowerCase() === newTag.toLowerCase())) {
+                          setSelectedTags(currentTags => [...currentTags, newTag]);
+                        }
+                        setTagInput("");
                       }
                     }}
-                    placeholder="พิมพ์ชื่อ Tag..." />
-                  <Button type="button" onClick={handleAddTag}>เพิ่ม Tag</Button>
+                    placeholder="พิมพ์ชื่อ Tag..."
+                  />
+                  <Button type="button" onClick={() => {
+                    const newTag = tagInput.trim();
+                    if (newTag && !selectedTags.find(t => t.toLowerCase() === newTag.toLowerCase())) {
+                      setSelectedTags(currentTags => [...currentTags, newTag]);
+                    }
+                    setTagInput("");
+                  }}>เพิ่ม</Button>
                 </div>
               </CardContent>
             </Card>
