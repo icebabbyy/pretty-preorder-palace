@@ -48,30 +48,37 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   });
 
   // --- useEffect ทั้งหมด (ใส่ log เพิ่ม) ---
+  // --- useEffect หลัก: จัดการข้อมูลตอน Edit/Reset (เวอร์ชันแก้ไขที่ถูกต้อง) ---
   useEffect(() => {
-    if (open) {
-      console.log('[Effect] Modal opened. Fetching product types...');
-      fetchProductTypes().then(setProductTypes).catch(console.error);
-    }
-  }, [open]);
-
-  useEffect(() => {
+    // โค้ดที่อยู่ข้างในนี้คือเวอร์ชันที่ถูกต้องทั้งหมดครับ
     if (editingProduct) {
-      console.log('%c[Effect] Editing product is detected.', 'color: green', editingProduct);
       setFormData(editingProduct);
       setSelectedCategories(editingProduct.categories || [editingProduct.category].filter(Boolean));
-      setOptions(editingProduct.options?.map(opt => ({ ...opt, id: opt.id || nanoid() })) || []);
+      
+      // *** ใช้โครงสร้าง if/else เดิมของคุณเป๊ะๆ ตามที่สัญญาไว้ ***
+      if (editingProduct.options) {
+        const optionsWithIds = editingProduct.options.map(opt => ({
+          ...opt,
+          id: opt.id || nanoid()
+        }));
+        setOptions(optionsWithIds);
+      } else {
+        setOptions([]);
+      }
       
       if (editingProduct.id) {
-        console.log('[Effect] Editing product has ID. Fetching images and tags...');
-        fetchProductImages(editingProduct.id).then(images => {
-          console.log('[Effect] Fetched images:', images);
-          setProductImages(images);
-          if (images.length > 0) setFormData(prev => ({ ...prev, image: images[0].image_url }));
-        }).catch(console.error);
+        // โค้ดดึงรูปภาพเดิมของคุณ
+        fetchProductImages(editingProduct.id)
+          .then(images => {
+            setProductImages(images);
+            if (images.length > 0) {
+              setFormData(prev => ({ ...prev, image: images[0].image_url }));
+            }
+          })
+          .catch(console.error);
 
+        // แทรกการดึง Tag เข้ามาตรงนี้อย่างเดียว
         const fetchProductTags = async () => {
-          console.log('[Effect] Fetching tags for product ID:', editingProduct.id);
           const { data, error } = await supabase.from('product_tags').select('tags(name)').eq('product_id', editingProduct.id);
           if (error) {
             console.error("Error fetching product tags:", error);
@@ -79,19 +86,17 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
           } else {
             // @ts-ignore
             const currentTags = (data || []).map(pt => pt.tags?.name).filter(Boolean);
-            console.log('[Effect] Fetched tags:', currentTags);
             setSelectedTags(currentTags);
           }
         };
         fetchProductTags();
 
       } else {
-        console.log('[Effect] Editing product has NO ID. Resetting images/tags.');
         setProductImages([]);
-        setSelectedTags([]);
+        setSelectedTags([]); // เพิ่ม reset tag
       }
     } else {
-      console.log('%c[Effect] No editing product. Resetting form.', 'color: orange');
+      // Logic Reset เดิมทั้งหมด + เพิ่ม reset tag
       setFormData({ sku: "", name: "", category: "", categories: [], productType: "", image: "", priceYuan: 0, exchangeRate: 1, priceThb: 0, importCost: 0, costThb: 0, sellingPrice: 0, status: "พรีออเดอร์", shipmentDate: "", link: "", description: "" });
       setSelectedCategories([]);
       setOptions([]);
