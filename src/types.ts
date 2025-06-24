@@ -68,3 +68,8 @@ export interface Order {
   username: string;
   address: string;
 }
+export interface Product {
+  // ... property อื่นๆ ที่มีอยู่แล้ว ...
+  images?: ProductImage[]; 
+  
+  tags?: string[];
