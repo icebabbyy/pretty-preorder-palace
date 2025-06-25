@@ -1,3 +1,4 @@
+
 // src/app/admin/products/AddProductModal.tsx
 
 import { useState, useEffect } from "react";
@@ -93,7 +94,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
       // 1. Handle image uploads for images that have a 'file' property
       const uploadedImagePromises = productImages.map(async (image) => {
         if (image.file) {
-          const newUrl = await uploadImageToStorage(image.file, editingProduct?.id || nanoid(), "products");
+          const newUrl = await uploadImageToStorage(image.file, String(editingProduct?.id || nanoid()), "extra");
           return { ...image, image_url: newUrl, file: undefined }; // Return new object with uploaded URL
         }
         return image; // Return existing image object
@@ -164,7 +165,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
             </Card>
             <ProductImageManager productId={editingProduct?.id} images={productImages} onImagesChange={handleImagesChange} disabled={isSubmitting} productOptions={options} />
             <ProductPricingFields formData={formData} setFormData={setFormData} />
-            <ProductOptionsManager options={options} setOptions={setOptions} productFormData={formData} />
+            <ProductOptionsManager options={options} setOptions={setOptions} category={selectedCategories[0] || ""} editingProductId={editingProduct?.id} />
           </div>
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>ยกเลิก</Button>
