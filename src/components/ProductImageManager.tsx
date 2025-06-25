@@ -1,4 +1,3 @@
-// src/components/ProductImageManager.tsx
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
@@ -6,15 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Plus, Upload } from "lucide-react";
-import { ProductImage, ProductOption } from "@/types"; // Make sure to import types
+import { ProductImage, ProductOption } from "@/types";
 import { nanoid } from "nanoid";
 import { DndProvider, useDrag, useDrop, XYCoord } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { cn } from '@/lib/utils';
-// *** Import ฟังก์ชัน deleteProductImage เข้ามา ***
 import { uploadImageToStorage, deleteProductImage } from "@/utils/productImages";
 
-// --- DraggableImage Component (เหมือนเดิม) ---
 interface DraggableImageProps {
   image: ProductImage;
   index: number;
@@ -63,7 +60,6 @@ const DraggableImage = ({ image, index, moveImage, onRemove, disabled }: Draggab
   );
 };
 
-// --- ProductImageManager Component ---
 interface ProductImageManagerProps {
   productId?: string;
   images: ProductImage[];
@@ -85,12 +81,17 @@ const ProductImageManager = ({ images, onImagesChange, disabled, productId }: Pr
     const file = e.target.files?.[0];
     if (!file) return;
     setIsUpdating(true);
-    const url = await uploadImageToStorage(file, productId || nanoid(), "extra");
-    if (url) {
-      handleAddImage({ id: nanoid(), image_url: url, order: images.length, file });
+    try {
+      const url = await uploadImageToStorage(file, productId || nanoid(), "extra");
+      if (url) {
+        handleAddImage({ id: nanoid(), image_url: url, order: images.length, file });
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error);
+    } finally {
+      setIsUpdating(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
-    setIsUpdating(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
   };
   
   const handleAddFromUrl = () => {
@@ -100,7 +101,7 @@ const ProductImageManager = ({ images, onImagesChange, disabled, productId }: Pr
   };
 
   const handlePaste = useCallback(async (e: ClipboardEvent) => {
-    if (isUpdating) return;
+    if (isUpdating || disabled) return;
     const items = e.clipboardData?.items;
     if (!items) return;
     for (const item of items) {
@@ -109,52 +110,55 @@ const ProductImageManager = ({ images, onImagesChange, disabled, productId }: Pr
         if (file) {
           e.preventDefault();
           setIsUpdating(true);
-          const url = await uploadImageToStorage(file, productId || nanoid(), "extra");
-          if (url) {
-            handleAddImage({ id: nanoid(), image_url: url, order: images.length, file });
+          try {
+            const url = await uploadImageToStorage(file, productId || nanoid(), "extra");
+            if (url) {
+              handleAddImage({ id: nanoid(), image_url: url, order: images.length, file });
+            }
+          } catch (error) {
+            console.error("Error uploading pasted image:", error);
+          } finally {
+            setIsUpdating(false);
           }
-          setIsUpdating(false);
           break;
         }
       }
     }
-  }, [isUpdating, images, onImagesChange, productId]);
+  }, [isUpdating, disabled, images, onImagesChange, productId]);
 
   useEffect(() => {
     window.addEventListener("paste", handlePaste);
     return () => { window.removeEventListener("paste", handlePaste); };
   }, [handlePaste]);
 
-
-  // *** แก้ไขฟังก์ชันลบรูปให้สมบูรณ์ ***
   const handleRemoveImage = async (indexToRemove: number) => {
     if (disabled || isUpdating) return;
 
-    // หาข้อมูลรูปที่จะลบ
     const imageToDelete = images[indexToRemove];
     if (!imageToDelete) return;
 
-    // 1. อัปเดต UI ทันที (Optimistic Update)
-    const updatedImages = images.filter((_, index) => index !== indexToRemove);
-    onImagesChange(updatedImages);
+    try {
+      setIsUpdating(true);
+      
+      // อัปเดต UI ทันที (Optimistic Update)
+      const updatedImages = images.filter((_, index) => index !== indexToRemove);
+      onImagesChange(updatedImages);
 
-    // 2. เช็คว่าเป็นรูปที่มีใน DB หรือไม่ (id เป็น number)
-    if (typeof imageToDelete.id === 'number' && imageToDelete.id > 0) {
-      try {
-        setIsUpdating(true);
+      // ถ้ารูปนี้มี ID ที่เป็นตัวเลข (มาจาก database) ให้ลบจาก database
+      if (typeof imageToDelete.id === 'number' && imageToDelete.id > 0) {
         console.log(`Deleting image with DB ID: ${imageToDelete.id}`);
-        // 3. ถ้าใช่ ให้ส่งคำสั่งลบไปที่ DB
         await deleteProductImage(imageToDelete.id);
-      } catch (error) {
-        console.error("Failed to delete image from database:", error);
-        // 4. ถ้าลบใน DB ไม่สำเร็จ ให้เอารูปกลับมาแสดงที่หน้าจอเหมือนเดิม
-        onImagesChange(images); 
-        alert("เกิดข้อผิดพลาดในการลบรูปภาพออกจากฐานข้อมูล");
-      } finally {
-        setIsUpdating(false);
+        console.log(`Successfully deleted image with ID: ${imageToDelete.id}`);
       }
+      
+    } catch (error) {
+      console.error("Failed to delete image:", error);
+      // ถ้าลบไม่สำเร็จ ให้คืนรูปกลับมา
+      onImagesChange(images);
+      alert("เกิดข้อผิดพลาดในการลบรูปภาพ");
+    } finally {
+      setIsUpdating(false);
     }
-    // ถ้าเป็นรูปที่เพิ่งอัปโหลด (id เป็น string) ก็ไม่ต้องทำอะไรเพิ่ม เพราะมันถูกลบจาก state ไปแล้ว
   };
   
   const moveImage = (dragIndex: number, hoverIndex: number) => {
