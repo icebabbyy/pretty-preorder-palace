@@ -36,6 +36,7 @@ async function supabaseProductToProduct(p: any): Promise<Product> {
     description: p.description || "",
     quantity: p.quantity ?? 0,
     options: p.options ?? [],
+     tags: p.tags ?? [],
   };
 }
 
@@ -62,6 +63,7 @@ function productToSupabaseInsert(product: Omit<Product, "id"> | Product) {
     import_cost: product.importCost,
     cost_thb: product.costThb,
     selling_price: product.sellingPrice,
+    tags: product.tags,
     product_status: product.status, // Use product_status column
     shipment_date:
       product.shipmentDate && product.shipmentDate !== ""
