@@ -1,6 +1,8 @@
 
 // src/components/ProductImageManager.tsx
-
+const handlePaste = useCallback(async (e: ClipboardEvent) => {
+  console.log('--- PASTE EVENT TRIGGERED! ---'); // <--- เพิ่มบรรทัดนี้
+  if (isUpdating || disabled) return;
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
