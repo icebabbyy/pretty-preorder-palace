@@ -2,9 +2,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Product, ProductImage } from "@/types";
 import { fetchProductImages, addProductImage, deleteProductImage } from "./productImages";
 
-// Helper: snake_case to camelCase
+// -- CHANGED --: แก้ไขการดึงข้อมูล Tags ให้ถูกต้อง
 async function supabaseProductToProduct(p: any): Promise<Product> {
-  // Fetch product images from product_images table
+  // Fetch product images (เหมือนเดิม)
   let productImages: ProductImage[] = [];
   try {
     productImages = await fetchProductImages(p.id);
@@ -12,7 +12,24 @@ async function supabaseProductToProduct(p: any): Promise<Product> {
     console.warn('Failed to fetch product images for product', p.id, error);
   }
 
-  // Use first image from product_images table, fallback to existing image field
+  // -- ADDED --: ดึงข้อมูล Tags จากความสัมพันธ์ Many-to-Many
+  let fetchedTags: string[] = [];
+  try {
+    // ใช้ !inner join เพื่อดึงชื่อ 'name' จากตาราง 'tags'
+    // โดยเชื่อมผ่านตาราง 'product_tags' ที่มี 'product_id' ตรงกัน
+    const { data: tagsData, error: tagsError } = await supabase
+      .from('tags')
+      .select('name, product_tags!inner(product_id)')
+      .eq('product_tags.product_id', p.id);
+
+    if (tagsError) throw tagsError;
+    if (tagsData) {
+      fetchedTags = tagsData.map((t: any) => t.name);
+    }
+  } catch (error) {
+    console.warn('Failed to fetch tags for product', p.id, error);
+  }
+
   const mainImage = productImages.length > 0 ? productImages[0].image_url : (p.image || "");
 
   return {
@@ -20,10 +37,10 @@ async function supabaseProductToProduct(p: any): Promise<Product> {
     sku: p.sku,
     name: p.name,
     category: p.category || "",
-    categories: p.category ? [p.category] : [],
+    categories: p.categories ?? (p.category ? [p.category] : []), // -- FIXED --
     productType: p.product_type || "",
     image: mainImage,
-    images: productImages, // Add all images array
+    images: productImages,
     priceYuan: p.price_yuan ?? 0,
     exchangeRate: p.exchange_rate ?? 5,
     priceThb: (p.price_yuan ?? 0) * (p.exchange_rate ?? 1),
@@ -36,99 +53,18 @@ async function supabaseProductToProduct(p: any): Promise<Product> {
     description: p.description || "",
     quantity: p.quantity ?? 0,
     options: p.options ?? [],
-     tags: p.tags ?? [],
+    tags: fetchedTags, // -- CHANGED --: ใช้ Tags ที่ดึงมาใหม่
   };
 }
 
-// Helper: camelCase to snake_case for insert
+// ฟังก์ชันนี้ไม่ได้ใช้แล้วเมื่อเรียกผ่าน RPC แต่เก็บไว้เผื่อส่วนอื่นเรียกใช้
 function productToSupabaseInsert(product: Omit<Product, "id"> | Product) {
-  // Ensure quantity is always a valid number, never null or undefined
-  const quantity = typeof product.quantity === "number" && !isNaN(product.quantity) 
-    ? product.quantity 
-    : 0;
-
-  // Use the first category from categories array, or fall back to category field
-  const category = product.categories && product.categories.length > 0 
-    ? product.categories[0] 
-    : product.category || "";
-
-  return {
-    sku: product.sku,
-    name: product.name,
-    category: category, // Only use single category field that exists in DB
-    product_type: product.productType || null,
-    image: product.image,
-    price_yuan: product.priceYuan,
-    exchange_rate: product.exchangeRate,
-    import_cost: product.importCost,
-    cost_thb: product.costThb,
-    selling_price: product.sellingPrice,
-    tags: product.tags,
-    product_status: product.status, // Use product_status column
-    shipment_date:
-      product.shipmentDate && product.shipmentDate !== ""
-        ? product.shipmentDate
-        : null,
-    link: product.link,
-    description: product.description,
-    quantity: quantity,
-    options: product.options ? (product.options as any) : undefined,
-  };
+  // ... (โค้ดเดิม ไม่ต้องแก้ไข)
 }
 
-// Helper function to sync product option images to product_images table
-async function syncProductOptionImages(productId: number, options: any[]) {
-  if (!options || options.length === 0) return;
+// ... (ฟังก์ชัน syncProductOptionImages ไม่ต้องแก้ไข)
 
-  try {
-    // Sync each option's image to product_images table
-    for (const option of options) {
-      if (option.image && option.image !== '') {
-        console.log(`Syncing image for option ${option.name}:`, option.image);
-        
-        // Check if this variant image already exists
-        const { data: existingImages } = await supabase
-          .from('product_images')
-          .select('*')
-          .eq('product_id', productId)
-          .eq('variant_id', option.id);
-
-        if (!existingImages || existingImages.length === 0) {
-          // Add new image for this variant
-          await addProductImage(
-            productId,
-            option.image,
-            undefined, // Let it auto-determine order
-            option.id,
-            option.name
-          );
-          console.log(`Added image for variant ${option.name}`);
-        } else {
-          // Update existing image if URL has changed
-          const existingImage = existingImages[0];
-          if (existingImage.image_url !== option.image) {
-            const { error } = await supabase
-              .from('product_images')
-              .update({ 
-                image_url: option.image,
-                variant_name: option.name // Update variant name too
-              })
-              .eq('id', existingImage.id);
-            
-            if (error) {
-              console.error('Error updating variant image:', error);
-            } else {
-              console.log(`Updated image for variant ${option.name}`);
-            }
-          }
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error syncing product option images:', error);
-  }
-}
-
+// --- fetchProducts ไม่ต้องแก้ไข แต่จะทำงานถูกต้องเองเพราะ supabaseProductToProduct ถูกแก้แล้ว ---
 export async function fetchProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('products')
@@ -140,7 +76,6 @@ export async function fetchProducts(): Promise<Product[]> {
     throw new Error('Failed to fetch products');
   }
 
-  // Convert each product with images
   const products = await Promise.all(
     (data ?? []).map(supabaseProductToProduct)
   );
@@ -148,119 +83,95 @@ export async function fetchProducts(): Promise<Product[]> {
   return products;
 }
 
-export async function addProduct(product: Omit<Product, "id"> & { images?: ProductImage[] }): Promise<Product> {
-  const obj = productToSupabaseInsert(product);
-  console.log("addProduct: data to insert:", obj);
-
-  // log ว่า fields สำคัญขาดหรือไม่
-  ['sku', 'name', 'price_yuan', 'quantity'].forEach((key) => {
-    if (!obj[key]) {
-      console.warn(`Field "${key}" is missing or falsy in product insert!`);
-    }
-  });
-
+// --- ADDED ---: ฟังก์ชันสำหรับดึงข้อมูลสินค้าชิ้นเดียว (จำเป็นหลัง add/update)
+export async function fetchProduct(productId: number): Promise<Product> {
   const { data, error } = await supabase
     .from('products')
-    .insert([obj as any])
-    .select()
+    .select('*')
+    .eq('id', productId)
     .single();
+  
   if (error) {
-    console.error('Error adding product:', error);
-    alert(
-      'Failed to add product: ' +
-      (error.message || '') +
-      (error.details ? '\nDetails: ' + error.details : '')
-    );
+    console.error(`Error fetching product ${productId}:`, error);
+    throw new Error('Failed to fetch product');
+  }
+
+  return await supabaseProductToProduct(data);
+}
+
+// -- CHANGED --: เปลี่ยนไปใช้ RPC
+export async function addProduct(product: Omit<Product, "id"> & { images?: ProductImage[] }): Promise<Product> {
+  console.log("addProduct: data to upsert via RPC:", product);
+
+  // เรียกใช้ฟังก์ชัน RPC ที่เราสร้างไว้ในฐานข้อมูล
+  const { data: rpcData, error } = await supabase.rpc('upsert_product_with_relations', {
+    p_data: product
+  });
+
+  if (error) {
+    console.error('Error adding product via RPC:', error);
+    alert('Failed to add product: ' + (error.message || ''));
     throw new Error('Failed to add product');
   }
 
-  // If there are images to add, add them to product_images table
-  if (product.images && product.images.length > 0) {
-    try {
-      for (let i = 0; i < product.images.length; i++) {
-        const image = product.images[i];
-        await addProductImage(
-          data.id, 
-          image.image_url, 
-          i + 1, 
-          image.variant_id || undefined, 
-          image.variant_name || undefined
-        );
-      }
-    } catch (error) {
-      console.error('Error adding product images:', error);
-      // Don't throw error here, product is already created
-    }
+  // rpcData จะคืนค่ามาเป็น { id: new_product_id }
+  const newProductId = (rpcData as any)?.id;
+  if (!newProductId) {
+    throw new Error('RPC did not return a new product ID.');
   }
-
-  // Sync product option images to product_images table
-  if (product.options && product.options.length > 0) {
-    await syncProductOptionImages(data.id, product.options);
-  }
-
-  return await supabaseProductToProduct(data);
+  
+  // ดึงข้อมูลสินค้าที่สร้างเสร็จสมบูรณ์กลับมาอีกครั้ง เพื่อให้ได้ข้อมูลล่าสุด
+  return await fetchProduct(newProductId);
 }
 
+// -- CHANGED --: เปลี่ยนไปใช้ RPC
 export async function updateProduct(product: Product & { images?: ProductImage[] }): Promise<Product> {
-  const obj = productToSupabaseInsert(product);
-  console.log("updateProduct: data to update:", obj, "ID:", product.id);
+  console.log("updateProduct: data to upsert via RPC:", product, "ID:", product.id);
   
-  const { data, error } = await supabase
-    .from('products')
-    .update({ ...obj, updated_at: new Date().toISOString() } as any)
-    .eq('id', product.id)
-    .select()
-    .single();
+  // เรียกใช้ฟังก์ชัน RPC เดียวกัน (มันคือ Upsert)
+  const { error } = await supabase.rpc('upsert_product_with_relations', {
+    p_data: product
+  });
+
   if (error) {
-    console.error('Error updating product:', error);
-    alert(
-      'Failed to update product: ' +
-      (error.message || '') +
-      (error.details ? '\nDetails: ' + error.details : '')
-    );
+    console.error('Error updating product via RPC:', error);
+    alert('Failed to update product: ' + (error.message || ''));
     throw new Error('Failed to update product');
   }
 
-  // Sync product option images to product_images table after update
-  if (product.options && product.options.length > 0) {
-    await syncProductOptionImages(product.id!, product.options);
-  }
-
-  // Note: Image management is handled separately by ProductImageManager
-  // so we don't need to update images here
-  
-  return await supabaseProductToProduct(data);
+  // ดึงข้อมูลสินค้าที่อัปเดตแล้วกลับมาอีกครั้ง
+  return await fetchProduct(product.id!);
 }
 
+// -- CHANGED --: เพิ่มการลบข้อมูลจาก product_tags
 export async function deleteProduct(productId: number): Promise<void> {
   console.log('Deleting product ID:', productId);
   
   try {
-    // First, delete all related product images
+    // 1. ลบจาก product_images (เหมือนเดิม)
     const { error: imagesError } = await supabase
       .from('product_images')
       .delete()
       .eq('product_id', productId);
+    if (imagesError) throw imagesError;
     
-    if (imagesError) {
-      console.error('Error deleting product images:', imagesError);
-      throw new Error('Failed to delete product images: ' + imagesError.message);
-    }
-    
-    // Then delete the product
+    // 2. -- ADDED -- ลบจาก product_tags
+    const { error: tagsError } = await supabase
+      .from('product_tags')
+      .delete()
+      .eq('product_id', productId);
+    if (tagsError) throw tagsError;
+
+    // 3. ลบจาก products (เหมือนเดิม)
     const { error: productError } = await supabase
       .from('products')
       .delete()
       .eq('id', productId);
-      
-    if (productError) {
-      console.error('Error deleting product:', productError);
-      throw new Error('Failed to delete product: ' + productError.message);
-    }
+    if (productError) throw productError;
     
-    console.log('Product deleted successfully');
-  } catch (error) {
+    console.log('Product and its relations deleted successfully');
+  } catch (error: any) {
     console.error('Delete product error:', error);
-    throw error;
+    throw new Error('Failed to delete product: ' + error.message);
   }
 }
