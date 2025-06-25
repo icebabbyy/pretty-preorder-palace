@@ -1,54 +1,53 @@
-  if (isUpdating || disabled) return;
+// src/components/ProductImageManager.tsx
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Plus, Upload, ImageIcon, ArrowDown, ArrowUp } from "lucide-react";
+import { X, Plus, Upload, ImageIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { nanoid } from "nanoid";
 import type { ProductImage, ProductOption } from "@/types";
 
 interface ProductImageManagerProps {
-  productId?: string;
   images: ProductImage[];
   onImagesChange: (images: ProductImage[]) => void;
   disabled?: boolean;
   productOptions: ProductOption[];
 }
 
-const ProductImageManager = ({ images, onImagesChange, disabled = false, productOptions = [] }: ProductImageManagerProps) => {
+const ProductImageManager = ({
+  images,
+  onImagesChange,
+  disabled = false,
+  productOptions = [],
+}: ProductImageManagerProps) => {
+
   const [newImageUrl, setNewImageUrl] = useState("");
   const [selectedImageType, setSelectedImageType] = useState<"main" | "additional" | "variant">("main");
   const [selectedVariant, setSelectedVariant] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- State Refs for Event Listener ---
-  const imagesRef = useRef(images);
+  // --- Refs for robust event handling ---
   const onImagesChangeRef = useRef(onImagesChange);
+  const imagesRef = useRef(images);
   const selectedImageTypeRef = useRef(selectedImageType);
   const selectedVariantRef = useRef(selectedVariant);
   const productOptionsRef = useRef(productOptions);
 
   useEffect(() => {
-    imagesRef.current = images;
     onImagesChangeRef.current = onImagesChange;
+    imagesRef.current = images;
     selectedImageTypeRef.current = selectedImageType;
     selectedVariantRef.current = selectedVariant;
     productOptionsRef.current = productOptions;
   }, [images, onImagesChange, selectedImageType, selectedVariant, productOptions]);
 
-
-  const handlePaste = useCallback(async (e: ClipboardEvent) => {
-    console.log('--- PASTE EVENT TRIGGERED! ---');
-    if (isUpdating || disabled) return;
-
- if (!items) return;
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        const file = item.getAsFile();
-        console.log('Image File Found:', file); //
+  // --- Logic for adding images (deferred upload) ---
+  const addImageToList = useCallback((source: { url?: string; file?: File }) => {
+    if ((!source.url || !source.url.trim()) && !source.file) return;
 
     if (selectedImageTypeRef.current === "variant" && !selectedVariantRef.current) {
       alert("กรุณาเลือกตัวเลือกสินค้าสำหรับรูปภาพนี้");
@@ -57,10 +56,10 @@ const ProductImageManager = ({ images, onImagesChange, disabled = false, product
 
     let newImageList = [...imagesRef.current];
     const newImage: ProductImage = {
-      id: Date.now(),
-      image_url: file ? URL.createObjectURL(file) : url!,
-      order: 999, // Default order
-      file: file,
+      id: nanoid(),
+      image_url: source.file ? URL.createObjectURL(source.file) : source.url!,
+      order: 999,
+      file: source.file,
     };
 
     if (selectedImageTypeRef.current === "variant") {
@@ -70,7 +69,9 @@ const ProductImageManager = ({ images, onImagesChange, disabled = false, product
       delete newImage.order;
     } else if (selectedImageTypeRef.current === "main") {
       newImage.order = 1;
-      newImageList = newImageList.map(img => img.order === 1 && !img.variant_id ? { ...img, order: 999 } : img);
+      newImageList = newImageList.map(img =>
+        img.order === 1 && !img.variant_id ? { ...img, order: 999 } : img
+      );
     } else { // Additional
       const maxOrder = Math.max(1, ...newImageList.filter(img => !img.variant_id).map(img => img.order || 1));
       newImage.order = maxOrder + 1;
@@ -80,6 +81,7 @@ const ProductImageManager = ({ images, onImagesChange, disabled = false, product
     setNewImageUrl("");
   }, []);
 
+  // --- Event handlers ---
   const handlePaste = useCallback((e: ClipboardEvent) => {
     if (disabled) return;
     const file = e.clipboardData?.items[0]?.getAsFile();
@@ -90,16 +92,15 @@ const ProductImageManager = ({ images, onImagesChange, disabled = false, product
   }, [disabled, addImageToList]);
 
   useEffect(() => {
-   window.addEventListener("paste", handlePaste);
-    return () => {
-      console.log('Removing Paste Listener...'); // <--- เพิ่มบรรทัดนี้
-      window.removeEventListener("paste", handlePaste);
-    };
+    window.addEventListener("paste", handlePaste);
+    return () => { window.removeEventListener("paste", handlePaste); };
   }, [handlePaste]);
+
   const handleDeleteImage = (imageId: string | number) => {
     onImagesChange(images.filter(img => img.id !== imageId));
   };
 
+  // --- JSX Rendering ---
   const renderImageList = (imageList: ProductImage[], title: string) => (
     <div>
       <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
@@ -126,6 +127,7 @@ const ProductImageManager = ({ images, onImagesChange, disabled = false, product
 
   return (
     <div className="space-y-6">
+      {/* SECTION: Add New Image */}
       <Card className="border-gray-200">
         <CardHeader><CardTitle className="text-base">เพิ่มรูปภาพใหม่</CardTitle></CardHeader>
         <CardContent className="space-y-4">
@@ -161,11 +163,14 @@ const ProductImageManager = ({ images, onImagesChange, disabled = false, product
               <Input value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} placeholder="หรือใส่ URL รูปภาพ แล้วกดบวก" disabled={disabled} />
               <Button onClick={() => addImageToList({ url: newImageUrl })} disabled={disabled || !newImageUrl.trim()}><Plus className="w-4 h-4" /></Button>
             </div>
-             <p className="text-sm text-gray-500 mt-2">💡 เคล็ดลับ: Paste รูปจาก clipboard ได้เลย (Ctrl+V)</p>
+            <p className="text-sm text-gray-500 mt-2">💡 เคล็ดลับ: Paste รูปจาก clipboard ได้เลย (Ctrl+V)</p>
           </div>
         </CardContent>
       </Card>
+      
       <Separator />
+
+      {/* SECTION: Display Images */}
       <div className="space-y-4">
         {renderImageList(images.filter(img => img.order === 1 && !img.variant_id), "รูปภาพหลัก")}
         {renderImageList(images.filter(img => img.order !== 1 && !img.variant_id).sort((a,b) => (a.order || 99) - (b.order||99)), "รูปภาพเพิ่มเติม")}
