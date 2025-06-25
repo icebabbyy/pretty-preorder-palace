@@ -1,3 +1,4 @@
+
 // src/components/ProductImageManager.tsx
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -52,7 +53,7 @@ const ProductImageManager = ({ images, onImagesChange, disabled = false, product
 
     let newImageList = [...imagesRef.current];
     const newImage: ProductImage = {
-      id: nanoid(),
+      id: Date.now(),
       image_url: file ? URL.createObjectURL(file) : url!,
       order: 999, // Default order
       file: file,
