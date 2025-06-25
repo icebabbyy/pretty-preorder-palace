@@ -133,6 +133,7 @@ export async function addProduct(product: Omit<Product, "id">): Promise<Product>
   return await fetchProduct(newProductId);
 }
 
+// อัปเดตสินค้า (ใช้ RPC)
 export async function updateProduct(product: Product): Promise<Product> {
   
   // บรรทัดนี้สำคัญมาก ต้องอยู่ที่นี่
@@ -144,16 +145,6 @@ export async function updateProduct(product: Product): Promise<Product> {
   const { error } = await supabase.rpc('upsert_product_with_relations', {
       p_data: product
   });
-
-  if (error) {
-      console.error('Error updating product via RPC:', error);
-      alert(`Failed to update product: ${error.message}`);
-      throw new Error('Failed to update product via RPC');
-  }
-
-  console.log('RPC call successful. Fetching updated product...');
-  return await fetchProduct(product.id!);
-}
 
   if (error) {
       console.error('Error updating product via RPC:', error);
