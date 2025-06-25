@@ -71,6 +71,7 @@ function productToSupabaseInsert(product: Omit<Product, "id"> | Product) {
     description: product.description,
     quantity: quantity,
     options: product.options ? (product.options as any) : undefined,
+     tags: product.tags, //
   };
 }
 
