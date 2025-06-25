@@ -1,3 +1,4 @@
+// src/utils/productImages.ts
 
 import { supabase } from "@/integrations/supabase/client";
 import { ProductImage } from "@/types";
@@ -35,7 +36,7 @@ export async function addProductImage(
       .order('order', { ascending: false })
       .limit(1);
     
-    order = existingImages && existingImages.length > 0 ? existingImages[0].order + 1 : 1;
+    order = existingImages && existingImages.length > 0 ? (existingImages[0].order || 0) + 1 : 1;
   }
 
   const { data, error } = await supabase
@@ -117,52 +118,36 @@ export async function reorderProductImages(
   }
 }
 
+// Upload image to Supabase storage with organized folder structure
 export const uploadImageToStorage = async (
   file: File,
-  pathPrefix: string // เราจะรับ pathPrefix ซึ่งก็คือ ID ของสินค้า
+  pathPrefix: string
 ): Promise<string | null> => {
   try {
-    // สร้างชื่อไฟล์ที่ไม่ซ้ำกัน โดยใช้ timestamp + ชื่อไฟล์เดิม
     const filename = `${Date.now()}_${file.name}`;
-    
-    // สร้างเส้นทางเก็บไฟล์ที่สมบูรณ์ตามที่เราต้องการ: {product_id}/{filename}
     const filePath = `${pathPrefix}/${filename}`;
 
     const { data, error } = await supabase
       .storage
-      .from("product-images") // ชื่อ bucket ของเรา
-      .upload(filePath, file, { // ใช้ filePath ที่เราสร้างขึ้น
+      .from("product-images")
+      .upload(filePath, file, {
         cacheControl: '3600',
         upsert: false
       });
 
     if (error) {
-      // ถ้าเกิด error ให้โยน error ออกไปเพื่อให้ catch ด้านนอกจัดการ
       throw error;
     }
 
-    // ดึง URL สาธารณะของไฟล์ที่เพิ่งอัปโหลดเสร็จ
     const { data: publicUrlData } = supabase
       .storage
       .from("product-images")
-      .getPublicUrl(filePath); // ใช้ filePath เดิม
+      .getPublicUrl(filePath);
 
     return publicUrlData.publicUrl;
 
   } catch (error) {
     console.error("Upload Error:", error);
-    return null; // คืนค่า null ถ้ามีข้อผิดพลาด
-  }
-};
-
-    const { data } = supabase
-      .storage
-      .from("product-images")
-      .getPublicUrl(path);
-      
-    return data.publicUrl;
-  } catch (error) {
-    console.error("Upload error:", error);
     return null;
   }
-}
+};
