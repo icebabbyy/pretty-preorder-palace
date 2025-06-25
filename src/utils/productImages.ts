@@ -117,28 +117,43 @@ export async function reorderProductImages(
   }
 }
 
-// Upload image to Supabase storage with organized folder structure
-export async function uploadImageToStorage(
+export const uploadImageToStorage = async (
   file: File,
-  productId: string | number,
-  folder: "main" | "extra" | "variant"
-): Promise<string | null> {
+  pathPrefix: string // เราจะรับ pathPrefix ซึ่งก็คือ ID ของสินค้า
+): Promise<string | null> => {
   try {
-    const filename = `${Date.now()}-${file.name}`;
-    const path = `products/${productId}/${folder}/${filename}`;
+    // สร้างชื่อไฟล์ที่ไม่ซ้ำกัน โดยใช้ timestamp + ชื่อไฟล์เดิม
+    const filename = `${Date.now()}_${file.name}`;
     
-    const { error } = await supabase
+    // สร้างเส้นทางเก็บไฟล์ที่สมบูรณ์ตามที่เราต้องการ: {product_id}/{filename}
+    const filePath = `${pathPrefix}/${filename}`;
+
+    const { data, error } = await supabase
       .storage
-      .from("product-images")
-      .upload(path, file, {
+      .from("product-images") // ชื่อ bucket ของเรา
+      .upload(filePath, file, { // ใช้ filePath ที่เราสร้างขึ้น
         cacheControl: '3600',
         upsert: false
       });
 
     if (error) {
-      console.error("Upload error:", error);
-      return null;
+      // ถ้าเกิด error ให้โยน error ออกไปเพื่อให้ catch ด้านนอกจัดการ
+      throw error;
     }
+
+    // ดึง URL สาธารณะของไฟล์ที่เพิ่งอัปโหลดเสร็จ
+    const { data: publicUrlData } = supabase
+      .storage
+      .from("product-images")
+      .getPublicUrl(filePath); // ใช้ filePath เดิม
+
+    return publicUrlData.publicUrl;
+
+  } catch (error) {
+    console.error("Upload Error:", error);
+    return null; // คืนค่า null ถ้ามีข้อผิดพลาด
+  }
+};
 
     const { data } = supabase
       .storage
