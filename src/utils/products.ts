@@ -12,6 +12,23 @@ async function supabaseProductToProduct(p: any): Promise<Product> {
     console.warn('Failed to fetch product images for product', p.id, error);
   }
 
+  // --- ADDED START: เพิ่มโค้ดส่วนนี้เพื่อดึง Tags ---
+  let fetchedTags: string[] = [];
+  try {
+    const { data: tagsData, error: tagsError } = await supabase
+      .from('tags')
+      .select('name, product_tags!inner(product_id)')
+      .eq('product_tags.product_id', p.id);
+
+    if (tagsError) throw tagsError;
+    if (tagsData) {
+      fetchedTags = tagsData.map((t: any) => t.name);
+    }
+  } catch (error) {
+    console.warn('Failed to fetch tags for product', p.id, error);
+  }
+  // --- ADDED END ---
+
   // Use first image from product_images table, fallback to existing image field
   const mainImage = productImages.length > 0 ? productImages[0].image_url : (p.image || "");
 
@@ -36,7 +53,7 @@ async function supabaseProductToProduct(p: any): Promise<Product> {
     description: p.description || "",
     quantity: p.quantity ?? 0,
     options: p.options ?? [],
-     tags: p.tags ?? [],
+    tags: fetchedTags, // --- CHANGED: เปลี่ยนมาใช้ตัวแปรใหม่
   };
 }
 
