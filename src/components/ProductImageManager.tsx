@@ -12,49 +12,27 @@ import { nanoid } from "nanoid";
 import type { ProductImage, ProductOption } from "@/types";
 
 interface ProductImageManagerProps {
+  productId?: string;
   images: ProductImage[];
   onImagesChange: (images: ProductImage[]) => void;
   disabled?: boolean;
   productOptions: ProductOption[];
 }
 
-const ProductImageManager = ({
-  images,
-  onImagesChange,
-  disabled = false,
-  productOptions = [],
-}: ProductImageManagerProps) => {
-
+const ProductImageManager = ({ images, onImagesChange, disabled = false, productOptions = [] }: ProductImageManagerProps) => {
   const [newImageUrl, setNewImageUrl] = useState("");
   const [selectedImageType, setSelectedImageType] = useState<"main" | "additional" | "variant">("main");
   const [selectedVariant, setSelectedVariant] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- Refs for robust event handling ---
-  const onImagesChangeRef = useRef(onImagesChange);
-  const imagesRef = useRef(images);
-  const selectedImageTypeRef = useRef(selectedImageType);
-  const selectedVariantRef = useRef(selectedVariant);
-  const productOptionsRef = useRef(productOptions);
-
-  useEffect(() => {
-    onImagesChangeRef.current = onImagesChange;
-    imagesRef.current = images;
-    selectedImageTypeRef.current = selectedImageType;
-    selectedVariantRef.current = selectedVariant;
-    productOptionsRef.current = productOptions;
-  }, [images, onImagesChange, selectedImageType, selectedVariant, productOptions]);
-
-  // --- Logic for adding images (deferred upload) ---
-  const addImageToList = useCallback((source: { url?: string; file?: File }) => {
+  const addImageToList = (source: { url?: string; file?: File }) => {
     if ((!source.url || !source.url.trim()) && !source.file) return;
-
-    if (selectedImageTypeRef.current === "variant" && !selectedVariantRef.current) {
+    if (selectedImageType === "variant" && !selectedVariant) {
       alert("กรุณาเลือกตัวเลือกสินค้าสำหรับรูปภาพนี้");
       return;
     }
 
-    let newImageList = [...imagesRef.current];
+    let newImageList = [...images];
     const newImage: ProductImage = {
       id: nanoid(),
       image_url: source.file ? URL.createObjectURL(source.file) : source.url!,
@@ -62,61 +40,63 @@ const ProductImageManager = ({
       file: source.file,
     };
 
-    if (selectedImageTypeRef.current === "variant") {
-      const variant = productOptionsRef.current.find(opt => opt.id === selectedVariantRef.current);
+    if (selectedImageType === "variant") {
+      const variant = productOptions.find(opt => opt.id === selectedVariant);
       newImage.variant_id = variant?.id;
       newImage.variant_name = variant?.name;
       delete newImage.order;
-    } else if (selectedImageTypeRef.current === "main") {
+    } else if (selectedImageType === "main") {
       newImage.order = 1;
-      newImageList = newImageList.map(img =>
-        img.order === 1 && !img.variant_id ? { ...img, order: 999 } : img
-      );
-    } else { // Additional
+      newImageList = newImageList.map(img => (img.order === 1 && !img.variant_id) ? { ...img, order: 999 } : img);
+    } else {
       const maxOrder = Math.max(1, ...newImageList.filter(img => !img.variant_id).map(img => img.order || 1));
       newImage.order = maxOrder + 1;
     }
     
-    onImagesChangeRef.current([...newImageList, newImage]);
+    onImagesChange([...newImageList, newImage]);
     setNewImageUrl("");
-  }, []);
-
-  // --- Event handlers ---
-  const handlePaste = useCallback((e: ClipboardEvent) => {
-    if (disabled) return;
-    const file = e.clipboardData?.items[0]?.getAsFile();
-    if (file && file.type.startsWith("image/")) {
-      e.preventDefault();
-      addImageToList({ file });
-    }
-  }, [disabled, addImageToList]);
-
-  useEffect(() => {
-    window.addEventListener("paste", handlePaste);
-    return () => { window.removeEventListener("paste", handlePaste); };
-  }, [handlePaste]);
+  };
 
   const handleDeleteImage = (imageId: string | number) => {
     onImagesChange(images.filter(img => img.id !== imageId));
   };
 
-  // --- JSX Rendering ---
+  // --- แก้ไข Paste Handler ให้ตรงไปตรงมาที่สุด ---
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (disabled) return;
+      
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) {
+            // เรียกฟังก์ชันกลางโดยตรง
+            addImageToList({ file });
+            break; 
+          }
+        }
+      }
+    };
+    
+    window.addEventListener("paste", handlePaste);
+    return () => {
+      window.removeEventListener("paste", handlePaste);
+    };
+  }, [disabled, images, productOptions, selectedImageType, selectedVariant]); // ใส่ dependencies ทั้งหมดที่ addImageToList ต้องใช้
+
   const renderImageList = (imageList: ProductImage[], title: string) => (
     <div>
-      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-        <ImageIcon className="w-4 h-4 text-gray-600" /> {title} <span className="text-xs text-gray-500">({imageList.length})</span>
-      </h4>
+      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2"><ImageIcon className="w-4 h-4 text-gray-600" /> {title} <span className="text-xs text-gray-500">({imageList.length})</span></h4>
       <div className="space-y-2 p-2 border rounded-md bg-gray-50/50 min-h-[5rem]">
-        {imageList.length === 0 ? (
-          <p className="text-center text-gray-400 text-sm py-4">ยังไม่มีรูปภาพ</p>
-        ) : (
+        {imageList.length === 0 ? (<p className="text-center text-gray-400 text-sm py-4">ยังไม่มีรูปภาพ</p>) : (
           imageList.map((img) => (
             <div key={img.id} className="flex gap-3 p-2 items-center bg-white border rounded-md shadow-sm">
               <img src={img.image_url} alt={img.variant_name || "Product Image"} className="w-16 h-16 object-cover rounded border" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-500 truncate" title={img.image_url}>{img.image_url}</p>
-                {img.variant_id && (<span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">{img.variant_name}</span>)}
-              </div>
+              <div className="flex-1 min-w-0"><p className="text-xs text-gray-500 truncate" title={img.image_url}>{img.image_url}</p>{img.variant_id && (<span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">{img.variant_name}</span>)}</div>
               <Button size="icon" variant="ghost" className="h-7 w-7 self-center text-red-500 hover:text-red-600" onClick={() => handleDeleteImage(img.id!)} disabled={disabled}><X className="w-4 h-4" /></Button>
             </div>
           ))
@@ -127,7 +107,6 @@ const ProductImageManager = ({
 
   return (
     <div className="space-y-6">
-      {/* SECTION: Add New Image */}
       <Card className="border-gray-200">
         <CardHeader><CardTitle className="text-base">เพิ่มรูปภาพใหม่</CardTitle></CardHeader>
         <CardContent className="space-y-4">
@@ -163,14 +142,11 @@ const ProductImageManager = ({
               <Input value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} placeholder="หรือใส่ URL รูปภาพ แล้วกดบวก" disabled={disabled} />
               <Button onClick={() => addImageToList({ url: newImageUrl })} disabled={disabled || !newImageUrl.trim()}><Plus className="w-4 h-4" /></Button>
             </div>
-            <p className="text-sm text-gray-500 mt-2">💡 เคล็ดลับ: Paste รูปจาก clipboard ได้เลย (Ctrl+V)</p>
+             <p className="text-sm text-gray-500 mt-2">💡 เคล็ดลับ: Paste รูปจาก clipboard ได้เลย (Ctrl+V)</p>
           </div>
         </CardContent>
       </Card>
-      
       <Separator />
-
-      {/* SECTION: Display Images */}
       <div className="space-y-4">
         {renderImageList(images.filter(img => img.order === 1 && !img.variant_id), "รูปภาพหลัก")}
         {renderImageList(images.filter(img => img.order !== 1 && !img.variant_id).sort((a,b) => (a.order || 99) - (b.order||99)), "รูปภาพเพิ่มเติม")}
