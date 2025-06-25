@@ -95,6 +95,8 @@ export async function addProduct(product: Omit<Product, "id">): Promise<Product>
 
 // --- FIXED: ฟังก์ชันอัปเดตสินค้า ---
 export async function updateProduct(product: Product): Promise<Product> {
+  const { data: { user } } = await supabase.auth.getUser();
+  console.log("CURRENT USER:", user);
   console.log("updateProduct: calling RPC with data:", product);
 
   const { error } = await supabase.rpc('upsert_product_with_relations', {
