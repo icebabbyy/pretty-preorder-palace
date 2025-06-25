@@ -1,7 +1,3 @@
-
-// src/components/ProductImageManager.tsx
-const handlePaste = useCallback(async (e: ClipboardEvent) => {
-  console.log('--- PASTE EVENT TRIGGERED! ---'); // <--- เพิ่มบรรทัดนี้
   if (isUpdating || disabled) return;
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
@@ -88,10 +84,12 @@ const ProductImageManager = ({ images, onImagesChange, disabled = false, product
   }, [disabled, addImageToList]);
 
   useEffect(() => {
-    window.addEventListener("paste", handlePaste);
-    return () => { window.removeEventListener("paste", handlePaste); };
+   window.addEventListener("paste", handlePaste);
+    return () => {
+      console.log('Removing Paste Listener...'); // <--- เพิ่มบรรทัดนี้
+      window.removeEventListener("paste", handlePaste);
+    };
   }, [handlePaste]);
-
   const handleDeleteImage = (imageId: string | number) => {
     onImagesChange(images.filter(img => img.id !== imageId));
   };
