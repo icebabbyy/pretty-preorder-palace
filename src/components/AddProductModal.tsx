@@ -150,7 +150,6 @@ const handleSubmit = async () => {
     setIsSubmitting(false);
   }
 };
-```
 
   // --- JSX (Return) ไม่มีการเปลี่ยนแปลงมากนัก ---
   return (
