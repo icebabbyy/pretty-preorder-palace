@@ -70,7 +70,31 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
       setFormData(prev => ({ ...prev, sku: generateSKU(selectedCategories[0]) }));
     }
   }, [selectedCategories]);
+// src/app/admin/products/AddProductModal.tsx
 
+  // --- useEffect สำหรับคำนวณราคา (เวอร์ชันใหม่ที่รวมทุกอย่าง) ---
+  useEffect(() => {
+    const yuan = parseFloat(String(formData.priceYuan)) || 0;
+    const rate = parseFloat(String(formData.exchangeRate)) || 0;
+    const importFee = parseFloat(String(formData.importCost)) || 0;
+
+    const newPriceThb = (yuan > 0 && rate > 0) ? parseFloat((yuan * rate).toFixed(2)) : 0;
+    const newCostThb = newPriceThb + importFee;
+
+    // อัปเดต state ด้วยค่าที่คำนวณใหม่ทั้งสองค่าในครั้งเดียว
+    setFormData(prev => {
+      // เช็คก่อนว่าค่ามีการเปลี่ยนแปลงจริงหรือไม่ เพื่อป้องกันการ re-render ไม่สิ้นสุด
+      if (prev.priceThb !== newPriceThb || prev.costThb !== newCostThb) {
+        return {
+          ...prev,
+          priceThb: newPriceThb,
+          costThb: newCostThb,
+        };
+      }
+      return prev;
+    });
+
+  }, [formData.priceYuan, formData.exchangeRate, formData.importCost]); // ดักจับการเปลี่ยนแปลงจาก input ทั้ง 3 ตัว
   const toggleCategory = (category: string) => {
     setSelectedCategories(prev => prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]);
   };
