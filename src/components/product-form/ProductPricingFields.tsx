@@ -31,7 +31,7 @@ const ProductPricingFields = ({ formData, setFormData }: ProductPricingFieldsPro
             type="number"
             step="0.0001"
             value={formData.exchangeRate}
-            onChange={(e) => setFormData({ ...formData, exchangeRate: parseFloat(e.target.value) || 1 })}
+            onChange={(e) => setFormData({ ...formData, exchangeRate: parseFloat(e.target.value) || 0 })}
             placeholder="1"
             className="border border-purple-200 rounded-lg"
           />
