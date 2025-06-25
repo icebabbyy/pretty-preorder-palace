@@ -84,7 +84,7 @@ const ProductImageManager = ({ images, onImagesChange, disabled, productId }: Pr
     try {
       const url = await uploadImageToStorage(file, productId || nanoid(), "extra");
       if (url) {
-        handleAddImage({ id: nanoid(), image_url: url, order: images.length, file });
+        handleAddImage({ id: Date.now(), image_url: url, order: images.length, file });
       }
     } catch (error) {
       console.error("Error uploading image:", error);
@@ -96,7 +96,7 @@ const ProductImageManager = ({ images, onImagesChange, disabled, productId }: Pr
   
   const handleAddFromUrl = () => {
     if (!newImageUrl.trim()) return;
-    handleAddImage({ id: nanoid(), image_url: newImageUrl.trim(), order: images.length });
+    handleAddImage({ id: Date.now(), image_url: newImageUrl.trim(), order: images.length });
     setNewImageUrl("");
   };
 
@@ -113,7 +113,7 @@ const ProductImageManager = ({ images, onImagesChange, disabled, productId }: Pr
           try {
             const url = await uploadImageToStorage(file, productId || nanoid(), "extra");
             if (url) {
-              handleAddImage({ id: nanoid(), image_url: url, order: images.length, file });
+              handleAddImage({ id: Date.now(), image_url: url, order: images.length, file });
             }
           } catch (error) {
             console.error("Error uploading pasted image:", error);
