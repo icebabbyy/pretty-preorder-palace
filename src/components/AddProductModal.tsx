@@ -1,4 +1,5 @@
 
+
 // src/app/admin/products/AddProductModal.tsx
 
 import { useState, useEffect } from "react";
@@ -163,7 +164,7 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
                 </div>
               </CardContent>
             </Card>
-            <ProductImageManager productId={editingProduct?.id} images={productImages} onImagesChange={handleImagesChange} disabled={isSubmitting} productOptions={options} />
+            <ProductImageManager productId={editingProduct?.id ? String(editingProduct.id) : undefined} images={productImages} onImagesChange={handleImagesChange} disabled={isSubmitting} productOptions={options} />
             <ProductPricingFields formData={formData} setFormData={setFormData} />
             <ProductOptionsManager options={options} setOptions={setOptions} category={selectedCategories[0] || ""} editingProductId={editingProduct?.id} />
           </div>
@@ -181,3 +182,4 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
 };
 
 export default AddProductModal;
+
