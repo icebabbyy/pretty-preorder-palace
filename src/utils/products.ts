@@ -136,7 +136,11 @@ export async function addProduct(product: Omit<Product, "id">): Promise<Product>
 // อัปเดตสินค้า (ใช้ RPC)
 export async function updateProduct(product: Product): Promise<Product> {
   console.log("updateProduct: calling RPC with data:", product);
+ // --- V V V เพิ่มบรรทัดนี้เข้าไปเลยครับ V V V ---
+  console.log("DEBUG PAYLOAD TO RPC:", JSON.stringify(product, null, 2));
+  // --- ^ ^ ^ สิ้นสุดบรรทัดที่ให้เพิ่ม ^ ^ ^ ---
 
+  console.log("updateProduct: calling RPC with data:", product);
   const { error } = await supabase.rpc('upsert_product_with_relations', {
       p_data: product
   });
