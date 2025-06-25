@@ -3,31 +3,34 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { nanoid } from "nanoid";
 import { Product, ProductOption, ProductImage } from "@/types";
 import { generateSKU } from "@/utils/sku";
 import { fetchProductTypes } from "@/utils/productTypes";
-import { uploadImageToStorage } from "@/utils/productImages"; // fetchProductImages ถูกเรียกใน parent แล้ว
+import { uploadImageToStorage } from "@/utils/productImages";
 import ProductTypeManagementModal from "./ProductTypeManagementModal";
 import ProductImageManager from "./ProductImageManager";
 import ProductFormFields from "./product-form/ProductFormFields";
 import ProductCategorySelector from "./product-form/ProductCategorySelector";
 import ProductPricingFields from "./product-form/ProductPricingFields";
 import ProductOptionsManager from "./product-form/ProductOptionsManager";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/use-toast"; // --- 1. IMPORT Toast ---
+
+// --- 2. IMPORT ฟังก์ชันที่เราแก้ไขกันมาอย่างยาวนาน ---
+import { addProduct, updateProduct, fetchProduct } from "@/utils/products"; 
 
 interface AddProductModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddProduct: (product: any) => void;
+  onProductSaved: () => void; // เปลี่ยนชื่อ prop เพื่อความชัดเจน
   categories: string[];
   editingProduct?: Product | null;
 }
 
-const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editingProduct }: AddProductModalProps) => {
-  const [formData, setFormData] = useState<Product>({ sku: "", name: "", category: "", categories: [], productType: "", image: "", priceYuan: 0, exchangeRate: 1, priceThb: 0, importCost: 0, costThb: 0, sellingPrice: 0, status: "พรีออเดอร์", shipmentDate: "", link: "", description: "", quantity: 0 });
+const AddProductModal = ({ open, onOpenChange, onProductSaved, categories, editingProduct }: AddProductModalProps) => {
+  const { toast } = useToast(); // --- 3. เตรียม Toast ไว้ใช้งาน ---
+  const [formData, setFormData] = useState<Product>({ sku: "", name: "", category: "", categories: [], productType: "", image: "", priceYuan: 0, exchangeRate: 5.0, priceThb: 0, importCost: 0, costThb: 0, sellingPrice: 0, status: "พรีออเดอร์", shipmentDate: "", link: "", description: "", quantity: 0, tags: [] });
   const [options, setOptions] = useState<ProductOption[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [productTypes, setProductTypes] = useState<string[]>([]);
@@ -37,25 +40,21 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
   const [tagInput, setTagInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- Initialize form state when modal opens or product changes ---
+  // --- Initialize form state ---
   useEffect(() => {
     if (open) {
-      if (editingProduct) {
-        setFormData({ ...editingProduct, quantity: editingProduct.quantity || 0 });
-        setSelectedCategories(editingProduct.categories || []);
-        setOptions(editingProduct.options?.map(opt => ({ ...opt, id: opt.id || nanoid() })) || []);
-        setProductImages(editingProduct.images || []);
-        
-        if (editingProduct.id) {
-          const fetchProductTags = async () => {
-            const { data } = await supabase.from('product_tags').select('tags(name)').eq('product_id', editingProduct.id);
-            setSelectedTags((data || []).map((pt: any) => pt.tags?.name).filter(Boolean));
-          };
-          fetchProductTags();
-        }
+      if (editingProduct && editingProduct.id) {
+        // ใช้ฟังก์ชัน fetchProduct ที่ดึงข้อมูลได้ครบถ้วนรวมถึง tags
+        fetchProduct(editingProduct.id).then(fullProduct => {
+          setFormData({ ...fullProduct, quantity: fullProduct.quantity || 0 });
+          setSelectedCategories(fullProduct.categories || []);
+          setOptions(fullProduct.options?.map(opt => ({ ...opt, id: opt.id || `temp-${Math.random()}` })) || []);
+          setProductImages(fullProduct.images || []);
+          setSelectedTags(fullProduct.tags || []);
+        });
       } else {
         // Reset form for new product
-        setFormData({ sku: "", name: "", category: "", categories: [], productType: "", image: "", priceYuan: 0, exchangeRate: 1, priceThb: 0, importCost: 0, costThb: 0, sellingPrice: 0, status: "พรีออเดอร์", shipmentDate: "", link: "", description: "", quantity: 0 });
+        setFormData({ sku: "", name: "", category: "", categories: [], productType: "", image: "", priceYuan: 0, exchangeRate: 5.0, priceThb: 0, importCost: 0, costThb: 0, sellingPrice: 0, status: "พรีออเดอร์", shipmentDate: "", link: "", description: "", quantity: 0, tags: [] });
         setSelectedCategories([]);
         setOptions([]);
         setProductImages([]);
@@ -66,24 +65,16 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     }
   }, [editingProduct, open]);
 
-  // --- Auto-calculation for pricing ---
+  // (ส่วน useEffect อื่นๆ ไม่ต้องแก้ไข)
   useEffect(() => {
     const yuan = parseFloat(String(formData.priceYuan)) || 0;
     const rate = parseFloat(String(formData.exchangeRate)) || 0;
     const importFee = parseFloat(String(formData.importCost)) || 0;
-
     const newPriceThb = (yuan > 0 && rate > 0) ? parseFloat((yuan * rate).toFixed(2)) : 0;
     const newCostThb = newPriceThb + importFee;
-
-    setFormData(prev => {
-      if (prev.priceThb !== newPriceThb || prev.costThb !== newCostThb) {
-        return { ...prev, priceThb: newPriceThb, costThb: newCostThb };
-      }
-      return prev;
-    });
+    setFormData(prev => (prev.priceThb !== newPriceThb || prev.costThb !== newCostThb) ? { ...prev, priceThb: newPriceThb, costThb: newCostThb } : prev);
   }, [formData.priceYuan, formData.exchangeRate, formData.importCost]);
 
-  // --- Sync category state and auto-generate SKU ---
   useEffect(() => {
     setFormData(prev => ({ ...prev, categories: selectedCategories, category: selectedCategories[0] || "" }));
     if (!editingProduct && !formData.sku && selectedCategories.length > 0) {
@@ -91,17 +82,16 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     }
   }, [selectedCategories]);
 
-  // --- Handler Functions ---
-  const toggleCategory = (category: string) => {
-    setSelectedCategories(prev => prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]);
-  };
 
+  // --- Handler Functions (toggleCategory, handleImagesChange ไม่ต้องแก้ไข) ---
+  const toggleCategory = (category: string) => setSelectedCategories(prev => prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]);
   const handleImagesChange = (images: ProductImage[]) => {
     setProductImages(images);
     const mainImage = images.find(img => img.order === 1);
     setFormData(prev => ({ ...prev, image: mainImage ? mainImage.image_url : (images[0]?.image_url || "") }));
   };
 
+  // --- 4. แก้ไข handleSubmit ทั้งหมด ---
   const handleSubmit = async () => {
     if (!formData.name || selectedCategories.length === 0) {
       alert("กรุณากรอกชื่อสินค้าและเลือกหมวดหมู่อย่างน้อย 1 หมวดหมู่"); return;
@@ -109,11 +99,12 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
     
     setIsSubmitting(true);
     try {
-      const productId = String(editingProduct?.id || nanoid());
+      // ไม่ต้องสร้าง ID ปลอมด้วย nanoid อีกต่อไป
+      // const productId = String(editingProduct?.id || nanoid());
 
       const uploadedImagePromises = productImages.map(async (image) => {
         if (image.file) {
-          const newUrl = await uploadImageToStorage(image.file, productId);
+          const newUrl = await uploadImageToStorage(image.file, String(editingProduct?.id || 'new'));
           const { file, ...rest } = image;
           return { ...rest, image_url: newUrl };
         }
@@ -125,23 +116,46 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
       
       const dataToSave = {
         ...formData,
-        id: productId, // Ensure ID is consistent
+        id: editingProduct?.id, // ใช้ ID เดิมถ้าเป็นการแก้ไข, เป็น undefined ถ้าเป็นการสร้างใหม่
         quantity,
         options: options.length > 0 ? options : undefined,
         images: uploadedImages,
         tags: selectedTags,
       };
       
-      await onAddProduct(dataToSave);
-      onOpenChange(false);
+      // ตรวจสอบว่าเป็นการแก้ไขหรือการเพิ่มใหม่
+      if (editingProduct) {
+        // เรียกใช้ฟังก์ชัน updateProduct ที่ถูกต้อง
+        await updateProduct(dataToSave as Product);
+      } else {
+        // เรียกใช้ฟังก์ชัน addProduct ที่ถูกต้อง
+        const { id, ...addData } = dataToSave; // ตัด id ที่เป็น undefined ออกไป
+        await addProduct(addData);
+      }
+      
+      // แสดงข้อความ Toast บอกว่าสำเร็จ
+      toast({
+        title: "บันทึกสำเร็จ!",
+        description: `สินค้า "${dataToSave.name}" ถูกบันทึกเรียบร้อยแล้ว`,
+        className: "bg-green-500 text-white",
+      });
+
+      onProductSaved(); // บอก Parent Component ว่ามีการบันทึกแล้ว (เพื่อให้มันโหลดข้อมูลใหม่)
+      onOpenChange(false); // ปิด Modal
+
     } catch (error) {
       console.error("Error saving product:", error);
-      alert("เกิดข้อผิดพลาดในการบันทึกสินค้า: " + (error instanceof Error ? error.message : 'Unknown error'));
+      toast({
+        variant: "destructive",
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถบันทึกข้อมูลได้: " + (error instanceof Error ? error.message : 'Unknown error'),
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // --- JSX (Return) ไม่มีการเปลี่ยนแปลงมากนัก ---
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -186,20 +200,9 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
               </CardContent>
             </Card>
 
-            <ProductImageManager 
-              productId={editingProduct?.id} 
-              images={productImages} 
-              onImagesChange={handleImagesChange} 
-              disabled={isSubmitting} 
-              productOptions={options} 
-            />
+            <ProductImageManager productId={editingProduct?.id} images={productImages} onImagesChange={handleImagesChange} disabled={isSubmitting} productOptions={options} />
             <ProductPricingFields formData={formData} setFormData={setFormData} />
-            <ProductOptionsManager 
-              options={options} 
-              setOptions={setOptions} 
-              category={selectedCategories[0] || ""} 
-              editingProductId={editingProduct?.id} 
-            />
+            <ProductOptionsManager options={options} setOptions={setOptions} category={selectedCategories[0] || ""} editingProductId={editingProduct?.id} />
           </div>
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>ยกเลิก</Button>
