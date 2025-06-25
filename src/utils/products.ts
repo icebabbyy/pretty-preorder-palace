@@ -1,3 +1,5 @@
+console.log("✅✅✅ FILE products.ts LOADED! ✅✅✅");
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Product, ProductImage } from "@/types";
 import { fetchProductImages, addProductImage, deleteProductImage } from "./productImages";
@@ -135,6 +137,7 @@ export async function addProduct(product: Omit<Product, "id">): Promise<Product>
 
 // อัปเดตสินค้า (ใช้ RPC)
 export async function updateProduct(product: Product): Promise<Product> {
+    console.log("🔴🔴🔴 FUNCTION updateProduct CALLED! 🔴🔴🔴");
   console.log("updateProduct: calling RPC with data:", product);
  // --- V V V เพิ่มบรรทัดนี้เข้าไปเลยครับ V V V ---
   console.log("DEBUG PAYLOAD TO RPC:", JSON.stringify(product, null, 2));
