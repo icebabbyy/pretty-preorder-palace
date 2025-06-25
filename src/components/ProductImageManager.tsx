@@ -40,9 +40,15 @@ const ProductImageManager = ({ images, onImagesChange, disabled = false, product
   }, [images, onImagesChange, selectedImageType, selectedVariant, productOptions]);
 
 
-  const addImageToList = useCallback((imageSource: { url?: string, file?: File }) => {
-    const { url, file } = imageSource;
-    if (!url && !file) return;
+  const handlePaste = useCallback(async (e: ClipboardEvent) => {
+    console.log('--- PASTE EVENT TRIGGERED! ---');
+    if (isUpdating || disabled) return;
+
+ if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        console.log('Image File Found:', file); //
 
     if (selectedImageTypeRef.current === "variant" && !selectedVariantRef.current) {
       alert("กรุณาเลือกตัวเลือกสินค้าสำหรับรูปภาพนี้");
