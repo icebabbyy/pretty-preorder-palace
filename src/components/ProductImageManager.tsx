@@ -1,184 +1,170 @@
 // src/components/ProductImageManager.tsx
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { X, Plus, Upload } from "lucide-react";
-import { ProductImage, ProductOption } from "@/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { X, Plus, Upload, ImageIcon, ArrowDown, ArrowUp } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { nanoid } from "nanoid";
-import { DndProvider, useDrag, useDrop, XYCoord } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
-import { cn } from '@/lib/utils';
-
-// DraggableImage Component (สมบูรณ์แล้ว ไม่แก้ไข)
-interface DraggableImageProps {
-  image: ProductImage;
-  index: number;
-  moveImage: (dragIndex: number, hoverIndex: number) => void;
-  onRemove: (index: number) => void;
-  disabled: boolean;
-}
-const DraggableImage = ({ image, index, moveImage, onRemove, disabled }: DraggableImageProps) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [{ handlerId }, drop] = useDrop({
-    accept: 'image',
-    collect(monitor) { return { handlerId: monitor.getHandlerId() }; },
-    hover(item: { index: number }, monitor) {
-      if (!ref.current) return;
-      const dragIndex = item.index;
-      const hoverIndex = index;
-      if (dragIndex === hoverIndex) return;
-      const hoverBoundingRect = ref.current?.getBoundingClientRect();
-      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-      const clientOffset = monitor.getClientOffset();
-      const hoverClientY = (clientOffset as XYCoord).y - hoverBoundingRect.top;
-      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
-      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
-      moveImage(dragIndex, hoverIndex);
-      item.index = hoverIndex;
-    },
-  });
-  const [{ isDragging }, drag] = useDrag({
-    type: 'image',
-    item: () => ({ id: image.id, index }),
-    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
-  });
-  drag(drop(ref));
-
-  return (
-    <div ref={ref} data-handler-id={handlerId} className={cn("relative p-2 border rounded-lg bg-white flex items-center gap-3 cursor-move", isDragging ? "opacity-50" : "opacity-100")}>
-      <img src={image.image_url} alt={`Product image ${index + 1}`} className="w-16 h-16 object-cover rounded-md" />
-      <div className="flex-grow text-xs text-gray-500 truncate">{image.image_url}</div>
-      {!disabled && (
-        <Button variant="destructive" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => onRemove(index)}>
-          <X className="h-4 w-4" />
-        </Button>
-      )}
-    </div>
-  );
-};
-
+import type { ProductImage, ProductOption } from "@/types";
 
 interface ProductImageManagerProps {
+  productId?: string;
   images: ProductImage[];
   onImagesChange: (images: ProductImage[]) => void;
-  disabled: boolean;
+  disabled?: boolean;
+  productOptions: ProductOption[];
 }
 
-const ProductImageManager = ({ images, onImagesChange, disabled }: ProductImageManagerProps) => {
-  const [newImageUrl, setNewImageUrl] = useState('');
+const ProductImageManager = ({ images, onImagesChange, disabled = false, productOptions = [] }: ProductImageManagerProps) => {
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [selectedImageType, setSelectedImageType] = useState<"main" | "additional" | "variant">("main");
+  const [selectedVariant, setSelectedVariant] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- แก้ไข: ใช้ useRef เพื่อแก้ปัญหา Stale Closure ใน Event Listener ---
-  const onImagesChangeRef = useRef(onImagesChange);
+  // --- State Refs for Event Listener ---
   const imagesRef = useRef(images);
+  const onImagesChangeRef = useRef(onImagesChange);
+  const selectedImageTypeRef = useRef(selectedImageType);
+  const selectedVariantRef = useRef(selectedVariant);
+  const productOptionsRef = useRef(productOptions);
+
   useEffect(() => {
-    onImagesChangeRef.current = onImagesChange;
     imagesRef.current = images;
-  }, [onImagesChange, images]);
+    onImagesChangeRef.current = onImagesChange;
+    selectedImageTypeRef.current = selectedImageType;
+    selectedVariantRef.current = selectedVariant;
+    productOptionsRef.current = productOptions;
+  }, [images, onImagesChange, selectedImageType, selectedVariant, productOptions]);
 
-  const addImageToList = useCallback((newImage: ProductImage) => {
-    // ใช้ Ref ที่อัปเดตล่าสุดเสมอ
-    onImagesChangeRef.current([...imagesRef.current, newImage]);
-  }, []); // useCallback พร้อม dependency ว่างเปล่า
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      addImageToList({
-        id: nanoid(),
-        image_url: URL.createObjectURL(file),
-        order: imagesRef.current.length,
-        file: file,
-      });
+  const addImageToList = useCallback((imageSource: { url?: string, file?: File }) => {
+    const { url, file } = imageSource;
+    if (!url && !file) return;
+
+    if (selectedImageTypeRef.current === "variant" && !selectedVariantRef.current) {
+      alert("กรุณาเลือกตัวเลือกสินค้าสำหรับรูปภาพนี้");
+      return;
     }
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-  
-  const handleAddFromUrl = () => {
-    if (!newImageUrl.trim()) return;
-    addImageToList({
+
+    let newImageList = [...imagesRef.current];
+    const newImage: ProductImage = {
       id: nanoid(),
-      image_url: newImageUrl.trim(),
-      order: imagesRef.current.length,
-    });
+      image_url: file ? URL.createObjectURL(file) : url!,
+      order: 999, // Default order
+      file: file,
+    };
+
+    if (selectedImageTypeRef.current === "variant") {
+      const variant = productOptionsRef.current.find(opt => opt.id === selectedVariantRef.current);
+      newImage.variant_id = variant?.id;
+      newImage.variant_name = variant?.name;
+      delete newImage.order;
+    } else if (selectedImageTypeRef.current === "main") {
+      newImage.order = 1;
+      newImageList = newImageList.map(img => img.order === 1 && !img.variant_id ? { ...img, order: 999 } : img);
+    } else { // Additional
+      const maxOrder = Math.max(1, ...newImageList.filter(img => !img.variant_id).map(img => img.order || 1));
+      newImage.order = maxOrder + 1;
+    }
+    
+    onImagesChangeRef.current([...newImageList, newImage]);
     setNewImageUrl("");
-  };
+  }, []);
 
-  const handleRemoveImage = (indexToRemove: number) => {
-    const updatedImages = imagesRef.current.filter((_, index) => index !== indexToRemove);
-    onImagesChangeRef.current(updatedImages);
-  };
-  
-  const moveImage = (dragIndex: number, hoverIndex: number) => {
-    const draggedImage = imagesRef.current[dragIndex];
-    const updatedImages = [...imagesRef.current];
-    updatedImages.splice(dragIndex, 1);
-    updatedImages.splice(hoverIndex, 0, draggedImage);
-    onImagesChangeRef.current(updatedImages);
-  };
+  const handlePaste = useCallback((e: ClipboardEvent) => {
+    if (disabled) return;
+    const file = e.clipboardData?.items[0]?.getAsFile();
+    if (file && file.type.startsWith("image/")) {
+      e.preventDefault();
+      addImageToList({ file });
+    }
+  }, [disabled, addImageToList]);
 
-  // --- แก้ไข: useEffect สำหรับ Paste จะถูกสร้างแค่ครั้งเดียว ---
   useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      if (disabled) return;
-      const file = e.clipboardData?.items[0]?.getAsFile();
-      if (file && file.type.startsWith("image/")) {
-        e.preventDefault();
-        addImageToList({
-          id: nanoid(),
-          image_url: URL.createObjectURL(file),
-          order: imagesRef.current.length,
-          file: file,
-        });
-      }
-    };
-
     window.addEventListener("paste", handlePaste);
-    return () => {
-      window.removeEventListener("paste", handlePaste);
-    };
-  }, [disabled, addImageToList]); // ใส่ dependency ที่จำเป็น
+    return () => { window.removeEventListener("paste", handlePaste); };
+  }, [handlePaste]);
+
+  const handleDeleteImage = (imageId: string | number) => {
+    onImagesChange(images.filter(img => img.id !== imageId));
+  };
+
+  const renderImageList = (imageList: ProductImage[], title: string) => (
+    <div>
+      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+        <ImageIcon className="w-4 h-4 text-gray-600" /> {title} <span className="text-xs text-gray-500">({imageList.length})</span>
+      </h4>
+      <div className="space-y-2 p-2 border rounded-md bg-gray-50/50 min-h-[5rem]">
+        {imageList.length === 0 ? (
+          <p className="text-center text-gray-400 text-sm py-4">ยังไม่มีรูปภาพ</p>
+        ) : (
+          imageList.map((img) => (
+            <div key={img.id} className="flex gap-3 p-2 items-center bg-white border rounded-md shadow-sm">
+              <img src={img.image_url} alt={img.variant_name || "Product Image"} className="w-16 h-16 object-cover rounded border" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-500 truncate" title={img.image_url}>{img.image_url}</p>
+                {img.variant_id && (<span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">{img.variant_name}</span>)}
+              </div>
+              <Button size="icon" variant="ghost" className="h-7 w-7 self-center text-red-500 hover:text-red-600" onClick={() => handleDeleteImage(img.id!)} disabled={disabled}><X className="w-4 h-4" /></Button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
 
   return (
-    <DndProvider backend={HTML5Backend}>
-      <Card>
-        <CardHeader><CardTitle className="text-base">จัดการรูปภาพสินค้า</CardTitle></CardHeader>
+    <div className="space-y-6">
+      <Card className="border-gray-200">
+        <CardHeader><CardTitle className="text-base">เพิ่มรูปภาพใหม่</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2 min-h-[5rem] bg-gray-50/50 p-2 rounded-md border">
-            {images.map((img, index) => (
-              <DraggableImage
-                key={img.id || index}
-                index={index}
-                image={img}
-                moveImage={moveImage}
-                onRemove={handleRemoveImage}
-                disabled={disabled}
-              />
-            ))}
-             {images.length === 0 && <p className="text-sm text-gray-500 text-center py-4">ยังไม่มีรูปภาพ (ลากวาง, Paste, หรือเพิ่มจาก URL)</p>}
-          </div>
-          {!disabled && (
-            <div className="flex flex-col gap-3 pt-4 border-t">
-               <Label className="text-sm font-medium">เพิ่มรูปภาพใหม่</Label>
-               <div className="flex gap-2 items-center">
-                  <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="flex-shrink-0">
-                    <Upload className="w-4 h-4 mr-2"/>
-                    เลือกไฟล์
-                  </Button>
-                  <span className="text-sm text-gray-500">หรือ</span>
-                  <Input value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} placeholder="ใส่ URL รูปภาพ แล้วกดบวก" />
-                  <Button onClick={handleAddFromUrl} disabled={!newImageUrl.trim()} size="icon" className="flex-shrink-0"><Plus className="w-4 h-4" /></Button>
-               </div>
-                <p className="text-sm text-gray-500">💡 เคล็ดลับ: คุณสามารถ Paste รูปภาพจาก clipboard ได้โดยตรง (Ctrl+V)</p>
-               <Input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>1. เลือกประเภทรูปภาพ</Label>
+              <Select value={selectedImageType} onValueChange={(value: any) => setSelectedImageType(value)} disabled={disabled}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="main">🖼️ รูปภาพหลัก</SelectItem>
+                  <SelectItem value="additional">📸 รูปภาพเพิ่มเติม</SelectItem>
+                  <SelectItem value="variant">🧩 รูปภาพของตัวเลือก</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          )}
+            {selectedImageType === 'variant' && (
+              <div>
+                <Label>2. สำหรับตัวเลือกสินค้า</Label>
+                <Select value={selectedVariant} onValueChange={setSelectedVariant} disabled={disabled || productOptions.length === 0}>
+                  <SelectTrigger><SelectValue placeholder="เลือกตัวเลือกสินค้า..." /></SelectTrigger>
+                  <SelectContent>
+                    {productOptions.map((option) => (<SelectItem key={option.id} value={option.id!}>{option.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <div>
+            <Label>3. อัปโหลด, Paste, หรือใส่ URL</Label>
+            <Input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={(e) => addImageToList({ file: e.target.files?.[0] })} />
+            <div className="flex gap-2 mt-1">
+              <Button onClick={() => fileInputRef.current?.click()} disabled={disabled} variant="outline"><Upload className="w-4 h-4 mr-2"/> เลือกไฟล์</Button>
+              <Input value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} placeholder="หรือใส่ URL รูปภาพ แล้วกดบวก" disabled={disabled} />
+              <Button onClick={() => addImageToList({ url: newImageUrl })} disabled={disabled || !newImageUrl.trim()}><Plus className="w-4 h-4" /></Button>
+            </div>
+             <p className="text-sm text-gray-500 mt-2">💡 เคล็ดลับ: Paste รูปจาก clipboard ได้เลย (Ctrl+V)</p>
+          </div>
         </CardContent>
       </Card>
-    </DndProvider>
+      <Separator />
+      <div className="space-y-4">
+        {renderImageList(images.filter(img => img.order === 1 && !img.variant_id), "รูปภาพหลัก")}
+        {renderImageList(images.filter(img => img.order !== 1 && !img.variant_id).sort((a,b) => (a.order || 99) - (b.order||99)), "รูปภาพเพิ่มเติม")}
+        {productOptions.length > 0 && renderImageList(images.filter(img => !!img.variant_id), "รูปภาพของตัวเลือกสินค้า")}
+      </div>
+    </div>
   );
 };
 
