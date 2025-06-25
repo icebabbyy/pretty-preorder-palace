@@ -23,12 +23,12 @@ import { addProduct, updateProduct, fetchProduct } from "@/utils/products";
 interface AddProductModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onProductSaved: () => void; // เปลี่ยนชื่อ prop เพื่อความชัดเจน
+  onAddProduct: (product: any) => void; // เปลี่ยนชื่อ prop เพื่อความชัดเจน
   categories: string[];
   editingProduct?: Product | null;
 }
 
-const AddProductModal = ({ open, onOpenChange, onProductSaved, categories, editingProduct }: AddProductModalProps) => {
+const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editingProduct }: AddProductModalProps) => {
   const { toast } = useToast(); // --- 3. เตรียม Toast ไว้ใช้งาน ---
   const [formData, setFormData] = useState<Product>({ sku: "", name: "", category: "", categories: [], productType: "", image: "", priceYuan: 0, exchangeRate: 5.0, priceThb: 0, importCost: 0, costThb: 0, sellingPrice: 0, status: "พรีออเดอร์", shipmentDate: "", link: "", description: "", quantity: 0, tags: [] });
   const [options, setOptions] = useState<ProductOption[]>([]);
@@ -92,68 +92,65 @@ const AddProductModal = ({ open, onOpenChange, onProductSaved, categories, editi
   };
 
   // --- 4. แก้ไข handleSubmit ทั้งหมด ---
-  const handleSubmit = async () => {
-    if (!formData.name || selectedCategories.length === 0) {
-      alert("กรุณากรอกชื่อสินค้าและเลือกหมวดหมู่อย่างน้อย 1 หมวดหมู่"); return;
+const handleSubmit = async () => {
+  if (!formData.name || selectedCategories.length === 0) {
+    alert("กรุณากรอกชื่อสินค้าและเลือกหมวดหมู่อย่างน้อย 1 หมวดหมู่"); return;
+  }
+  
+  setIsSubmitting(true);
+  try {
+    const uploadedImagePromises = productImages.map(async (image) => {
+      if (image.file) {
+        const newUrl = await uploadImageToStorage(image.file, String(editingProduct?.id || 'new'));
+        const { file, ...rest } = image;
+        return { ...rest, image_url: newUrl };
+      }
+      return image;
+    });
+    const uploadedImages = await Promise.all(uploadedImagePromises);
+
+    const quantity = options.length > 0 ? options.reduce((sum, o) => sum + (o.quantity || 0), 0) : (formData.quantity || 0);
+    
+    const dataToSave = {
+      ...formData,
+      id: editingProduct?.id,
+      quantity,
+      options: options.length > 0 ? options : undefined,
+      images: uploadedImages,
+      tags: selectedTags,
+    };
+    
+    let savedProduct; // สร้างตัวแปรมารับผลลัพธ์
+    if (editingProduct) {
+      savedProduct = await updateProduct(dataToSave as Product);
+    } else {
+      const { id, ...addData } = dataToSave;
+      savedProduct = await addProduct(addData);
     }
     
-    setIsSubmitting(true);
-    try {
-      // ไม่ต้องสร้าง ID ปลอมด้วย nanoid อีกต่อไป
-      // const productId = String(editingProduct?.id || nanoid());
+    toast({
+      title: "บันทึกสำเร็จ!",
+      description: `สินค้า "${savedProduct.name}" ถูกบันทึกเรียบร้อยแล้ว`,
+      className: "bg-green-500 text-white",
+    });
 
-      const uploadedImagePromises = productImages.map(async (image) => {
-        if (image.file) {
-          const newUrl = await uploadImageToStorage(image.file, String(editingProduct?.id || 'new'));
-          const { file, ...rest } = image;
-          return { ...rest, image_url: newUrl };
-        }
-        return image;
-      });
-      const uploadedImages = await Promise.all(uploadedImagePromises);
+    // --- แก้ไขจุดนี้: เรียกใช้ onAddProduct พร้อมส่งข้อมูลกลับไป ---
+    onAddProduct(savedProduct); 
+    
+    onOpenChange(false);
 
-      const quantity = options.length > 0 ? options.reduce((sum, o) => sum + (o.quantity || 0), 0) : (formData.quantity || 0);
-      
-      const dataToSave = {
-        ...formData,
-        id: editingProduct?.id, // ใช้ ID เดิมถ้าเป็นการแก้ไข, เป็น undefined ถ้าเป็นการสร้างใหม่
-        quantity,
-        options: options.length > 0 ? options : undefined,
-        images: uploadedImages,
-        tags: selectedTags,
-      };
-      
-      // ตรวจสอบว่าเป็นการแก้ไขหรือการเพิ่มใหม่
-      if (editingProduct) {
-        // เรียกใช้ฟังก์ชัน updateProduct ที่ถูกต้อง
-        await updateProduct(dataToSave as Product);
-      } else {
-        // เรียกใช้ฟังก์ชัน addProduct ที่ถูกต้อง
-        const { id, ...addData } = dataToSave; // ตัด id ที่เป็น undefined ออกไป
-        await addProduct(addData);
-      }
-      
-      // แสดงข้อความ Toast บอกว่าสำเร็จ
-      toast({
-        title: "บันทึกสำเร็จ!",
-        description: `สินค้า "${dataToSave.name}" ถูกบันทึกเรียบร้อยแล้ว`,
-        className: "bg-green-500 text-white",
-      });
-
-      onProductSaved(); // บอก Parent Component ว่ามีการบันทึกแล้ว (เพื่อให้มันโหลดข้อมูลใหม่)
-      onOpenChange(false); // ปิด Modal
-
-    } catch (error) {
-      console.error("Error saving product:", error);
-      toast({
-        variant: "destructive",
-        title: "เกิดข้อผิดพลาด",
-        description: "ไม่สามารถบันทึกข้อมูลได้: " + (error instanceof Error ? error.message : 'Unknown error'),
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  } catch (error) {
+    console.error("Error saving product:", error);
+    toast({
+      variant: "destructive",
+      title: "เกิดข้อผิดพลาด",
+      description: "ไม่สามารถบันทึกข้อมูลได้: " + (error instanceof Error ? error.message : 'Unknown error'),
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+```
 
   // --- JSX (Return) ไม่มีการเปลี่ยนแปลงมากนัก ---
   return (
