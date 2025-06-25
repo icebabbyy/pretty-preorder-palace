@@ -146,21 +146,21 @@ async function syncProductOptionImages(productId: number, options: any[]) {
   }
 }
 
-export async function fetchProducts(): Promise<Product[]> {
+export async function fetchProduct(productId: number): Promise<Product> {
   const { data, error } = await supabase
     .from('products')
     .select('*')
-    .order('created_at', { ascending: false });
-
+    .eq('id', productId)
+    .single();
+  
   if (error) {
-    console.error('Error fetching products:', error);
-    throw new Error('Failed to fetch products');
+    console.error(`Error fetching product ${productId}:`, error);
+    throw new Error('Failed to fetch product');
   }
 
-  // Convert each product with images
-  const products = await Promise.all(
-    (data ?? []).map(supabaseProductToProduct)
-  );
+  // ใช้ฟังก์ชันแปลงข้อมูลตัวเดิมที่ตอนนี้ดึง tags ได้ถูกต้องแล้ว
+  return await supabaseProductToProduct(data); 
+}
 
   return products;
 }
@@ -218,25 +218,24 @@ export async function addProduct(product: Omit<Product, "id"> & { images?: Produ
   return await supabaseProductToProduct(data);
 }
 
-export async function updateProduct(product: Product & { images?: ProductImage[] }): Promise<Product> {
-  const obj = productToSupabaseInsert(product);
-  console.log("updateProduct: data to update:", obj, "ID:", product.id);
-  
-  const { data, error } = await supabase
-    .from('products')
-    .update({ ...obj, updated_at: new Date().toISOString() } as any)
-    .eq('id', product.id)
-    .select()
-    .single();
+export async function updateProduct(product: Product): Promise<Product> {
+  console.log("updateProduct: กำลังจะเรียก RPC พร้อมข้อมูล:", product);
+
+  const { error } = await supabase.rpc('upsert_product_with_relations', {
+      p_data: product // ส่ง object product ทั้งหมดไปให้ฟังก์ชันจัดการ
+  });
+
   if (error) {
-    console.error('Error updating product:', error);
-    alert(
-      'Failed to update product: ' +
-      (error.message || '') +
-      (error.details ? '\nDetails: ' + error.details : '')
-    );
-    throw new Error('Failed to update product');
+      console.error('Error updating product via RPC:', error);
+      alert(`Failed to update product: ${error.message}`);
+      throw new Error('Failed to update product via RPC');
   }
+
+  console.log('RPC call successful. Fetching updated product...');
+  
+  // หลังจากบันทึกผ่าน RPC สำเร็จ เราก็ดึงข้อมูลล่าสุดกลับมา
+  return await fetchProduct(product.id!);
+}
 
   // Sync product option images to product_images table after update
   if (product.options && product.options.length > 0) {
