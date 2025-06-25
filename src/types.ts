@@ -1,3 +1,4 @@
+
 export interface ProductOption {
   id: string;
   name: string;
@@ -40,6 +41,7 @@ export interface Product {
   description: string;
   quantity?: number;
   options?: ProductOption[];
+  tags?: string[];
 }
 
 export interface OrderItem {
@@ -68,8 +70,3 @@ export interface Order {
   username: string;
   address: string;
 }
-export interface Product {
-  // ... property อื่นๆ ที่มีอยู่แล้ว ...
-  images?: ProductImage[]; 
-  
-  tags?: string[];
