@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/types";
 
@@ -76,9 +77,12 @@ export async function addProduct(product: Omit<Product, "id">): Promise<Product>
   const { id, ...productDataForInsert } = product as any;
   console.log("addProduct: calling RPC with data (ID removed):", productDataForInsert);
 
+  // Fix: Convert Product to JSON-compatible format
+  const jsonCompatibleData = JSON.parse(JSON.stringify(productDataForInsert));
+
   // เรียก RPC โดยส่งข้อมูลที่ไม่มี ID ไป
   const { data: rpcData, error } = await supabase.rpc('upsert_product_with_relations', {
-    p_data: productDataForInsert
+    p_data: jsonCompatibleData
   });
 
   if (error) {
@@ -99,8 +103,11 @@ export async function updateProduct(product: Product): Promise<Product> {
   console.log("CURRENT USER:", user);
   console.log("updateProduct: calling RPC with data:", product);
 
+  // Fix: Convert Product to JSON-compatible format
+  const jsonCompatibleData = JSON.parse(JSON.stringify(product));
+
   const { error } = await supabase.rpc('upsert_product_with_relations', {
-      p_data: product
+      p_data: jsonCompatibleData
   });
 
   if (error) {

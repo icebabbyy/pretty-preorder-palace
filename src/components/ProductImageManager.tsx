@@ -159,7 +159,7 @@ const ProductImageManager = ({
         if (newImage.variant_id) await updateVariantImageInProduct(newImage.variant_id, newImage.image_url);
       } else {
         const tempImage: ProductImage = {
-          id: `temp_${Date.now()}`,
+          id: Date.now(), // Fix: Use number instead of string for temp ID
           image_url: newImagePayload.image_url!,
           order: newImagePayload.order || initialImages.length + 2,
           variant_id: newImagePayload.variant_id,
