@@ -126,19 +126,19 @@ export async function updateProduct(product: Product): Promise<Product> {
   const { data: { user } } = await supabase.auth.getUser();
   console.log("CURRENT USER:", user);
   
-  const jsonData = productToJson(product); // Fixed: Convert to proper JSON format
+  const jsonData = productToJson(product);
   console.log("updateProduct: calling RPC with data:", jsonData);
 
   const { error } = await supabase.rpc('upsert_product_with_relations', {
-      p_data: jsonData
+    p_data: jsonData
   });
 
   if (error) {
-      console.error('Error updating product via RPC:', error);
-      alert(`Failed to update product: ${error.message}`);
-      throw new Error('Failed to update product via RPC');
+    console.error('Error updating product via RPC:', error);
+    alert(`Failed to update product: ${error.message}`);
+    throw new Error('Failed to update product via RPC');
   }
-  
+
   return await fetchProduct(product.id!);
 }
 
