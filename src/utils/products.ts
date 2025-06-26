@@ -97,14 +97,13 @@ function productToJson(product: Product | Omit<Product, "id">): any {
   };
 }
 
-// --- FIXED: ฟังก์ชันเพิ่มสินค้า ---
-// --- โค้ดใหม่ที่ถูกต้อง ---
-export async function addProduct(product: Omit<Product, "id">): Promise<Product> {
-  // ตัด id ที่เป็น string ออกไป (ถูกต้องแล้ว)
-  const { id, ...productDataForInsert } = product as any;
-  console.log("addProduct: calling RPC with data:", productDataForInsert);
+// ในไฟล์ src/utils/products.ts
 
-  // เรียก RPC โดยส่งข้อมูลจากฟอร์มไปตรงๆ "ไม่ต้องแปลภาษา"
+// --- แก้ไขฟังก์ชัน addProduct ---
+export async function addProduct(product: Omit<Product, "id">): Promise<Product> {
+  const { id, ...productDataForInsert } = product as any;
+  console.log("addProduct: calling RPC with direct data:", productDataForInsert);
+
   const { data: rpcData, error } = await supabase.rpc('upsert_product_with_relations', {
     p_data: productDataForInsert
   });
@@ -114,17 +113,16 @@ export async function addProduct(product: Omit<Product, "id">): Promise<Product>
     throw new Error('Failed to add product via RPC: ' + error.message);
   }
 
-  const newProductId = (rpcData as any)?.id; // แก้ key ให้ถูกต้องเป็น id
+  const newProductId = (rpcData as any)?.id;
   if (!newProductId) throw new Error('RPC did not return a new product ID.');
-
+  
   return await fetchProduct(newProductId);
 }
 
-// --- FIXED: ฟังก์ชันอัปเดตสินค้า ---
+// --- แก้ไขฟังก์ชัน updateProduct ---
 export async function updateProduct(product: Product): Promise<Product> {
-  console.log("updateProduct: calling RPC with data:", product);
+  console.log("updateProduct: calling RPC with direct data:", product);
 
-  // เรียก RPC โดยส่งข้อมูลจากฟอร์มไปตรงๆ "ไม่ต้องแปลภาษา"
   const { error } = await supabase.rpc('upsert_product_with_relations', {
     p_data: product
   });
