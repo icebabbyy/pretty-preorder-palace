@@ -72,24 +72,26 @@ export async function fetchProduct(productId: number): Promise<Product> {
 }
 
 // --- FIXED: ฟังก์ชันเพิ่มสินค้า ---
-export async function addProduct(product: Omit<Product, "id">): Promise<Product> {
-  // สร้าง object ใหม่โดย "ไม่เอา" id เข้ามาด้วย เพื่อป้องกัน ID ที่เป็น string
-  const { id, ...productDataForInsert } = product as any;
-  console.log("addProduct: calling RPC with data (ID removed):", productDataForInsert);
-
-  // Fix: Convert Product to JSON-compatible format
-  const jsonCompatibleData = JSON.parse(JSON.stringify(productDataForInsert));
-
-  // เรียก RPC โดยส่งข้อมูลที่ไม่มี ID ไป
-  const { data: rpcData, error } = await supabase.rpc('upsert_product_with_relations', {
-    p_data: jsonCompatibleData
+export const addProduct = async (productData: Omit<Product, 'id' | 'created_at'>): Promise<Product> => {
+  const response = await fetch(`${API_BASE_URL}/api/products`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(productData),
   });
 
-  if (error) {
-    console.error('Error adding product via RPC:', error);
-    alert('Failed to add product: ' + (error.message || ''));
-    throw new Error('Failed to add product');
+  // ---- ส่วนที่แก้ไข ----
+  if (!response.ok) {
+    // ลองอ่าน body ของ response เพื่อดู error message ที่เราส่งมาจาก backend
+    // เราจะเช็คสถานะ 409 ที่เราตั้งไว้ใน Backend สำหรับกรณีชื่อซ้ำ
+    const errorData = await response.json().catch(() => ({ message: 'Failed to add product' }));
+    
+    // โยน Error พร้อมข้อความจาก Backend
+    throw new Error(errorData.message || 'Failed to add product');
   }
+  // ---- จบส่วนที่แก้ไข ----
+
+  return response.json();
+};
 
   const newProductId = (rpcData as any)?.id;
   if (!newProductId) throw new Error('RPC did not return a new product ID.');
