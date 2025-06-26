@@ -295,13 +295,6 @@ export type Database = {
             referencedRelation: "public_products"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "product_images_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "public_products_with_main_image"
-            referencedColumns: ["id"]
-          },
         ]
       }
       product_tags: {
@@ -330,13 +323,6 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "public_products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "product_tags_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "public_products_with_main_image"
             referencedColumns: ["id"]
           },
           {
@@ -497,19 +483,16 @@ export type Database = {
           created_at: string
           id: number
           name: string
-          slug: string
         }
         Insert: {
           created_at?: string
           id?: number
           name: string
-          slug: string
         }
         Update: {
           created_at?: string
           id?: number
           name?: string
-          slug?: string
         }
         Relationships: []
       }
@@ -518,18 +501,21 @@ export type Database = {
           created_at: string
           id: number
           product_id: number
+          product_images: Json | null
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: number
           product_id: number
+          product_images?: Json | null
           user_id: string
         }
         Update: {
           created_at?: string
           id?: number
           product_id?: number
+          product_images?: Json | null
           user_id?: string
         }
         Relationships: [
@@ -547,89 +533,67 @@ export type Database = {
             referencedRelation: "public_products"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "wishlist_items_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "public_products_with_main_image"
-            referencedColumns: ["id"]
-          },
         ]
       }
     }
     Views: {
       public_products: {
         Row: {
-          all_images: Json | null
           category: string | null
           created_at: string | null
           description: string | null
           id: number | null
           image: string | null
-          main_image_url: string | null
-          product_name: string | null
-          product_sku: string | null
+          images_list: Json | null
+          name: string | null
+          options: Json | null
           product_status: string | null
           product_type: string | null
           quantity: number | null
           selling_price: number | null
           shipment_date: string | null
+          shipping_fee: string | null
+          sku: string | null
+          slug: string | null
           updated_at: string | null
         }
         Insert: {
-          all_images?: Json | null
           category?: string | null
           created_at?: string | null
           description?: string | null
           id?: number | null
           image?: string | null
-          main_image_url?: string | null
-          product_name?: string | null
-          product_sku?: string | null
+          images_list?: never
+          name?: string | null
+          options?: Json | null
           product_status?: string | null
           product_type?: string | null
           quantity?: number | null
           selling_price?: number | null
           shipment_date?: string | null
+          shipping_fee?: string | null
+          sku?: string | null
+          slug?: string | null
           updated_at?: string | null
         }
         Update: {
-          all_images?: Json | null
           category?: string | null
           created_at?: string | null
           description?: string | null
           id?: number | null
           image?: string | null
-          main_image_url?: string | null
-          product_name?: string | null
-          product_sku?: string | null
+          images_list?: never
+          name?: string | null
+          options?: Json | null
           product_status?: string | null
           product_type?: string | null
           quantity?: number | null
           selling_price?: number | null
           shipment_date?: string | null
+          shipping_fee?: string | null
+          sku?: string | null
+          slug?: string | null
           updated_at?: string | null
-        }
-        Relationships: []
-      }
-      public_products_with_main_image: {
-        Row: {
-          all_images: Json | null
-          category: string | null
-          created_at: string | null
-          description: string | null
-          id: number | null
-          image: string | null
-          main_image_url: string | null
-          new_main_image_url: string | null
-          product_name: string | null
-          product_sku: string | null
-          product_status: string | null
-          product_type: string | null
-          quantity: number | null
-          selling_price: number | null
-          shipment_date: string | null
-          updated_at: string | null
         }
         Relationships: []
       }
@@ -735,6 +699,10 @@ export type Database = {
       update_main_image_via_view: {
         Args: { image_id: number; new_image_url: string }
         Returns: undefined
+      }
+      upsert_product_with_relations: {
+        Args: { p_data: Json }
+        Returns: Json
       }
     }
     Enums: {

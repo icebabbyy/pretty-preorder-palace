@@ -1,3 +1,4 @@
+
 // src/components/ProductImageManager.tsx
 
 import { useEffect, useRef, useState } from "react";
@@ -27,20 +28,111 @@ const ProductImageManager = ({
   disabled = false,
   productOptions = [],
 }: ProductImageManagerProps) => {
-  // ใช้ State ภายในเพื่อจัดการ state การโหลด แต่ข้อมูลหลักยังมาจาก prop
   const [isUpdating, setIsUpdating] = useState(false);
   const [newImageUrl, setNewImageUrl] = useState("");
   const [selectedImageType, setSelectedImageType] = useState<"main" | "additional" | "variant">("main");
   const [selectedVariant, setSelectedVariant] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
 
   // Categorize images from props directly
   const mainImages = initialImages.filter(img => !img.variant_id && img.order === 1);
   const additionalImages = initialImages.filter(img => !img.variant_id && (img.order || 0) > 1).sort((a, b) => (a.order || 0) - (b.order || 0));
   const variantImages = initialImages.filter(img => img.variant_id);
 
+  // Upload image to Supabase storage
   const uploadImageToStorage = async (file: File): Promise<string | null> => {
-    // ... โค้ดเดิม (ถูกต้องแล้ว) ...
+    try {
+      const filename = `${Date.now()}_${file.name}`;
+      const filePath = `${productId || 'temp'}/${filename}`;
+
+      const { data, error } = await supabase.storage
+        .from("product-images")
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error("Upload error:", error);
+        throw error;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("product-images")
+        .getPublicUrl(filePath);
+
+      return publicUrlData.publicUrl;
+    } catch (error) {
+      console.error("Upload Image Error:", error);
+      return null;
+    }
+  };
+
+  // Handle paste from clipboard
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of items) {
+        if (item.type.indexOf("image") !== -1) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) {
+            await handleFileUpload(file);
+          }
+        }
+      }
+    };
+
+    const handleDrop = async (e: DragEvent) => {
+      e.preventDefault();
+      const files = e.dataTransfer?.files;
+      if (!files) return;
+
+      for (const file of files) {
+        if (file.type.indexOf("image") !== -1) {
+          await handleFileUpload(file);
+        }
+      }
+    };
+
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+    };
+
+    document.addEventListener('paste', handlePaste);
+    const dropZone = dropZoneRef.current;
+    if (dropZone) {
+      dropZone.addEventListener('drop', handleDrop);
+      dropZone.addEventListener('dragover', handleDragOver);
+    }
+
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+      if (dropZone) {
+        dropZone.removeEventListener('drop', handleDrop);
+        dropZone.removeEventListener('dragover', handleDragOver);
+      }
+    };
+  }, [selectedImageType, selectedVariant]);
+
+  const handleFileUpload = async (file: File) => {
+    if (isUpdating) return;
+    
+    try {
+      setIsUpdating(true);
+      const uploadedUrl = await uploadImageToStorage(file);
+      if (uploadedUrl) {
+        await addImageByType(uploadedUrl);
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const addImageByType = async (url: string) => {
@@ -72,7 +164,6 @@ const ProductImageManager = ({
           order: newImagePayload.order || initialImages.length + 2,
           variant_id: newImagePayload.variant_id,
           variant_name: newImagePayload.variant_name,
-          file: newImageUrl.startsWith('blob:') ? undefined : undefined // Simplified
         };
         onImagesChange([...initialImages, tempImage]);
       }
@@ -86,18 +177,29 @@ const ProductImageManager = ({
     }
   };
   
-  const updateVariantImageInProduct = async (variantId: string, imageUrl: string) => { /* ...โค้ดเดิม... */ };
-  const handleAddImageUrl = async () => { /* ...โค้ดเดิม... */ };
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => { /* ...โค้ดเดิม... */ };
-  
-  // --- เพิ่มฟังก์ชันที่หายไป ---
+  const updateVariantImageInProduct = async (variantId: string, imageUrl: string) => {
+    // Update variant image in product options if needed
+    console.log('Updating variant image:', variantId, imageUrl);
+  };
+
+  const handleAddImageUrl = async () => {
+    await addImageByType(newImageUrl);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await handleFileUpload(file);
+    }
+  };
+
   const handleImageUrlChange = async (imageId: number | string | undefined, newUrl: string) => {
     if (!imageId) return;
     
     const updatedImages = initialImages.map(img => 
       img.id === imageId ? { ...img, image_url: newUrl } : img
     );
-    onImagesChange(updatedImages); // Update local UI immediately
+    onImagesChange(updatedImages);
 
     if (productId && typeof imageId === 'number' && imageId > 0) {
       try {
@@ -108,7 +210,6 @@ const ProductImageManager = ({
         }
       } catch (error) {
         console.error("Error updating image URL in DB:", error);
-        // Optionally revert UI on error
         onImagesChange(initialImages);
       }
     }
@@ -142,13 +243,10 @@ const ProductImageManager = ({
     const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
     if (newIndex < 0 || newIndex >= listToReorder.length) return;
 
-    // Swap
     [listToReorder[currentIndex], listToReorder[newIndex]] = [listToReorder[newIndex], listToReorder[currentIndex]];
 
-    // Re-assign order numbers
     const reorderedWithNumbers = listToReorder.map((img, index) => ({ ...img, order: index + 1 }));
 
-    // Reconstruct the full image list
     const updatedAllImages = [
       ...reorderedWithNumbers,
       ...variantImages
@@ -197,7 +295,7 @@ const ProductImageManager = ({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" ref={dropZoneRef}>
       <Card className="border-purple-200">
         <CardHeader><CardTitle className="text-base">เพิ่มรูปภาพใหม่</CardTitle></CardHeader>
         <CardContent className="space-y-4">
@@ -227,13 +325,13 @@ const ProductImageManager = ({
           </div>
           <div>
             <Label>3. อัปโหลดหรือใส่ URL</Label>
-            <Input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+            <Input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
             <div className="flex gap-2 mt-1">
               <Button onClick={() => fileInputRef.current?.click()} disabled={isUpdating} variant="outline"><Upload className="w-4 h-4 mr-2"/> เลือกไฟล์</Button>
               <Input value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} placeholder="หรือใส่ URL รูปภาพ แล้วกดบวก" disabled={isUpdating} />
               <Button onClick={handleAddImageUrl} disabled={isUpdating || !newImageUrl.trim()}><Plus className="w-4 h-4" /></Button>
             </div>
-             <p className="text-sm text-gray-500 mt-2">💡 เคล็ดลับ: คุณสามารถ Paste รูปภาพจาก clipboard ได้โดยตรง (Ctrl+V)</p>
+             <p className="text-sm text-gray-500 mt-2">💡 เคล็ดลับ: คุณสามารถ Paste รูปภาพจาก clipboard ได้โดยตรง (Ctrl+V) หรือ Drag & Drop ไฟล์รูปภาพลงในพื้นที่นี้</p>
           </div>
         </CardContent>
       </Card>
