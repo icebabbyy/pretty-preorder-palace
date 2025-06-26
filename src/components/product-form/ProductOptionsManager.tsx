@@ -73,8 +73,7 @@ const ProductOptionsManager = ({ options, setOptions, category, editingProductId
 
   const handleOptionImageUpload = async (optionId: string, file: File) => {
     const productId = editingProductId || Date.now();
-    // Fix: Pass only 2 arguments - file and pathPrefix
-    const url = await uploadImageToStorage(file, productId.toString());
+    const url = await uploadImageToStorage(file, productId, 'variant');
     if (url) {
       updateOption(
         options.findIndex(opt => opt.id === optionId), 

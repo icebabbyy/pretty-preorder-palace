@@ -50,47 +50,46 @@ const StockManagement = ({
   const [loadingSave, setLoadingSave] = useState(false);
   const [deletingProductId, setDeletingProductId] = useState<number | null>(null);
 
-  // 1. เพิ่มประสิทธิภาพด้วย useMemo
-  const filteredProducts = useMemo(() => {
-    // ย้าย console.log มาไว้ที่นี่เพื่อดูการ re-render ที่เกิดขึ้นจริง
-    console.log("Filtering products..."); 
-    return products.filter(product => {
-      const productName = product.name || "";
-      const productSku = product.sku || "";
-      
-      const matchesSearch = productName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            productSku.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesCategory = categoryFilter === "all" || 
-                              product.category === categoryFilter ||
-                              (Array.isArray(product.categories) && product.categories.includes(categoryFilter));
-                              
-      const matchesStatus = statusFilter === "all" || product.status === statusFilter;
+  useEffect(() => {
+    console.log("Current products state:", products);
+  }, [products]);
 
-      return matchesSearch && matchesCategory && matchesStatus;
-    });
-  }, [products, searchTerm, categoryFilter, statusFilter]); // จะคำนวณใหม่เมื่อค่าเหล่านี้เปลี่ยนเท่านั้น
+  const filteredProducts = products.filter(product => {
+    // Add null checks for product name and sku
+    const productName = product.name || "";
+    const productSku = product.sku || "";
+    
+    const matchesSearch = productName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         productSku.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // ตรวจสอบหมวดหมู่ - ดูทั้งหมวดหมู่เดี่ยวและหมวดหมู่หลายอัน
+    const matchesCategory = categoryFilter === "all" || 
+                           product.category === categoryFilter ||
+                           (product.categories && product.categories.includes(categoryFilter));
+                           
+    const matchesStatus = statusFilter === "all" || product.status === statusFilter;
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
 
   const deleteProduct = async (productId: number) => {
     if (!confirm("คุณต้องการลบสินค้านี้หรือไม่?")) {
       return;
     }
     
-    setDeletingProductId(productId);
     try {
+      setDeletingProductId(productId);
       console.log('Starting delete for product:', productId);
       
       await deleteProductAPI(productId);
       
-      // 2. ใช้ Functional Update เพื่อความปลอดภัยของ State
-      setProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
-      
-      console.log("Product deleted successfully");
+      // Update local state immediately
+      const updatedProducts = products.filter(p => p.id !== productId);
+      setProducts(updatedProducts);
+      console.log("Product deleted successfully, updated products:", updatedProducts);
       
     } catch (error) {
       console.error('Delete product failed:', error);
-      // 3. แสดง Error Message ที่เฉพาะเจาะจงมากขึ้น
-      alert('เกิดข้อผิดพลาดในการลบสินค้า: ' + (error instanceof Error ? error.message : String(error)));
+      alert('เกิดข้อผิดพลาดในการลบสินค้า: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setDeletingProductId(null);
     }
@@ -99,58 +98,36 @@ const StockManagement = ({
   const addProduct = async (newProduct: Omit<Product, 'id'>) => {
     setLoadingSave(true);
     try {
-      const addedProd = await addProductAPI(newProduct);
-      
-      // 2. ใช้ Functional Update
-      setProducts(prevProducts => [...prevProducts, addedProd]);
-      
-      console.log("After add, new product:", addedProd);
-
-      // 2. ใช้ Functional Update กับ Categories ด้วย
-      if (addedProd.category && !categories.includes(addedProd.category)) {
-        setCategories(prevCategories => [...prevCategories, addedProd.category]);
+      const prod = await addProductAPI(newProduct);
+      const updatedProducts = [...products, prod];
+      setProducts(updatedProducts);
+      console.log("After add, products state:", updatedProducts);
+      if (prod.category && !categories.includes(prod.category)) {
+        setCategories([...categories, prod.category]);
       }
-    } catch (error) {
-      console.error('Add product failed:', error);
-      // 3. แสดง Error Message ที่เฉพาะเจาะจงมากขึ้น
-      alert('เกิดข้อผิดพลาดขณะบันทึกสินค้า: ' + (error instanceof Error ? error.message : String(error)));
-    } finally {
-      setLoadingSave(false);
+    } catch (err) {
+      alert("เกิดข้อผิดพลาดขณะบันทึกสินค้า");
     }
+    setLoadingSave(false);
   };
 
   const updateProduct = async (updatedProduct: Product) => {
     setLoadingSave(true);
     try {
-      const returnedProd = await updateProductAPI(updatedProduct);
-      
-      // 2. ใช้ Functional Update
-      setProducts(prevProducts => 
-        prevProducts.map(p => p.id === returnedProd.id ? returnedProd : p)
-      );
-
-      console.log("After update, updated product:", returnedProd);
-    } catch (error) {
-      console.error('Update product failed:', error);
-      // 3. แสดง Error Message ที่เฉพาะเจาะจงมากขึ้น
-      alert('เกิดข้อผิดพลาดขณะอัปเดตสินค้า: ' + (error instanceof Error ? error.message : String(error)));
-    } finally {
-      setLoadingSave(false);
+      const prod = await updateProductAPI(updatedProduct);
+      const updatedProducts = products.map(p => p.id === prod.id ? prod : p);
+      setProducts(updatedProducts);
+      console.log("After update, products state:", updatedProducts);
+    } catch (err) {
+      alert("เกิดข้อผิดพลาดขณะอัปเดตสินค้า");
     }
+    setLoadingSave(false);
   };
 
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
     setShowAddModal(true);
   };
-  
-  // ส่วน JSX ที่เหลือ...
-  return (
-    <div>
-      {/* Your JSX for search, filters, buttons, and product table goes here */}
-    </div>
-  );
-};
 
   const getStockStatus = (quantity: number, status: string) => {
     if (status === "พร้อมส่ง" && quantity < 3) {

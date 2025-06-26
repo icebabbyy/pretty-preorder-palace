@@ -115,14 +115,13 @@ const AddProductModal = ({ open, onOpenChange, onAddProduct, categories, editing
       // รวบรวมข้อมูลทั้งหมดที่จะบันทึก
       const dataToSave = {
         ...formData,
-    
         id: editingProduct?.id, // ใช้ ID เดิมถ้าเป็นการแก้ไข
         quantity,
         options: options.length > 0 ? options : undefined,
         images: uploadedImages,
         tags: selectedTags,
       };
-      console.log("ข้อมูลที่กำลังจะส่งไปที่ Backend:", dataToSave);
+      
       let savedProduct; // สร้างตัวแปรมารับผลลัพธ์ที่สมบูรณ์
       
       // ตรวจสอบว่าเป็น 'การแก้ไข' หรือ 'การเพิ่มใหม่'
