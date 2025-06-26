@@ -105,14 +105,15 @@ export async function addProduct(product: Omit<Product, "id">): Promise<Product>
   console.log("addProduct: calling RPC with data (ID removed):", jsonData);
 
   // เรียก RPC โดยส่งข้อมูลที่ไม่มี ID ไป
-const { data, error } = await supabase.rpc('upsert_product_with_relations', { p_data });
+  const { data: rpcData, error } = await supabase.rpc('upsert_product_with_relations', {
+    p_data: jsonData
+  });
 
-if (error) {
-  console.error("RPC Error:", error.message);
-} else {
-  console.log("✅ Product saved. ID:", data.product_id);
-  router.push(`/products/${data.product_id}`); // ถ้าอยาก redirect
-}
+  if (error) {
+    console.error('Error adding product via RPC:', error);
+    alert('Failed to add product: ' + (error.message || ''));
+    throw new Error('Failed to add product');
+  }
 
   const newProductId = (rpcData as any)?.id;
   if (!newProductId) throw new Error('RPC did not return a new product ID.');
