@@ -98,40 +98,35 @@ function productToJson(product: Product | Omit<Product, "id">): any {
 }
 
 // --- FIXED: ฟังก์ชันเพิ่มสินค้า ---
+// --- โค้ดใหม่ที่ถูกต้อง ---
 export async function addProduct(product: Omit<Product, "id">): Promise<Product> {
-  // สร้าง object ใหม่โดย "ไม่เอา" id เข้ามาด้วย เพื่อป้องกัน ID ที่เป็น string
+  // ตัด id ที่เป็น string ออกไป (ถูกต้องแล้ว)
   const { id, ...productDataForInsert } = product as any;
-  const jsonData = productToJson(productDataForInsert); // Fixed: Convert to proper JSON format
-  console.log("addProduct: calling RPC with data (ID removed):", jsonData);
+  console.log("addProduct: calling RPC with data:", productDataForInsert);
 
-  // เรียก RPC โดยส่งข้อมูลที่ไม่มี ID ไป
-  const { data: rpcData, error } = await supabase.rpc('upsert_product_with_relations', { 
-    p_data: jsonData 
+  // เรียก RPC โดยส่งข้อมูลจากฟอร์มไปตรงๆ "ไม่ต้องแปลภาษา"
+  const { data: rpcData, error } = await supabase.rpc('upsert_product_with_relations', {
+    p_data: productDataForInsert
   });
 
   if (error) {
     console.error("RPC Error:", error.message);
     throw new Error('Failed to add product via RPC: ' + error.message);
-  } else {
-    console.log("✅ Product saved. Response:", rpcData);
   }
 
-  const newProductId = (rpcData as any)?.product_id;
+  const newProductId = (rpcData as any)?.id; // แก้ key ให้ถูกต้องเป็น id
   if (!newProductId) throw new Error('RPC did not return a new product ID.');
-  
+
   return await fetchProduct(newProductId);
 }
 
 // --- FIXED: ฟังก์ชันอัปเดตสินค้า ---
 export async function updateProduct(product: Product): Promise<Product> {
-  const { data: { user } } = await supabase.auth.getUser();
-  console.log("CURRENT USER:", user);
-  
-  const jsonData = productToJson(product);
-  console.log("updateProduct: calling RPC with data:", jsonData);
+  console.log("updateProduct: calling RPC with data:", product);
 
+  // เรียก RPC โดยส่งข้อมูลจากฟอร์มไปตรงๆ "ไม่ต้องแปลภาษา"
   const { error } = await supabase.rpc('upsert_product_with_relations', {
-    p_data: jsonData
+    p_data: product
   });
 
   if (error) {
