@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
 import { ProductOption } from "@/types";
 import { generateSKU } from "@/utils/sku";
-import { uploadImageToStorage } from "@/utils/productImages";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProductOptionsManagerProps {
   options: ProductOption[];
@@ -71,9 +71,37 @@ const ProductOptionsManager = ({ options, setOptions, category, editingProductId
     );
   };
 
+  // Fixed: Upload image to Supabase storage with correct function signature
+  const uploadImageToStorage = async (file: File): Promise<string | null> => {
+    try {
+      const filename = `${Date.now()}_${file.name}`;
+      const filePath = `${editingProductId || 'temp'}/${filename}`;
+
+      const { data, error } = await supabase.storage
+        .from("product-images")
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error("Upload error:", error);
+        throw error;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("product-images")
+        .getPublicUrl(filePath);
+
+      return publicUrlData.publicUrl;
+    } catch (error) {
+      console.error("Upload Image Error:", error);
+      return null;
+    }
+  };
+
   const handleOptionImageUpload = async (optionId: string, file: File) => {
-    const productId = editingProductId || Date.now();
-    const url = await uploadImageToStorage(file, productId, 'variant');
+    const url = await uploadImageToStorage(file); // Fixed: Removed third parameter
     if (url) {
       updateOption(
         options.findIndex(opt => opt.id === optionId), 

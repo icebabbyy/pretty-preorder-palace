@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/types";
 
@@ -70,15 +71,42 @@ export async function fetchProduct(productId: number): Promise<Product> {
   return await supabaseProductToProduct(data);
 }
 
+// Helper function to convert Product to JSON for database
+function productToJson(product: Product | Omit<Product, "id">): any {
+  return {
+    sku: product.sku,
+    name: product.name,
+    category: product.category,
+    categories: product.categories,
+    product_type: product.productType,
+    image: product.image,
+    images: product.images,
+    price_yuan: product.priceYuan,
+    exchange_rate: product.exchangeRate,
+    price_thb: product.priceThb,
+    import_cost: product.importCost,
+    cost_thb: product.costThb,
+    selling_price: product.sellingPrice,
+    product_status: product.status,
+    shipment_date: product.shipmentDate,
+    link: product.link,
+    description: product.description,
+    quantity: product.quantity,
+    options: product.options,
+    tags: product.tags,
+  };
+}
+
 // --- FIXED: ฟังก์ชันเพิ่มสินค้า ---
 export async function addProduct(product: Omit<Product, "id">): Promise<Product> {
   // สร้าง object ใหม่โดย "ไม่เอา" id เข้ามาด้วย เพื่อป้องกัน ID ที่เป็น string
   const { id, ...productDataForInsert } = product as any;
-  console.log("addProduct: calling RPC with data (ID removed):", productDataForInsert);
+  const jsonData = productToJson(productDataForInsert); // Fixed: Convert to proper JSON format
+  console.log("addProduct: calling RPC with data (ID removed):", jsonData);
 
   // เรียก RPC โดยส่งข้อมูลที่ไม่มี ID ไป
   const { data: rpcData, error } = await supabase.rpc('upsert_product_with_relations', {
-    p_data: productDataForInsert
+    p_data: jsonData
   });
 
   if (error) {
@@ -97,10 +125,12 @@ export async function addProduct(product: Omit<Product, "id">): Promise<Product>
 export async function updateProduct(product: Product): Promise<Product> {
   const { data: { user } } = await supabase.auth.getUser();
   console.log("CURRENT USER:", user);
-  console.log("updateProduct: calling RPC with data:", product);
+  
+  const jsonData = productToJson(product); // Fixed: Convert to proper JSON format
+  console.log("updateProduct: calling RPC with data:", jsonData);
 
   const { error } = await supabase.rpc('upsert_product_with_relations', {
-      p_data: product
+      p_data: jsonData
   });
 
   if (error) {
