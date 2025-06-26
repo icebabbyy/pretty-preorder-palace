@@ -88,7 +88,7 @@ function productToJson(product: Product | Omit<Product, "id">): any {
     cost_thb: product.costThb,
     selling_price: product.sellingPrice,
     product_status: product.status,
-    shipment_date: product.shipmentDate,
+    shipment_date: product.shipmentDate?.trim() === "" ? null : product.shipmentDate,
     link: product.link,
     description: product.description,
     quantity: product.quantity,
