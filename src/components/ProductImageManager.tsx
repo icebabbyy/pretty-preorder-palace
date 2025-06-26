@@ -1,6 +1,3 @@
-
-// src/components/ProductImageManager.tsx
-
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -19,6 +16,7 @@ interface ProductImageManagerProps {
   onImagesChange: (images: ProductImage[]) => void;
   disabled?: boolean;
   productOptions?: ProductOption[];
+  onMainImageChange?: (mainImageUrl: string) => void; // ✅ เพิ่ม prop นี้
 }
 
 const ProductImageManager = ({
@@ -27,6 +25,7 @@ const ProductImageManager = ({
   onImagesChange,
   disabled = false,
   productOptions = [],
+  onMainImageChange, // ✅ รับเข้ามาด้วย
 }: ProductImageManagerProps) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [newImageUrl, setNewImageUrl] = useState("");
@@ -34,6 +33,11 @@ const ProductImageManager = ({
   const [selectedVariant, setSelectedVariant] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+
+  // ✅ เก็บ main image แยกไว้ในตัวแปร
+  const mainImages = initialImages.filter(img => !img.variant_id && img.order === 1);
+  const additionalImages = initialImages.filter(img => !img.variant_id && (img.order || 0) > 1).sort((a, b) => (a.order || 0) - (b.order || 0));
+  const variantImages = initialImages.filter(img => img.variant_id);
 
   // Categorize images from props directly
   const mainImages = initialImages.filter(img => !img.variant_id && img.order === 1);
